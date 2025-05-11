@@ -8,20 +8,42 @@ interface Props {
 }
 
 export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
+  function createColumns(): Column<Record<string, string>>[] {
+    if (csvArray.length === 0) {
+      return [];
+    }
+    const array =
+      csvArray[0]?.map((header, index) => ({
+        key: `col${index}`,
+        name: header,
+        editable: true,
+      })) || [];
+    return array;
+  }
+
+  function createRows(): Record<string, string>[] {
+    if (csvArray.length === 0) {
+      return [];
+    }
+    const array = csvArray.slice(1).map((row, rowIndex) =>
+      row.reduce(
+        (acc, cell, colIndex) => {
+          acc[`col${colIndex}`] = cell;
+          return acc;
+        },
+        {} as Record<string, string>
+      )
+    );
+    return array;
+  }
+
   return (
     <>
       <div className={styles.root}>
         <DataGrid
-          columns={csvArray[0]?.map((header, index) => ({ key: `col${index}`, name: header }))}
-          rows={csvArray.slice(1).map((row, rowIndex) =>
-            row.reduce(
-              (acc, cell, colIndex) => {
-                acc[`col${colIndex}`] = cell;
-                return acc;
-              },
-              {} as Record<string, string>
-            )
-          )}
+          columns={createColumns()}
+          rows={createRows()}
+          rowKeyGetter={(row) => row.col0}
           onRowsChange={(updatedRows) => {
             const updatedCSVArray = [
               csvArray[0],
