@@ -1,0 +1,26 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100%;
+  padding: 16px;
+}
+
+.divider {
+  width: 100%;
+  margin: 16px 0;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.applyButton {
+  width: 80px;
+  height: 32px;
+  margin-left: auto;
+}
