@@ -5,6 +5,7 @@ import styles from "./App.module.scss";
 import { EditableTableRoot } from "./components/EditableTableRoot";
 import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
+import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 
 function App() {
   const [rawText, setRawText] = useState("");
@@ -14,8 +15,7 @@ function App() {
     (event: MessageEvent<Message>) => {
       if (event.data.type === "update") {
         const message = event.data as UpdateMessage;
-        setRawText(message.payload);
-        setCSVArray(message.payload.split("\n").map((row) => row.split(",")));
+        updateCSVFromExtension(message.payload);
       }
     },
     [rawText]
@@ -62,10 +62,8 @@ function App() {
 
   function updateCSVFromExtension(text: string) {
     setRawText(text);
-    const newCsvArray = text.split("\n").map((row) => row.split(","));
-    setCSVArray(newCsvArray);
-    console.log("Updated CSV array:", newCsvArray);
-    console.log("Updated CSV array:", csvArray);
+    const records = csvParseSync(text);
+    setCSVArray(records);
   }
 
   function handleApply() {
