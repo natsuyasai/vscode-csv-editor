@@ -4,6 +4,7 @@ import { DataGrid, type Column, textEditor, FillEvent, CellPasteEvent } from "re
 import { useDirection } from "@/hooks/useDirection";
 import { createPortal } from "react-dom";
 import { VscodeContextMenu, VscodeContextMenuItem } from "@vscode-elements/react-elements";
+import TextAreaEditor from "./TextAreaEditor";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -38,7 +39,7 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
         key: `col${index}`,
         name: header,
         resizeable: true,
-        renderEditCell: textEditor,
+        renderEditCell: TextAreaEditor,
       })) || [];
     return array;
   }
