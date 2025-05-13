@@ -89,7 +89,7 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
       if (event.target instanceof Node && menuRef.current?.contains(event.target)) {
         return;
       }
-      // setContextMenuProps(null);
+      setContextMenuProps(null);
     }
 
     addEventListener("mousedown", onMouseDown);
