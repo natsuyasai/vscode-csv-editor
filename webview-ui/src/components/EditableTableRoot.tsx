@@ -125,6 +125,7 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
     <>
       <div className={styles.root}>
         <DataGrid
+          className={styles.dataGrid}
           columns={columns}
           rows={rows}
           rowKeyGetter={(row) => row.col0}
