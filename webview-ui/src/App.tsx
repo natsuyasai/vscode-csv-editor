@@ -6,6 +6,7 @@ import { EditableTableRoot } from "./components/EditableTableRoot";
 import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
 import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
+import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 
 function App() {
   const [rawText, setRawText] = useState("");
@@ -69,13 +70,14 @@ function App() {
   function handleApply() {
     vscode.postMessage({
       type: "save",
-      payload: csvArray.join("\n"),
+      payload: rawText,
     });
   }
 
   function updateCSVArray(csv: Array<Array<string>>) {
     setCSVArray(csv);
-    setRawText(csv.join("\n"));
+    const text = csvStringfy(csv);
+    setRawText(text);
   }
 
   return (
