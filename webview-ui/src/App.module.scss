@@ -1,6 +1,27 @@
-.main {
+.root{
   height: 100%;
-  padding: 16px;
+    padding: 16px;
+    display: grid;
+    grid-template-rows: 20px 1fr 80px;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "content"
+      "footer";
+}
+.header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.main {
+  grid-area: content;
+  height: 100%;
+}
+.footer {
+  grid-area: footer;
 }
 
 .divider {
@@ -8,7 +29,7 @@
   margin: 16px 0;
 }
 
-.footer {
+.buttonArea {
   display: flex;
   align-items: center;
   width: 100%;

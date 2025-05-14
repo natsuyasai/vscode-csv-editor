@@ -1,8 +1,3 @@
-.root {
-  margin: 16px;
-  width: 100%;
-}
-
 .contextMenu {
   position: absolute;
   z-index: 2;
@@ -11,4 +6,5 @@
 .dataGrid{
   width: 100%;
   height: 100%;
+  resize: 'both'
 }

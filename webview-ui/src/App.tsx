@@ -81,15 +81,22 @@ function App() {
   }
 
   return (
-    <main className={styles.main}>
-      <EditableTableRoot csvArray={csvArray} setCSVArray={updateCSVArray}></EditableTableRoot>
-      <VscodeDivider className={styles.divider} />
-      <div className={styles.footer}>
-        <VscodeButton className={styles.applyButton} onClick={handleApply}>
-          Apply
-        </VscodeButton>
+    <>
+      <div className={styles.root}>
+        <div className={styles.header}></div>
+        <main className={styles.main}>
+          <EditableTableRoot csvArray={csvArray} setCSVArray={updateCSVArray}></EditableTableRoot>
+        </main>
+        <div className={styles.footer}>
+          <VscodeDivider className={styles.divider} />
+          <div className={styles.buttonArea}>
+            <VscodeButton className={styles.applyButton} onClick={handleApply}>
+              Apply
+            </VscodeButton>
+          </div>
+        </div>
       </div>
-    </main>
+    </>
   );
 }
 
