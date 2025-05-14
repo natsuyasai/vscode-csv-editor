@@ -1,13 +1,13 @@
-import { useCellCopy } from "@/hooks/useCellCopy";
+import { FC } from "react";
+import styles from "./EditableTableRoot.module.scss";
+import { DataGrid, FillEvent } from "react-data-grid";
+import { useDirection } from "@/hooks/useDirection";
+import { createPortal } from "react-dom";
+import { useRows } from "@/hooks/useRows";
 import { useColumns } from "@/hooks/useColumns";
 import { useContextMenu } from "@/hooks/useContextMenu";
-import { useDirection } from "@/hooks/useDirection";
-import { useRows } from "@/hooks/useRows";
-import { VscodeContextMenu } from "@vscode-elements/react-elements";
-import { FC } from "react";
-import { DataGrid, FillEvent } from "react-data-grid";
-import { createPortal } from "react-dom";
-import styles from "./EditableTableRoot.module.scss";
+import { useCellCopy } from "@/hooks/useCellCopy";
+import { ContextMenu } from "./ContextMenu";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -79,47 +79,24 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
       />
       {isContextMenuOpen &&
         createPortal(
-          <VscodeContextMenu
-            ref={menuRef}
-            show={isContextMenuOpen}
+          <ContextMenu
+            isContextMenuOpen={isContextMenuOpen}
+            menuRef={menuRef}
+            contextMenuProps={contextMenuProps}
             className={styles.contextMenu}
-            data={[
-              {
-                label: "Delete Row",
-                keybinding: "Ctrl+Shift+D",
-                value: "deleteRow",
-                tabindex: 0,
-              },
-              {
-                label: "Insert Row Above",
-                keybinding: "Ctrl+Shift+I",
-                value: "insertRowAbove",
-                tabindex: 1,
-              },
-              {
-                label: "Insert Row Below",
-                keybinding: "Ctrl+Shift+B",
-                value: "insertRowBelow",
-                tabindex: 2,
-              },
-            ]}
-            onVscContextMenuSelect={(item) => {
-              if (contextMenuProps === null) {
-                return;
-              }
-              if (item.detail.value === "deleteRow") {
+            onSelect={(value) => {
+              if (contextMenuProps === null) return;
+
+              if (value === "deleteRow") {
                 setRows(rows.toSpliced(contextMenuProps.rowIdx, 1));
-              } else if (item.detail.value === "insertRowAbove") {
+              } else if (value === "insertRowAbove") {
                 insertRow(contextMenuProps.rowIdx);
-              } else if (item.detail.value === "insertRowBelow") {
+              } else if (value === "insertRowBelow") {
                 insertRow(contextMenuProps.rowIdx + 1);
               }
-              setContextMenuProps(null);
             }}
-            style={{
-              top: contextMenuProps?.top,
-              left: contextMenuProps?.left,
-            }}></VscodeContextMenu>,
+            onClose={() => setContextMenuProps(null)}
+          />,
           document.body
         )}
     </div>
