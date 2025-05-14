@@ -44,9 +44,10 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
   }
 
   return (
-    <div className={styles.root}>
+    <>
       <DataGrid
         className={styles.dataGrid}
+        enableVirtualization={true}
         columns={columns}
         rows={rows}
         rowKeyGetter={(row) => row.col0}
@@ -99,6 +100,6 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
           />,
           document.body
         )}
-    </div>
+    </>
   );
 };
