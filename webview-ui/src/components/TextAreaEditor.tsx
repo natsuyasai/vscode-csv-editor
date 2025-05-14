@@ -20,12 +20,12 @@ export default function TextAreaEditor({
       className={styles.textArea}
       value={row[column.key]}
       onChange={(e) => onRowChange({ ...row, [column.key]: e.target.value })}
-      onBlur={() => onClose(true)} // 終了時に変更を保存
+      onBlur={() => onClose(true, false)}
       onKeyDown={(e) => {
-        // Shift+Enterで改行、Enter単体で編集終了
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          onClose(true);
+        if (e.key === "Enter" && e.shiftKey) {
+          // DataGrid側でEnter入力時に編集モードを抜けてしまうのでイベントを止める
+          e.stopPropagation();
+          onRowChange({ ...row, [column.key]: `${row[column.key]}\n` });
         }
       }}
     />
