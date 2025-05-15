@@ -22,5 +22,5 @@ export function useRows(csvArray: Array<Array<string>>) {
     );
   }
 
-  return { rows, setRows };
+  return { rows };
 }
