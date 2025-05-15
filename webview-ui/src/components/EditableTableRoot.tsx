@@ -43,6 +43,20 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
     setCSVArray(updatedCSVArray);
   }
 
+  function handleSelectContextMenu(value: string) {
+    if (contextMenuProps === null) {
+      return;
+    }
+
+    if (value === "deleteRow") {
+      setRows(rows.toSpliced(contextMenuProps.rowIdx, 1));
+    } else if (value === "insertRowAbove") {
+      insertRow(contextMenuProps.rowIdx);
+    } else if (value === "insertRowBelow") {
+      insertRow(contextMenuProps.rowIdx + 1);
+    }
+  }
+
   return (
     <>
       <DataGrid
@@ -86,15 +100,7 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
             contextMenuProps={contextMenuProps}
             className={styles.contextMenu}
             onSelect={(value) => {
-              if (contextMenuProps === null) return;
-
-              if (value === "deleteRow") {
-                setRows(rows.toSpliced(contextMenuProps.rowIdx, 1));
-              } else if (value === "insertRowAbove") {
-                insertRow(contextMenuProps.rowIdx);
-              } else if (value === "insertRowBelow") {
-                insertRow(contextMenuProps.rowIdx + 1);
-              }
+              handleSelectContextMenu(value);
             }}
             onClose={() => setContextMenuProps(null)}
           />,
