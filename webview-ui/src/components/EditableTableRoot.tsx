@@ -16,7 +16,7 @@ interface Props {
 
 export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
   const direction = useDirection();
-  const { rows, setRows } = useRows(csvArray);
+  const { rows } = useRows(csvArray);
   const { columns } = useColumns(csvArray);
   const { contextMenuProps, setContextMenuProps, menuRef, isContextMenuOpen } = useContextMenu();
   const { handleCellCopy } = useCellCopy();
