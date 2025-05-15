@@ -1,13 +1,13 @@
-.root{
+.root {
   height: 100%;
-    padding: 16px;
-    display: grid;
-    grid-template-rows: 20px 1fr 80px;
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "header"
-      "content"
-      "footer";
+  padding: 16px;
+  display: grid;
+  grid-template-rows: 20px calc(100% - 20px - 80px) 80px;
+  grid-template-columns: 100%;
+  grid-template-areas:
+    "header"
+    "content"
+    "footer";
 }
 .header {
   grid-area: header;
