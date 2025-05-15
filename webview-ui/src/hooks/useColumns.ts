@@ -3,6 +3,7 @@ import { Column } from "react-data-grid";
 import TextAreaEditor from "@/components/TextAreaEditor";
 
 export function useColumns(csvArray: Array<Array<string>>) {
+  const empty: Column<Record<string, string>>[] = [];
   const [columns, setColumns] = useState((): Column<Record<string, string>>[] =>
     createColumns(csvArray)
   );
@@ -13,7 +14,7 @@ export function useColumns(csvArray: Array<Array<string>>) {
 
   function createColumns(csvArray: Array<Array<string>>): Column<Record<string, string>>[] {
     if (csvArray.length === 0) {
-      return [];
+      return empty;
     }
     return (
       csvArray[0]?.map((header, index) => ({
@@ -21,9 +22,8 @@ export function useColumns(csvArray: Array<Array<string>>) {
         name: header,
         resizable: true,
         renderEditCell: TextAreaEditor,
-      })) || []
+      })) || empty
     );
   }
-
-  return { columns, setColumns };
+  return { columns };
 }
