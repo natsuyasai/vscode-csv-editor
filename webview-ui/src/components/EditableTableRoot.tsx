@@ -1,6 +1,6 @@
 import { FC } from "react";
 import styles from "./EditableTableRoot.module.scss";
-import { DataGrid, FillEvent } from "react-data-grid";
+import { CellKeyboardEvent, CellKeyDownArgs, DataGrid, FillEvent } from "react-data-grid";
 import { useDirection } from "@/hooks/useDirection";
 import { createPortal } from "react-dom";
 import { useRows } from "@/hooks/useRows";
@@ -43,17 +43,54 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
     setCSVArray(updatedCSVArray);
   }
 
+  function deleteRow(deleteRowIdx: number) {
+    const updatedCSVArray = [
+      csvArray[0],
+      ...csvArray.slice(1).reduce(
+        (acc, row, index) => {
+          if (index !== deleteRowIdx) {
+            acc.push(row);
+          }
+          return acc;
+        },
+        [] as Array<Array<string>>
+      ),
+    ];
+    setCSVArray(updatedCSVArray);
+  }
+
   function handleSelectContextMenu(value: string) {
     if (contextMenuProps === null) {
       return;
     }
 
     if (value === "deleteRow") {
-      setRows(rows.toSpliced(contextMenuProps.rowIdx, 1));
+      deleteRow(contextMenuProps.rowIdx);
     } else if (value === "insertRowAbove") {
       insertRow(contextMenuProps.rowIdx);
     } else if (value === "insertRowBelow") {
       insertRow(contextMenuProps.rowIdx + 1);
+    }
+  }
+
+  function handleKeyDown(
+    args: CellKeyDownArgs<NoInfer<Record<string, string>>, unknown>,
+    e: CellKeyboardEvent
+  ) {
+    if (e.key === "D" && e.ctrlKey && e.shiftKey) {
+      e.stopPropagation();
+      deleteRow(args.rowIdx);
+      return;
+    }
+    if (e.key === "I" && e.ctrlKey && e.shiftKey) {
+      e.stopPropagation();
+      insertRow(args.rowIdx);
+      return;
+    }
+    if (e.key === "B" && e.ctrlKey && e.shiftKey) {
+      e.stopPropagation();
+      insertRow(args.rowIdx + 1);
+      return;
     }
   }
 
@@ -90,6 +127,9 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
             top: event.clientY,
             left: event.clientX,
           });
+        }}
+        onCellKeyDown={(args, e) => {
+          handleKeyDown(args, e);
         }}
       />
       {isContextMenuOpen &&
