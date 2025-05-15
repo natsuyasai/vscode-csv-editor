@@ -19,7 +19,7 @@ export function useColumns(csvArray: Array<Array<string>>) {
       csvArray[0]?.map((header, index) => ({
         key: `col${index}`,
         name: header,
-        resizeable: true,
+        resizable: true,
         renderEditCell: TextAreaEditor,
       })) || []
     );
