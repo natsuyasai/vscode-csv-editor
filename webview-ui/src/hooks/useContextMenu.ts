@@ -10,7 +10,9 @@ export function useContextMenu() {
   const isContextMenuOpen = contextMenuProps !== null;
 
   useLayoutEffect(() => {
-    if (!isContextMenuOpen) return;
+    if (!isContextMenuOpen) {
+      return;
+    }
 
     function onMouseDown(event: MouseEvent) {
       if (event.target instanceof Node && menuRef.current?.contains(event.target)) {
