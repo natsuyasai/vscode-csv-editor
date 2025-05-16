@@ -8,6 +8,7 @@ import { useColumns } from "@/hooks/useColumns";
 import { useContextMenu } from "@/hooks/useContextMenu";
 import { useCellCopy } from "@/hooks/useCellCopy";
 import { ContextMenu } from "./ContextMenu";
+import { useUpdateRows } from "@/hooks/useUpdateRows";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -20,44 +21,7 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
   const { columns } = useColumns(csvArray);
   const { contextMenuProps, setContextMenuProps, menuRef, isContextMenuOpen } = useContextMenu();
   const { handleCellCopy } = useCellCopy();
-
-  function insertRow(insertRowIdx: number) {
-    const newRow = csvArray[0].map(() => "");
-    if (insertRowIdx >= csvArray.length - 1) {
-      setCSVArray([...csvArray, newRow]);
-      return;
-    }
-    const updatedCSVArray = [
-      csvArray[0],
-      ...csvArray.slice(1).reduce(
-        (acc, row, index) => {
-          if (index === insertRowIdx) {
-            acc.push(newRow);
-          }
-          acc.push(row);
-          return acc;
-        },
-        [] as Array<Array<string>>
-      ),
-    ];
-    setCSVArray(updatedCSVArray);
-  }
-
-  function deleteRow(deleteRowIdx: number) {
-    const updatedCSVArray = [
-      csvArray[0],
-      ...csvArray.slice(1).reduce(
-        (acc, row, index) => {
-          if (index !== deleteRowIdx) {
-            acc.push(row);
-          }
-          return acc;
-        },
-        [] as Array<Array<string>>
-      ),
-    ];
-    setCSVArray(updatedCSVArray);
-  }
+  const { insertRow, deleteRow, updateRow } = useUpdateRows(csvArray, setCSVArray);
 
   function handleSelectContextMenu(value: string) {
     if (contextMenuProps === null) {
@@ -102,15 +66,7 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
         columns={columns}
         rows={rows}
         rowKeyGetter={(row) => row.col0}
-        onRowsChange={(updatedRows) => {
-          const updatedCSVArray = [
-            csvArray[0],
-            ...updatedRows.map((row) =>
-              csvArray[0].map((_, colIndex) => row[`col${colIndex}`] || "")
-            ),
-          ];
-          setCSVArray(updatedCSVArray);
-        }}
+        onRowsChange={updateRow}
         onFill={({ columnKey, sourceRow, targetRow }: FillEvent<Record<string, string>>) => {
           return {
             ...targetRow,
