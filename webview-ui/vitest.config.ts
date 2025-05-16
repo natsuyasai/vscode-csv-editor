@@ -13,6 +13,8 @@ export default defineConfig({
     alias: {
       "@message": resolve("../src/message"),
       "@": resolve("src/"),
+      "@vscode-elements/elements/dist/vscode-context-menu/vscode-context-menu":
+        "@vscode-elements/elements/dist/vscode-context-menu/vscode-context-menu.js",
     },
   },
 });
