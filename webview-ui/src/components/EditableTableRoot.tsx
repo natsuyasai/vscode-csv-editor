@@ -1,6 +1,13 @@
 import { FC } from "react";
 import styles from "./EditableTableRoot.module.scss";
-import { CellKeyboardEvent, CellKeyDownArgs, DataGrid, FillEvent } from "react-data-grid";
+import {
+  CellClickArgs,
+  CellKeyboardEvent,
+  CellKeyDownArgs,
+  CellMouseEvent,
+  DataGrid,
+  FillEvent,
+} from "react-data-grid";
 import { useDirection } from "@/hooks/useDirection";
 import { createPortal } from "react-dom";
 import { useRows } from "@/hooks/useRows";
@@ -37,6 +44,26 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
     }
   }
 
+  function handleCellContextMenu(
+    args: CellClickArgs<NoInfer<Record<string, string>>, unknown>,
+    event: CellMouseEvent
+  ) {
+    event.preventGridDefault();
+    event.preventDefault();
+    setContextMenuProps({
+      rowIdx: rows.indexOf(args.row),
+      top: event.clientY,
+      left: event.clientX,
+    });
+  }
+
+  function handleFill(event: FillEvent<NoInfer<Record<string, string>>>) {
+    return {
+      ...event.targetRow,
+      [event.columnKey]: event.sourceRow[event.columnKey as keyof Record<string, string>],
+    };
+  }
+
   function handleKeyDown(
     args: CellKeyDownArgs<NoInfer<Record<string, string>>, unknown>,
     e: CellKeyboardEvent
@@ -67,26 +94,11 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
         rows={rows}
         rowKeyGetter={(row) => row.col0}
         onRowsChange={updateRow}
-        onFill={({ columnKey, sourceRow, targetRow }: FillEvent<Record<string, string>>) => {
-          return {
-            ...targetRow,
-            [columnKey]: sourceRow[columnKey as keyof Record<string, string>],
-          };
-        }}
+        onFill={handleFill}
         onCellCopy={handleCellCopy}
         direction={direction}
-        onCellContextMenu={({ row }, event) => {
-          event.preventGridDefault();
-          event.preventDefault();
-          setContextMenuProps({
-            rowIdx: rows.indexOf(row),
-            top: event.clientY,
-            left: event.clientX,
-          });
-        }}
-        onCellKeyDown={(args, e) => {
-          handleKeyDown(args, e);
-        }}
+        onCellContextMenu={handleCellContextMenu}
+        onCellKeyDown={handleKeyDown}
       />
       {isContextMenuOpen &&
         createPortal(
@@ -95,9 +107,7 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
             menuRef={menuRef}
             contextMenuProps={contextMenuProps}
             className={styles.contextMenu}
-            onSelect={(value) => {
-              handleSelectContextMenu(value);
-            }}
+            onSelect={handleSelectContextMenu}
             onClose={() => setContextMenuProps(null)}
           />,
           document.body
