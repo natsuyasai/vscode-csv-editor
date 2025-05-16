@@ -1,9 +1,12 @@
 // WebViewの内容を表示するためのクラス
 import * as vscode from "vscode";
-import { MessageType as MessageTypeToWebview, UpdateMessage } from "@message/messageTypeToWebview";
-import { MessageType as MessageTypeFromWebview } from "@message/messageTypeToExtention";
-import { getUri } from "@util/getUri";
-import { getNonce } from "@util/util";
+import {
+  MessageType as MessageTypeToWebview,
+  UpdateMessage,
+} from "../message/messageTypeToWebview";
+import { MessageType as MessageTypeFromWebview } from "../message/messageTypeToExtention";
+import { getUri } from "../util/getUri";
+import { getNonce } from "../util/util";
 
 export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
   /**
