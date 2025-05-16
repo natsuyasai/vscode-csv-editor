@@ -1,12 +1,8 @@
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 
 export function useRows(csvArray: Array<Array<string>>) {
   const empty: Record<string, string>[] = [];
-  const [rows, setRows] = useState((): Record<string, string>[] => createRows(csvArray));
-
-  useEffect(() => {
-    setRows(createRows(csvArray));
-  }, [csvArray]);
+  const rows = useMemo(() => createRows(csvArray), [csvArray]);
 
   function createRows(csvArray: Array<Array<string>>): Record<string, string>[] {
     if (csvArray.length === 0) {
