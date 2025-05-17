@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, useMemo } from "react";
 import styles from "./EditableTableRoot.module.scss";
 import {
   CellClickArgs,
@@ -16,14 +16,21 @@ import { useContextMenu } from "@/hooks/useContextMenu";
 import { useCellCopy } from "@/hooks/useCellCopy";
 import { ContextMenu } from "./ContextMenu";
 import { useUpdateRows } from "@/hooks/useUpdateRows";
+import { RowSizeType } from "@/types";
 
 interface Props {
   csvArray: Array<Array<string>>;
   isIgnoreHeaderRow: boolean;
+  rowSize: RowSizeType;
   setCSVArray: (csv: Array<Array<string>>) => void;
 }
 
-export const EditableTableRoot: FC<Props> = ({ csvArray, isIgnoreHeaderRow, setCSVArray }) => {
+export const EditableTableRoot: FC<Props> = ({
+  csvArray,
+  isIgnoreHeaderRow,
+  rowSize,
+  setCSVArray,
+}) => {
   const direction = useDirection();
   const { rows } = useRows(csvArray, isIgnoreHeaderRow);
   const { columns } = useColumns(csvArray, isIgnoreHeaderRow);
@@ -86,6 +93,21 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, isIgnoreHeaderRow, setC
     }
   }
 
+  const rowHeight = useMemo(() => {
+    switch (rowSize) {
+      case "small":
+        return 24;
+      case "normal":
+        return 40;
+      case "large":
+        return 80;
+      case "extra large":
+        return 120;
+      default:
+        return 40;
+    }
+  }, [rowSize]);
+
   return (
     <>
       <DataGrid
@@ -93,6 +115,7 @@ export const EditableTableRoot: FC<Props> = ({ csvArray, isIgnoreHeaderRow, setC
         enableVirtualization={true}
         columns={columns}
         rows={rows}
+        rowHeight={rowHeight}
         rowKeyGetter={(row) => row.col0}
         onRowsChange={updateRow}
         onFill={handleFill}

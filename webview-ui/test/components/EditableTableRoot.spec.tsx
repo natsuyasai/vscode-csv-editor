@@ -60,7 +60,12 @@ describe("EditableTableRoot", () => {
 
   it("renders DataGrid with correct rows and columns", () => {
     render(
-      <EditableTableRoot csvArray={csvArray} setCSVArray={setCSVArray} isIgnoreHeaderRow={false} />
+      <EditableTableRoot
+        csvArray={csvArray}
+        setCSVArray={setCSVArray}
+        isIgnoreHeaderRow={false}
+        rowSize="normal"
+      />
     );
     expect(screen.getByRole("grid")).toBeVisible();
     expect(screen.getByText("A")).toBeVisible();
