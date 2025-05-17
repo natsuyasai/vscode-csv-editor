@@ -19,6 +19,7 @@ const meta = {
       ["", "", "", "", ""],
     ],
     isIgnoreHeaderRow: false,
+    rowSize: "normal",
     setCSVArray: fn(),
   },
 } satisfies Meta<typeof EditableTableRoot>;

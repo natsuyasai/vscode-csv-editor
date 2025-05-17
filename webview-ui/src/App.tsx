@@ -102,6 +102,7 @@ function App() {
           <EditableTableRoot
             csvArray={csvArray}
             isIgnoreHeaderRow={isIgnoreHeaderRow}
+            rowSize={rowSize}
             setCSVArray={updateCSVArray}></EditableTableRoot>
         </main>
       </div>
