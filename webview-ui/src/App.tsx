@@ -1,5 +1,5 @@
 import { Message, UpdateMessage } from "@message/messageTypeToWebview";
-import { VscodeButton, VscodeDivider } from "@vscode-elements/react-elements";
+import { VscodeDivider } from "@vscode-elements/react-elements";
 import { useCallback, useEffect, useState } from "react";
 import styles from "./App.module.scss";
 import { EditableTableRoot } from "./components/EditableTableRoot";
@@ -7,7 +7,7 @@ import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
 import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
-import { Header } from "./components/Header";
+import { Header, RowSizeType } from "./components/Header";
 
 function App() {
   const [rawText, setRawText] = useState("");
@@ -82,9 +82,7 @@ function App() {
   }
 
   const [isIgnoreHeaderRow, setIsIgnoreHeaderRow] = useState(false);
-  function handleUpdateIgnoreHeaderRow(checked: boolean) {
-    setIsIgnoreHeaderRow(checked);
-  }
+  const [rowSize, setRowSize] = useState<RowSizeType>("normal");
 
   return (
     <>
@@ -92,7 +90,9 @@ function App() {
         <header className={styles.header}>
           <Header
             isIgnoreHeaderRow={isIgnoreHeaderRow}
-            onUpdateIgnoreHeaderRow={handleUpdateIgnoreHeaderRow}
+            onUpdateIgnoreHeaderRow={setIsIgnoreHeaderRow}
+            rowSize={rowSize}
+            onUpdateRowSize={setRowSize}
             onClickApply={handleApply}
           />
           <VscodeDivider className={styles.divider} />
