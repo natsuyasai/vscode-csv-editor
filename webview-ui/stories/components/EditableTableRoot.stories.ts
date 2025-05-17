@@ -34,6 +34,31 @@ export const IgnoreHeader: Story = {
     isIgnoreHeaderRow: true,
   },
 };
+
+export const RowSize_small: Story = {
+  args: {
+    rowSize: "small",
+  },
+};
+
+export const RowSize_normal: Story = {
+  args: {
+    rowSize: "normal",
+  },
+};
+
+export const RowSize_large: Story = {
+  args: {
+    rowSize: "large",
+  },
+};
+
+export const RowSize_extra_large: Story = {
+  args: {
+    rowSize: "extra large",
+  },
+};
+
 export const Empty: Story = {
   args: {
     csvArray: [],
