@@ -7,7 +7,8 @@ import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
 import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
-import { Header, RowSizeType } from "./components/Header";
+import { Header } from "./components/Header";
+import { RowSizeType } from "./types";
 
 function App() {
   const [rawText, setRawText] = useState("");

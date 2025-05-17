@@ -8,8 +8,8 @@ import {
 } from "@vscode-elements/react-elements";
 import { FC, useState } from "react";
 import styles from "./Header.module.scss";
+import { RowSizeType } from "@/types";
 
-export type RowSizeType = "small" | "normal" | "large" | "extra large";
 interface Props {
   isIgnoreHeaderRow: boolean;
   onUpdateIgnoreHeaderRow: (checked: boolean) => void;
