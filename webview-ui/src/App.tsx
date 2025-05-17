@@ -7,6 +7,7 @@ import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
 import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
+import Header from "./components/Header";
 
 function App() {
   const [rawText, setRawText] = useState("");
@@ -80,21 +81,32 @@ function App() {
     setRawText(text);
   }
 
+  const [isIgnoreHeaderRow, setIsIgnoreHeaderRow] = useState(false);
+  function handleUpdateIgnoreHeaderRow(checked: boolean) {
+    setIsIgnoreHeaderRow(checked);
+  }
+
   return (
     <>
       <div className={styles.root}>
-        <div className={styles.header}></div>
+        <header className={styles.header}>
+          <Header
+            isIgnoreHeaderRow={isIgnoreHeaderRow}
+            onUpdateIgnoreHeaderRow={handleUpdateIgnoreHeaderRow}
+          />
+          <VscodeDivider className={styles.divider} />
+        </header>
         <main className={styles.main}>
           <EditableTableRoot csvArray={csvArray} setCSVArray={updateCSVArray}></EditableTableRoot>
         </main>
-        <div className={styles.footer}>
+        <footer className={styles.footer}>
           <VscodeDivider className={styles.divider} />
           <div className={styles.buttonArea}>
             <VscodeButton className={styles.applyButton} onClick={handleApply}>
               Apply
             </VscodeButton>
           </div>
-        </div>
+        </footer>
       </div>
     </>
   );
