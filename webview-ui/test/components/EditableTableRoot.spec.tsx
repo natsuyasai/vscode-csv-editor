@@ -59,7 +59,9 @@ describe("EditableTableRoot", () => {
   });
 
   it("renders DataGrid with correct rows and columns", () => {
-    render(<EditableTableRoot csvArray={csvArray} setCSVArray={setCSVArray} />);
+    render(
+      <EditableTableRoot csvArray={csvArray} setCSVArray={setCSVArray} isIgnoreHeaderRow={false} />
+    );
     expect(screen.getByRole("grid")).toBeVisible();
     expect(screen.getByText("A")).toBeVisible();
     expect(screen.getByText("B")).toBeVisible();
