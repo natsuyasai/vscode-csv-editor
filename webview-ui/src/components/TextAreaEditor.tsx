@@ -27,7 +27,7 @@ export default function TextAreaEditor({
         if (e.key === "Enter" && e.shiftKey) {
           // DataGrid側でEnter入力時に編集モードを抜けてしまうのでイベントを止める
           e.stopPropagation();
-          onRowChange({ ...row, [column.key]: `${row[column.key]}\n` });
+          onRowChange({ ...row, [column.key]: (e.target as HTMLTextAreaElement).value });
         }
       }}
     />
