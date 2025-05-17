@@ -1,14 +1,13 @@
+import { RowSizeType } from "@/types";
 import {
   VscodeButton,
   VscodeCheckbox,
-  VscodeDivider,
   VscodeLabel,
-  VscodeRadio,
-  VscodeRadioGroup,
+  VscodeOption,
+  VscodeSingleSelect,
 } from "@vscode-elements/react-elements";
-import { FC, useState } from "react";
+import { FC } from "react";
 import styles from "./Header.module.scss";
-import { RowSizeType } from "@/types";
 
 interface Props {
   isIgnoreHeaderRow: boolean;
@@ -38,22 +37,28 @@ export const Header: FC<Props> = ({
             }
           }}></VscodeCheckbox>
         <div className={styles.cellSize}>
-          <VscodeLabel>cell size</VscodeLabel>
-          <VscodeRadioGroup
+          <VscodeLabel>cell size :</VscodeLabel>
+          <VscodeSingleSelect
+            className={styles.cellSizeSelect}
             onChange={(e) => {
               if (e.target instanceof HTMLElement) {
-                const target = e.target as HTMLInputElement;
-                onUpdateRowSize(target.name as RowSizeType);
+                const target = e.target as HTMLSelectElement;
+                onUpdateRowSize(target.value as RowSizeType);
               }
             }}>
-            <VscodeRadio label="small" name="small" checked={rowSize === "small"}></VscodeRadio>
-            <VscodeRadio label="normal" name="normal" checked={rowSize === "normal"}></VscodeRadio>
-            <VscodeRadio label="large" name="large" checked={rowSize === "large"}></VscodeRadio>
-            <VscodeRadio
-              label="extra large"
-              name="extra large"
-              checked={rowSize === "extra large"}></VscodeRadio>
-          </VscodeRadioGroup>
+            <VscodeOption value="small" selected={rowSize === "small"}>
+              small
+            </VscodeOption>
+            <VscodeOption value="normal" selected={rowSize === "normal"}>
+              normal
+            </VscodeOption>
+            <VscodeOption value="large" selected={rowSize === "large"}>
+              large
+            </VscodeOption>
+            <VscodeOption value="extra large" selected={rowSize === "extra large"}>
+              extra large
+            </VscodeOption>
+          </VscodeSingleSelect>
         </div>
         <VscodeButton className={styles.applyButton} onClick={(e) => onClickApply()}>
           Apply
