@@ -2,12 +2,11 @@
   height: 100%;
   padding: 16px;
   display: grid;
-  grid-template-rows: 60px calc(100% - 60px - 80px) 80px;
+  grid-template-rows: 60px calc(100% - 60px);
   grid-template-columns: 100%;
   grid-template-areas:
     "header"
     "content"
-    "footer";
 }
 .header {
   grid-area: header;
@@ -18,24 +17,8 @@
   grid-area: content;
   height: 100%;
 }
-.footer {
-  grid-area: footer;
-}
 
 .divider {
   width: 100%;
   margin: 16px 0;
-}
-
-.buttonArea {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  margin-bottom: 16px;
-}
-
-.applyButton {
-  width: 80px;
-  height: 32px;
-  margin-left: auto;
 }
