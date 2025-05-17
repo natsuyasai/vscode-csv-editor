@@ -3,3 +3,16 @@
   align-items: center;
   width: 100%;
 }
+
+.buttonArea {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.applyButton {
+  width: 80px;
+  height: 32px;
+  margin-left: auto;
+}

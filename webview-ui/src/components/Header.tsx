@@ -1,13 +1,14 @@
-import { VscodeCheckbox } from "@vscode-elements/react-elements";
+import { VscodeButton, VscodeCheckbox } from "@vscode-elements/react-elements";
 import { FC, useState } from "react";
 import styles from "./Header.module.scss";
 
 interface Props {
   isIgnoreHeaderRow: boolean;
   onUpdateIgnoreHeaderRow: (checked: boolean) => void;
+  onClickApply: () => void;
 }
 
-const Header: FC<Props> = ({ isIgnoreHeaderRow, onUpdateIgnoreHeaderRow }) => {
+const Header: FC<Props> = ({ isIgnoreHeaderRow, onUpdateIgnoreHeaderRow, onClickApply }) => {
   return (
     <>
       <div className={styles.headerRoot}>
@@ -20,6 +21,9 @@ const Header: FC<Props> = ({ isIgnoreHeaderRow, onUpdateIgnoreHeaderRow }) => {
               onUpdateIgnoreHeaderRow(target.checked);
             }
           }}></VscodeCheckbox>
+        <VscodeButton className={styles.applyButton} onClick={(e) => onClickApply()}>
+          Apply
+        </VscodeButton>
       </div>
     </>
   );

@@ -93,6 +93,7 @@ function App() {
           <Header
             isIgnoreHeaderRow={isIgnoreHeaderRow}
             onUpdateIgnoreHeaderRow={handleUpdateIgnoreHeaderRow}
+            onClickApply={handleApply}
           />
           <VscodeDivider className={styles.divider} />
         </header>
@@ -102,14 +103,6 @@ function App() {
             isIgnoreHeaderRow={isIgnoreHeaderRow}
             setCSVArray={updateCSVArray}></EditableTableRoot>
         </main>
-        <footer className={styles.footer}>
-          <VscodeDivider className={styles.divider} />
-          <div className={styles.buttonArea}>
-            <VscodeButton className={styles.applyButton} onClick={handleApply}>
-              Apply
-            </VscodeButton>
-          </div>
-        </footer>
       </div>
     </>
   );
