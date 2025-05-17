@@ -12,6 +12,8 @@ export default function TextAreaEditor({
 
   useEffect(() => {
     ref.current?.focus();
+    const textLen = ref.current?.value.length ?? 0;
+    ref.current?.setSelectionRange(textLen, textLen);
   }, []);
 
   return (
