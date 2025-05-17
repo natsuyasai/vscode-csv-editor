@@ -2,17 +2,20 @@
   display: flex;
   align-items: center;
   width: 100%;
-}
-
-.buttonArea {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  margin-bottom: 16px;
+  gap: 16px;
 }
 
 .applyButton {
   width: 80px;
   height: 32px;
   margin-left: auto;
+}
+
+.cellSize {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
 }
