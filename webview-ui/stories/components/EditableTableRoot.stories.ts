@@ -6,13 +6,6 @@ import { EditableTableRoot } from "@/components/EditableTableRoot";
 const meta = {
   title: "components/EditableTableRoot",
   component: EditableTableRoot,
-  args: {},
-} satisfies Meta<typeof EditableTableRoot>;
-
-export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Default: Story = {
   args: {
     csvArray: [
       ["A", "B", "C", "D", "E"],
@@ -25,13 +18,24 @@ export const Default: Story = {
       ["4", "44", "444", "4444", "44444"],
       ["", "", "", "", ""],
     ],
+    isIgnoreHeaderRow: false,
     setCSVArray: fn(),
   },
-};
+} satisfies Meta<typeof EditableTableRoot>;
 
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {};
+
+export const IgnoreHeader: Story = {
+  args: {
+    isIgnoreHeaderRow: true,
+  },
+};
 export const Empty: Story = {
   args: {
     csvArray: [],
-    setCSVArray: fn(),
+    isIgnoreHeaderRow: false,
   },
 };

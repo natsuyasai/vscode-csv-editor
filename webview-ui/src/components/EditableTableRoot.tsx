@@ -19,13 +19,14 @@ import { useUpdateRows } from "@/hooks/useUpdateRows";
 
 interface Props {
   csvArray: Array<Array<string>>;
+  isIgnoreHeaderRow: boolean;
   setCSVArray: (csv: Array<Array<string>>) => void;
 }
 
-export const EditableTableRoot: FC<Props> = ({ csvArray, setCSVArray }) => {
+export const EditableTableRoot: FC<Props> = ({ csvArray, isIgnoreHeaderRow, setCSVArray }) => {
   const direction = useDirection();
-  const { rows } = useRows(csvArray);
-  const { columns } = useColumns(csvArray);
+  const { rows } = useRows(csvArray, isIgnoreHeaderRow);
+  const { columns } = useColumns(csvArray, isIgnoreHeaderRow);
   const { contextMenuProps, setContextMenuProps, menuRef, isContextMenuOpen } = useContextMenu();
   const { handleCellCopy } = useCellCopy();
   const { insertRow, deleteRow, updateRow } = useUpdateRows(csvArray, setCSVArray);
