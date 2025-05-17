@@ -8,7 +8,7 @@ interface Props {
   onClickApply: () => void;
 }
 
-const Header: FC<Props> = ({ isIgnoreHeaderRow, onUpdateIgnoreHeaderRow, onClickApply }) => {
+export const Header: FC<Props> = ({ isIgnoreHeaderRow, onUpdateIgnoreHeaderRow, onClickApply }) => {
   return (
     <>
       <div className={styles.headerRoot}>
@@ -28,5 +28,3 @@ const Header: FC<Props> = ({ isIgnoreHeaderRow, onUpdateIgnoreHeaderRow, onClick
     </>
   );
 };
-
-export default Header;
