@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Column } from "react-data-grid";
 import TextAreaEditor from "@/components/TextAreaEditor";
 
-export function useColumns(csvArray: Array<Array<string>>) {
+export function useColumns(csvArray: Array<Array<string>>, isIgnoreHeaderRow: boolean) {
   const empty: Column<Record<string, string>>[] = [];
   const columns = useMemo(() => createColumns(csvArray), [csvArray]);
 
@@ -13,7 +13,7 @@ export function useColumns(csvArray: Array<Array<string>>) {
     return (
       csvArray[0]?.map((header, index) => ({
         key: `col${index}`,
-        name: header,
+        name: isIgnoreHeaderRow ? "" : header,
         resizable: true,
         renderEditCell: TextAreaEditor,
       })) || empty

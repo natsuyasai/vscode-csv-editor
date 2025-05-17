@@ -97,7 +97,10 @@ function App() {
           <VscodeDivider className={styles.divider} />
         </header>
         <main className={styles.main}>
-          <EditableTableRoot csvArray={csvArray} setCSVArray={updateCSVArray}></EditableTableRoot>
+          <EditableTableRoot
+            csvArray={csvArray}
+            isIgnoreHeaderRow={isIgnoreHeaderRow}
+            setCSVArray={updateCSVArray}></EditableTableRoot>
         </main>
         <footer className={styles.footer}>
           <VscodeDivider className={styles.divider} />

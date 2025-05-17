@@ -4,7 +4,7 @@ import { useColumns } from "@/hooks/useColumns";
 
 describe("カラムの作成", () => {
   it("データが空の場合は空の行が生成されること", () => {
-    const { result } = renderHook(() => useColumns([]));
+    const { result } = renderHook(() => useColumns([], false));
     expect(result.current.columns).toEqual([]);
   });
 
@@ -13,7 +13,7 @@ describe("カラムの作成", () => {
       ["Header1", "Header2", "Header3"],
       ["Row1Col1", "Row1Col2", "Row1Col3"],
     ];
-    const { result } = renderHook(() => useColumns(csvArray));
+    const { result } = renderHook(() => useColumns(csvArray, false));
     expect(result.current.columns).toEqual([
       { key: "col0", name: "Header1", resizable: true, renderEditCell: expect.any(Function) },
       { key: "col1", name: "Header2", resizable: true, renderEditCell: expect.any(Function) },
@@ -23,10 +23,23 @@ describe("カラムの作成", () => {
 
   it("ヘッダ行のみの場合にヘッダ行で生成されること", () => {
     const csvArray: Array<Array<string>> = [["Header1", "Header2"]];
-    const { result } = renderHook(() => useColumns(csvArray));
+    const { result } = renderHook(() => useColumns(csvArray, false));
     expect(result.current.columns).toEqual([
       { key: "col0", name: "Header1", resizable: true, renderEditCell: expect.any(Function) },
       { key: "col1", name: "Header2", resizable: true, renderEditCell: expect.any(Function) },
+    ]);
+  });
+
+  it("ヘッダ行無効の場合空文字のみの配列が生成されること", () => {
+    const csvArray: Array<Array<string>> = [
+      ["Header1", "Header2", "Header3"],
+      ["Row1Col1", "Row1Col2", "Row1Col3"],
+    ];
+    const { result } = renderHook(() => useColumns(csvArray, true));
+    expect(result.current.columns).toEqual([
+      { key: "col0", name: "", resizable: true, renderEditCell: expect.any(Function) },
+      { key: "col1", name: "", resizable: true, renderEditCell: expect.any(Function) },
+      { key: "col2", name: "", resizable: true, renderEditCell: expect.any(Function) },
     ]);
   });
 });
