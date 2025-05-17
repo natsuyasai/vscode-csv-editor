@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 export function useRows(csvArray: Array<Array<string>>, isIgnoreHeaderRow: boolean) {
   const empty: Record<string, string>[] = [];
-  const rows = useMemo(() => createRows(csvArray), [csvArray]);
+  const rows = useMemo(() => createRows(csvArray), [csvArray, isIgnoreHeaderRow]);
 
   function createRows(csvArray: Array<Array<string>>): Record<string, string>[] {
     if (csvArray.length === 0) {
