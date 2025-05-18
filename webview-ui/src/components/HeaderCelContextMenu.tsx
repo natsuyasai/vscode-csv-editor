@@ -33,15 +33,15 @@ export const HeaderCelContextMenu: FC<HeaderCelContextMenuProps> = ({
           tabindex: 0,
         },
         {
-          label: "Insert HeaderCel Above",
-          keybinding: "Ctrl+Shift+I",
-          value: "insertHeaderCelAbove",
+          label: "Insert HeaderCel Left",
+          keybinding: "Ctrl+Shift+L",
+          value: "insertHeaderCelLeft",
           tabindex: 1,
         },
         {
-          label: "Insert HeaderCel Below",
-          keybinding: "Ctrl+Shift+B",
-          value: "insertHeaderCelBelow",
+          label: "Insert HeaderCel Right",
+          keybinding: "Ctrl+Shift+R",
+          value: "insertHeaderCelRight",
           tabindex: 2,
         },
       ]}

@@ -87,7 +87,7 @@ describe("useUpdateCsvArray", () => {
 
   describe("insertCol", () => {
     it("最終要素を選択したとき末尾に列が追加されること", () => {
-      act(() => hooks.result.current.insertCol(2));
+      act(() => hooks.result.current.insertCol(3));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2", "new column"],
         ["a", "b", "c", ""],
@@ -96,7 +96,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("2列目の要素を選択したとき、3列目に追加されること", () => {
-      act(() => hooks.result.current.insertCol(1));
+      act(() => hooks.result.current.insertCol(2));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "new column", "col2"],
         ["a", "b", "", "c"],

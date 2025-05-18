@@ -81,14 +81,16 @@ export function useUpdateCsvArray(
     }
     const updatedCSVArray = csvArray.map((row, rowIdx) => {
       const newRow = [...row];
-      newRow.splice(insertColIdx + 1, 0, rowIdx === 0 ? "new column" : "");
+      newRow.splice(insertColIdx, 0, rowIdx === 0 ? "new column" : "");
       return newRow;
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
 
   function deleteCol(deleteColIdx: number) {
-    if (csvArray.length === 0) return;
+    if (csvArray.length === 0) {
+      return;
+    }
     const updatedCSVArray = csvArray.map((row) => {
       const newRow = [...row];
       newRow.splice(deleteColIdx, 1);
