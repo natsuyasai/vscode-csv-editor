@@ -97,7 +97,7 @@ export const EditableTableRoot: FC<Props> = ({
 
   function handleHeaderCellContextMenu(
     cell: CalculatedColumn<NoInfer<Record<string, string>>, unknown>,
-    e: PointerEvent
+    e: MouseEvent
   ) {
     e.preventDefault();
     setHeaderContextMenuProps({
@@ -105,6 +105,10 @@ export const EditableTableRoot: FC<Props> = ({
       top: e.clientY,
       left: e.clientX,
     });
+  }
+
+  function handleHeaderEdit(cellIdx: number, updateText: string) {
+    updateCol(cellIdx, updateText);
   }
 
   function handleFill(event: FillEvent<NoInfer<Record<string, string>>>) {
@@ -192,6 +196,7 @@ export const EditableTableRoot: FC<Props> = ({
             CustomHeaderCell({
               ...props,
               onHeaderCellContextMenu: handleHeaderCellContextMenu,
+              onHeaderEdit: handleHeaderEdit,
             }) as ReactNode,
         }}
       />
