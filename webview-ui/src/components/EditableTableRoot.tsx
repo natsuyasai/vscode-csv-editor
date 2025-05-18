@@ -140,7 +140,7 @@ export const EditableTableRoot: FC<Props> = ({
         columns={columns}
         rows={rows}
         rowHeight={rowHeight}
-        rowKeyGetter={(row) => row.col0}
+        // rowKeyGetter={(row) => row.col0}
         onRowsChange={updateRow}
         onFill={handleFill}
         onCellCopy={handleCellCopy}
