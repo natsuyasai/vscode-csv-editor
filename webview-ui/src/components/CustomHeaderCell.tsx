@@ -3,6 +3,7 @@ import { CalculatedColumn, RenderHeaderCellProps } from "react-data-grid";
 import styles from "./CustomHeaderCell.module.scss";
 
 interface Props {
+  isIgnoreHeaderRow: boolean;
   onHeaderCellContextMenu: (
     cell: CalculatedColumn<NoInfer<Record<string, string>>, unknown>,
     e: MouseEvent
@@ -52,6 +53,9 @@ export const CustomHeaderCell: FC<
   }
 
   useEffect(() => {
+    if (props.isIgnoreHeaderRow) {
+      return;
+    }
     ref.current?.parentElement?.addEventListener("keydown", handleKeyDown);
     ref.current?.parentElement?.addEventListener("contextmenu", handleContextMenu);
     ref.current?.parentElement?.addEventListener("dblclick", handleDoubleClick);
@@ -63,11 +67,11 @@ export const CustomHeaderCell: FC<
       ref.current?.parentElement?.removeEventListener("dblclick", handleDoubleClick);
       window.removeEventListener("click", handleWindowClick);
     };
-  }, [props.column]);
+  }, [props.column, props.isIgnoreHeaderRow]);
 
   return (
     <>
-      {isEditing && (
+      {!props.isIgnoreHeaderRow && isEditing && (
         <textarea
           ref={textAreaRef}
           className={styles.textArea}

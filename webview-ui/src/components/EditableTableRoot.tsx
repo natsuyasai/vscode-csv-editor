@@ -217,6 +217,7 @@ export const EditableTableRoot: FC<Props> = ({
           renderHeaderCell: (props) =>
             CustomHeaderCell({
               ...props,
+              isIgnoreHeaderRow,
               onHeaderCellContextMenu: handleHeaderCellContextMenu,
               onHeaderEdit: handleHeaderEdit,
               onKeyDown: handleKeyDownHeaderCell,
