@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useUpdateRows } from "@/hooks/useUpdateRows";
+import { act, renderHook, RenderHookResult } from "@testing-library/react";
 
 describe("useUpdateRows", () => {
   let csvArray: Array<Array<string>>;
   let setCSVArray: ReturnType<typeof vi.fn>;
-  let hooks: ReturnType<typeof useUpdateRows>;
+  let hooks: RenderHookResult<ReturnType<typeof useUpdateRows>, unknown>;
 
   beforeEach(() => {
     csvArray = [
@@ -13,12 +14,12 @@ describe("useUpdateRows", () => {
       ["d", "e", "f"],
     ];
     setCSVArray = vi.fn();
-    hooks = useUpdateRows(csvArray, setCSVArray);
+    hooks = renderHook(() => useUpdateRows(csvArray, setCSVArray));
   });
 
   describe("insertRow", () => {
     it("inserts a new row at the end", () => {
-      hooks.insertRow(2);
+      hooks.result.current.insertRow(2);
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
@@ -28,7 +29,7 @@ describe("useUpdateRows", () => {
     });
 
     it("inserts a new row in the middle", () => {
-      hooks.insertRow(0);
+      hooks.result.current.insertRow(0);
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["", "", ""],
@@ -40,7 +41,7 @@ describe("useUpdateRows", () => {
 
   describe("deleteRow", () => {
     it("deletes a row by index", () => {
-      hooks.deleteRow(0);
+      hooks.result.current.deleteRow(0);
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["d", "e", "f"],
@@ -49,7 +50,7 @@ describe("useUpdateRows", () => {
 
     it("does not delete header row", () => {
       // deleteRow only affects rows after the header
-      hooks.deleteRow(-1);
+      hooks.result.current.deleteRow(-1);
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
@@ -64,7 +65,7 @@ describe("useUpdateRows", () => {
         { col0: "x", col1: "y", col2: "z" },
         { col0: "1", col1: "2", col2: "3" },
       ];
-      hooks.updateRow(updatedRows);
+      hooks.result.current.updateRow(updatedRows);
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["x", "y", "z"],
@@ -76,10 +77,82 @@ describe("useUpdateRows", () => {
       const updatedRows = [
         { col0: "x" }, // missing col1, col2
       ];
-      hooks.updateRow(updatedRows);
+      hooks.result.current.updateRow(updatedRows);
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["x", "", ""],
+      ]);
+    });
+  });
+
+  describe("history", () => {
+    it("csvのデータに変更があれば履歴情報に追加され、undo操作で変更前の状態に戻ること", () => {
+      act(() => hooks.result.current.insertRow(2));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+        ["", "", ""],
+      ]);
+      const updatedRows = [
+        { col0: "x", col1: "y", col2: "z" },
+        { col0: "1", col1: "2", col2: "3" },
+      ];
+      act(() => hooks.result.current.updateRow(updatedRows));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["x", "y", "z"],
+        ["1", "2", "3"],
+      ]);
+
+      act(() => hooks.result.current.undo());
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+        ["", "", ""],
+      ]);
+      act(() => hooks.result.current.undo());
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+      ]);
+    });
+  });
+
+  describe("poppedHistory", () => {
+    it("undo後にredoを行うと元に戻ること", () => {
+      act(() => hooks.result.current.insertRow(2));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+        ["", "", ""],
+      ]);
+      const updatedRows = [
+        { col0: "x", col1: "y", col2: "z" },
+        { col0: "1", col1: "2", col2: "3" },
+      ];
+      act(() => hooks.result.current.updateRow(updatedRows));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["x", "y", "z"],
+        ["1", "2", "3"],
+      ]);
+
+      act(() => hooks.result.current.undo());
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+        ["", "", ""],
+      ]);
+      act(() => hooks.result.current.redo());
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["x", "y", "z"],
+        ["1", "2", "3"],
       ]);
     });
   });

@@ -1,4 +1,4 @@
-import { FC, useMemo } from "react";
+import { FC, useCallback, useEffect, useMemo } from "react";
 import styles from "./EditableTableRoot.module.scss";
 import {
   CellClickArgs,
@@ -36,7 +36,7 @@ export const EditableTableRoot: FC<Props> = ({
   const { columns } = useColumns(csvArray, isIgnoreHeaderRow);
   const { contextMenuProps, setContextMenuProps, menuRef, isContextMenuOpen } = useContextMenu();
   const { handleCellCopy } = useCellCopy();
-  const { insertRow, deleteRow, updateRow } = useUpdateRows(csvArray, setCSVArray);
+  const { insertRow, deleteRow, updateRow, undo, redo } = useUpdateRows(csvArray, setCSVArray);
 
   function handleSelectContextMenu(value: string) {
     if (contextMenuProps === null) {
@@ -76,22 +76,44 @@ export const EditableTableRoot: FC<Props> = ({
     args: CellKeyDownArgs<NoInfer<Record<string, string>>, unknown>,
     e: CellKeyboardEvent
   ) {
-    if (e.key === "D" && e.ctrlKey && e.shiftKey) {
+    const key = e.key.toUpperCase();
+    if (key === "D" && e.ctrlKey && e.shiftKey) {
       e.stopPropagation();
       deleteRow(args.rowIdx);
       return;
     }
-    if (e.key === "I" && e.ctrlKey && e.shiftKey) {
+    if (key === "I" && e.ctrlKey && e.shiftKey) {
       e.stopPropagation();
       insertRow(args.rowIdx);
       return;
     }
-    if (e.key === "B" && e.ctrlKey && e.shiftKey) {
+    if (key === "B" && e.ctrlKey && e.shiftKey) {
       e.stopPropagation();
       insertRow(args.rowIdx + 1);
       return;
     }
   }
+
+  function handleKeyDownForDocument(e: KeyboardEvent) {
+    const key = e.key.toUpperCase();
+    if (key === "Z" && e.ctrlKey) {
+      e.stopPropagation();
+      undo();
+      return;
+    }
+    if (key === "Y" && e.ctrlKey) {
+      e.stopPropagation();
+      redo();
+      return;
+    }
+  }
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDownForDocument);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDownForDocument);
+    };
+  }, [handleKeyDownForDocument]);
 
   const rowHeight = useMemo(() => {
     switch (rowSize) {
