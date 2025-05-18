@@ -2,7 +2,8 @@ import { useState } from "react";
 
 export function useUpdateCsvArray(
   csvArray: Array<Array<string>>,
-  setCSVArray: (csv: Array<Array<string>>) => void
+  setCSVArray: (csv: Array<Array<string>>) => void,
+  isIgnoreHeaderRow: boolean
 ) {
   const [history, setHistory] = useState<Array<Array<Array<string>>>>([]);
   const [poppedHistory, setPoppedHistory] = useState<Array<Array<Array<string>>>>([]);
@@ -35,44 +36,57 @@ export function useUpdateCsvArray(
       setCSVArrayAndPushHistory([...csvArray, newRow]);
       return;
     }
-    const updatedCSVArray = [
-      csvArray[0],
-      ...csvArray.slice(1).reduce(
-        (acc, row, index) => {
-          if (index === insertRowIdx) {
-            acc.push(newRow);
-          }
-          acc.push(row);
-          return acc;
-        },
-        [] as Array<Array<string>>
-      ),
-    ];
-    setCSVArrayAndPushHistory(updatedCSVArray);
+    const reducer = (acc: string[][], row: string[], index: number) => {
+      if (index === insertRowIdx) {
+        acc.push(newRow);
+      }
+      acc.push(row);
+      return acc;
+    };
+    if (isIgnoreHeaderRow) {
+      const updatedCSVArray = [...csvArray.reduce(reducer, [] as Array<Array<string>>)];
+      setCSVArrayAndPushHistory(updatedCSVArray);
+    } else {
+      const updatedCSVArray = [
+        csvArray[0],
+        ...csvArray.slice(1).reduce(reducer, [] as Array<Array<string>>),
+      ];
+      setCSVArrayAndPushHistory(updatedCSVArray);
+    }
   }
 
   function deleteRow(deleteRowIdx: number) {
-    const updatedCSVArray = [
-      csvArray[0],
-      ...csvArray.slice(1).reduce(
-        (acc, row, index) => {
-          if (index !== deleteRowIdx) {
-            acc.push(row);
-          }
-          return acc;
-        },
-        [] as Array<Array<string>>
-      ),
-    ];
-    setCSVArrayAndPushHistory(updatedCSVArray);
+    const reducer = (acc: string[][], row: string[], index: number) => {
+      if (index !== deleteRowIdx) {
+        acc.push(row);
+      }
+      return acc;
+    };
+    if (isIgnoreHeaderRow) {
+      const updatedCSVArray = [...csvArray.reduce(reducer, [] as Array<Array<string>>)];
+      setCSVArrayAndPushHistory(updatedCSVArray);
+    } else {
+      const updatedCSVArray = [
+        csvArray[0],
+        ...csvArray.slice(1).reduce(reducer, [] as Array<Array<string>>),
+      ];
+      setCSVArrayAndPushHistory(updatedCSVArray);
+    }
   }
 
   function updateRow(updatedRows: Array<Record<string, string>>) {
-    const updatedCSVArray = [
-      csvArray[0],
-      ...updatedRows.map((row) => csvArray[0].map((_, colIndex) => row[`col${colIndex}`] || "")),
-    ];
-    setCSVArrayAndPushHistory(updatedCSVArray);
+    if (isIgnoreHeaderRow) {
+      const updatedCSVArray = [
+        ...updatedRows.map((row) => csvArray[0].map((_, colIndex) => row[`col${colIndex}`] || "")),
+      ];
+      setCSVArrayAndPushHistory(updatedCSVArray);
+    } else {
+      const updatedCSVArray = [
+        csvArray[0],
+        ...updatedRows.map((row) => csvArray[0].map((_, colIndex) => row[`col${colIndex}`] || "")),
+      ];
+      setCSVArrayAndPushHistory(updatedCSVArray);
+    }
   }
 
   function insertCol(insertColIdx: number) {
