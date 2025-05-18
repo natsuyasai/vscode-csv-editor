@@ -1,12 +1,21 @@
 import { FC, useEffect, useRef } from "react";
-import { RenderHeaderCellProps } from "react-data-grid";
+import { CalculatedColumn, RenderHeaderCellProps } from "react-data-grid";
+
+interface Props {
+  onHeaderCellContextMenu: (
+    cell: CalculatedColumn<NoInfer<Record<string, string>>, unknown>,
+    e: PointerEvent
+  ) => void;
+}
 
 export const CustomHeaderCell: FC<
-  RenderHeaderCellProps<NoInfer<Record<string, string>>, unknown>
+  RenderHeaderCellProps<NoInfer<Record<string, string>>, unknown> & Props
 > = (props) => {
   const ref = useRef<HTMLSpanElement>(null);
 
-  function handleClickParent() {}
+  function handleClickParent(e: PointerEvent) {
+    props.onHeaderCellContextMenu(props.column, e);
+  }
   useEffect(() => {
     ref.current?.parentElement?.addEventListener("contextmenu", handleClickParent);
 
