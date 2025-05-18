@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useUpdateRows } from "@/hooks/useUpdateRows";
+import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { act, renderHook, RenderHookResult } from "@testing-library/react";
 
-describe("useUpdateRows", () => {
+describe("useUpdateCsvArray", () => {
   let csvArray: Array<Array<string>>;
   let setCSVArray: ReturnType<typeof vi.fn>;
-  let hooks: RenderHookResult<ReturnType<typeof useUpdateRows>, unknown>;
+  let hooks: RenderHookResult<ReturnType<typeof useUpdateCsvArray>, unknown>;
 
   beforeEach(() => {
     csvArray = [
@@ -14,7 +14,7 @@ describe("useUpdateRows", () => {
       ["d", "e", "f"],
     ];
     setCSVArray = vi.fn();
-    hooks = renderHook(() => useUpdateRows(csvArray, setCSVArray));
+    hooks = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray));
   });
 
   describe("insertRow", () => {

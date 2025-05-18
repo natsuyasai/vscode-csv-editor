@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export function useUpdateRows(
+export function useUpdateCsvArray(
   csvArray: Array<Array<string>>,
   setCSVArray: (csv: Array<Array<string>>) => void
 ) {
