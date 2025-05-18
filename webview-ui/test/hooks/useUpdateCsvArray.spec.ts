@@ -161,8 +161,13 @@ describe("useUpdateCsvArray", () => {
   });
 
   describe("updateCol", () => {
-    it("non", () => {
-      expect(true).toBe(true);
+    it("ヘッダ行の指定セルの内容が更新できること", () => {
+      act(() => hooks.result.current.updateCol(1, "testCol1"));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "testCol1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+      ]);
     });
   });
 

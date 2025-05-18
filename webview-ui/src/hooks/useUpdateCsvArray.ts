@@ -113,7 +113,22 @@ export function useUpdateCsvArray(
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
 
-  function updateCol(updatedRows: Array<Record<string, string>>) {}
+  function updateCol(idx: number, text: string) {
+    if (csvArray.length === 0) {
+      return;
+    }
+    if (isIgnoreHeaderRow) {
+      return;
+    }
+    const updatedCSVArray = csvArray.map((row, rowIdx) => {
+      const newRow = [...row];
+      if (rowIdx === 0) {
+        newRow[idx] = text;
+      }
+      return newRow;
+    });
+    setCSVArrayAndPushHistory(updatedCSVArray);
+  }
 
   return { insertRow, deleteRow, updateRow, insertCol, deleteCol, updateCol, undo, redo };
 }
