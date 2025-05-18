@@ -59,11 +59,11 @@ export const EditableTableRoot: FC<Props> = ({
     }
 
     if (value === "deleteRow") {
-      deleteRow(rowContextMenuProps.rowIdx);
+      deleteRow(rowContextMenuProps.itemIdx);
     } else if (value === "insertRowAbove") {
-      insertRow(rowContextMenuProps.rowIdx);
+      insertRow(rowContextMenuProps.itemIdx);
     } else if (value === "insertRowBelow") {
-      insertRow(rowContextMenuProps.rowIdx + 1);
+      insertRow(rowContextMenuProps.itemIdx + 1);
     }
   }
 
@@ -88,7 +88,7 @@ export const EditableTableRoot: FC<Props> = ({
     event.preventGridDefault();
     event.preventDefault();
     setRowContextMenuProps({
-      rowIdx: rows.indexOf(args.row),
+      itemIdx: rows.indexOf(args.row),
       top: event.clientY,
       left: event.clientX,
     });
@@ -100,7 +100,7 @@ export const EditableTableRoot: FC<Props> = ({
   ) {
     e.preventDefault();
     setHeaderContextMenuProps({
-      rowIdx: columns.indexOf(cell),
+      itemIdx: columns.indexOf(cell),
       top: e.clientY,
       left: e.clientX,
     });

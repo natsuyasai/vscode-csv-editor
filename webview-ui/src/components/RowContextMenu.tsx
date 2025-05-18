@@ -4,7 +4,7 @@ import { VscodeContextMenu } from "@vscode-elements/react-elements";
 interface RowContextMenuProps {
   isContextMenuOpen: boolean;
   menuRef: React.RefObject<any>;
-  contextMenuProps: { rowIdx: number; top: number; left: number } | null;
+  contextMenuProps: { itemIdx: number; top: number; left: number } | null;
   onSelect: (value: string) => void;
   onClose: () => void;
   className?: string;

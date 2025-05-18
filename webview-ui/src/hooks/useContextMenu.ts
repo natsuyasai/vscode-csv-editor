@@ -2,7 +2,7 @@ import { useState, useRef, useLayoutEffect } from "react";
 
 export function useContextMenu() {
   const [contextMenuProps, setContextMenuProps] = useState<{
-    rowIdx: number;
+    itemIdx: number;
     top: number;
     left: number;
   } | null>(null);
