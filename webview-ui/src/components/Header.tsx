@@ -36,10 +36,10 @@ export const Header: FC<Props> = ({
               onUpdateIgnoreHeaderRow(target.checked);
             }
           }}></VscodeCheckbox>
-        <div className={styles.cellSize}>
-          <VscodeLabel>cell size :</VscodeLabel>
+        <div className={styles.rowSize}>
+          <VscodeLabel>row size :</VscodeLabel>
           <VscodeSingleSelect
-            className={styles.cellSizeSelect}
+            className={styles.rowSizeSelect}
             onChange={(e) => {
               if (e.target instanceof HTMLElement) {
                 const target = e.target as HTMLSelectElement;

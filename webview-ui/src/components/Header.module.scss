@@ -11,13 +11,13 @@
   margin-left: auto;
 }
 
-.cellSize {
+.rowSize {
   display: inline-flex;
   flex-direction: row;
   flex-wrap: nowrap;
   justify-content: center;
   align-items: center;
 }
-.cellSizeSelect {
+.rowSizeSelect {
   width: 10em;
 }
