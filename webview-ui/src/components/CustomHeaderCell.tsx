@@ -13,8 +13,8 @@ export const CustomHeaderCell: FC<
 > = (props) => {
   const ref = useRef<HTMLSpanElement>(null);
 
-  function handleClickParent(e: PointerEvent) {
-    props.onHeaderCellContextMenu(props.column, e);
+  function handleClickParent(e: Event) {
+    props.onHeaderCellContextMenu(props.column, e as PointerEvent);
   }
   useEffect(() => {
     ref.current?.parentElement?.addEventListener("contextmenu", handleClickParent);
