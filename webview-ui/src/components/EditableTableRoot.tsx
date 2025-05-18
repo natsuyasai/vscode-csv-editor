@@ -150,7 +150,6 @@ export const EditableTableRoot: FC<Props> = ({
         defaultColumnOptions={{
           renderHeaderCell: (props) => CustomHeaderCell(props) as ReactNode,
         }}
-        onCellClick={(e) => console.log(e)}
       />
       {isContextMenuOpen &&
         createPortal(
