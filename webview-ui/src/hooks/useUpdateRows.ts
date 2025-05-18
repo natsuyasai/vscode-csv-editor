@@ -1,11 +1,38 @@
+import { useState } from "react";
+
 export function useUpdateRows(
   csvArray: Array<Array<string>>,
   setCSVArray: (csv: Array<Array<string>>) => void
 ) {
+  const [history, setHistory] = useState<Array<Array<Array<string>>>>([]);
+  const [poppedHistory, setPoppedHistory] = useState<Array<Array<Array<string>>>>([]);
+
+  function undo() {
+    const lastItem = history.pop();
+    if (lastItem) {
+      setPoppedHistory([...history, csvArray]);
+      setCSVArray(lastItem);
+      setHistory(history);
+    }
+  }
+
+  function redo() {
+    const lastItem = poppedHistory.pop();
+    if (lastItem) {
+      setCSVArrayAndPushHistory(lastItem);
+      setPoppedHistory(history);
+    }
+  }
+
+  function setCSVArrayAndPushHistory(newArray: Array<Array<string>>) {
+    setHistory([...history, csvArray]);
+    setCSVArray(newArray);
+  }
+
   function insertRow(insertRowIdx: number) {
     const newRow = csvArray[0].map(() => "");
     if (insertRowIdx >= csvArray.length - 1) {
-      setCSVArray([...csvArray, newRow]);
+      setCSVArrayAndPushHistory([...csvArray, newRow]);
       return;
     }
     const updatedCSVArray = [
@@ -21,7 +48,7 @@ export function useUpdateRows(
         [] as Array<Array<string>>
       ),
     ];
-    setCSVArray(updatedCSVArray);
+    setCSVArrayAndPushHistory(updatedCSVArray);
   }
 
   function deleteRow(deleteRowIdx: number) {
@@ -37,7 +64,7 @@ export function useUpdateRows(
         [] as Array<Array<string>>
       ),
     ];
-    setCSVArray(updatedCSVArray);
+    setCSVArrayAndPushHistory(updatedCSVArray);
   }
 
   function updateRow(updatedRows: Array<Record<string, string>>) {
@@ -45,8 +72,8 @@ export function useUpdateRows(
       csvArray[0],
       ...updatedRows.map((row) => csvArray[0].map((_, colIndex) => row[`col${colIndex}`] || "")),
     ];
-    setCSVArray(updatedCSVArray);
+    setCSVArrayAndPushHistory(updatedCSVArray);
   }
 
-  return { insertRow, deleteRow, updateRow };
+  return { insertRow, deleteRow, updateRow, undo, redo };
 }
