@@ -52,7 +52,7 @@ export const EditableTableRoot: FC<Props> = ({
   } = useContextMenu();
   const { handleCellCopy } = useCellCopy();
   const { insertRow, deleteRow, updateRow, insertCol, deleteCol, updateCol, undo, redo } =
-    useUpdateCsvArray(csvArray, setCSVArray);
+    useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
 
   function handleSelectRowContextMenu(value: string) {
     if (rowContextMenuProps === null) {

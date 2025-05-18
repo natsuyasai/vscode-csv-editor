@@ -14,11 +14,11 @@ describe("useUpdateCsvArray", () => {
       ["d", "e", "f"],
     ];
     setCSVArray = vi.fn();
-    hooks = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray));
+    hooks = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, false));
   });
 
   describe("insertRow", () => {
-    it("inserts a new row at the end", () => {
+    it("末尾に行を追加できること", () => {
       hooks.result.current.insertRow(2);
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
@@ -28,7 +28,7 @@ describe("useUpdateCsvArray", () => {
       ]);
     });
 
-    it("inserts a new row in the middle", () => {
+    it("間に行を追加できること", () => {
       hooks.result.current.insertRow(0);
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
