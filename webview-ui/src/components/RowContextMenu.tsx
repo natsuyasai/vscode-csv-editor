@@ -1,7 +1,7 @@
 import { FC } from "react";
 import { VscodeContextMenu } from "@vscode-elements/react-elements";
 
-interface ContextMenuProps {
+interface RowContextMenuProps {
   isContextMenuOpen: boolean;
   menuRef: React.RefObject<any>;
   contextMenuProps: { rowIdx: number; top: number; left: number } | null;
@@ -10,7 +10,7 @@ interface ContextMenuProps {
   className?: string;
 }
 
-export const ContextMenu: FC<ContextMenuProps> = ({
+export const RowContextMenu: FC<RowContextMenuProps> = ({
   isContextMenuOpen,
   menuRef,
   contextMenuProps,

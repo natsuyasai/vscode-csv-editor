@@ -15,7 +15,7 @@ import { useRows } from "@/hooks/useRows";
 import { useColumns } from "@/hooks/useColumns";
 import { useContextMenu } from "@/hooks/useContextMenu";
 import { useCellCopy } from "@/hooks/useCellCopy";
-import { ContextMenu } from "./ContextMenu";
+import { RowContextMenu } from "./RowContextMenu";
 import { useUpdateRows } from "@/hooks/useUpdateRows";
 import { RowSizeType } from "@/types";
 import { CustomHeaderCell } from "./CustomHeaderCell";
@@ -36,21 +36,26 @@ export const EditableTableRoot: FC<Props> = ({
   const direction = useDirection();
   const { rows } = useRows(csvArray, isIgnoreHeaderRow);
   const { columns } = useColumns(csvArray, isIgnoreHeaderRow);
-  const { contextMenuProps, setContextMenuProps, menuRef, isContextMenuOpen } = useContextMenu();
+  const {
+    contextMenuProps: rowContextMenuProps,
+    setContextMenuProps: setRowContextMenuProps,
+    menuRef: rowMenuRef,
+    isContextMenuOpen: isRowContextMenuOpen,
+  } = useContextMenu();
   const { handleCellCopy } = useCellCopy();
   const { insertRow, deleteRow, updateRow, undo, redo } = useUpdateRows(csvArray, setCSVArray);
 
   function handleSelectContextMenu(value: string) {
-    if (contextMenuProps === null) {
+    if (rowContextMenuProps === null) {
       return;
     }
 
     if (value === "deleteRow") {
-      deleteRow(contextMenuProps.rowIdx);
+      deleteRow(rowContextMenuProps.rowIdx);
     } else if (value === "insertRowAbove") {
-      insertRow(contextMenuProps.rowIdx);
+      insertRow(rowContextMenuProps.rowIdx);
     } else if (value === "insertRowBelow") {
-      insertRow(contextMenuProps.rowIdx + 1);
+      insertRow(rowContextMenuProps.rowIdx + 1);
     }
   }
 
@@ -60,7 +65,7 @@ export const EditableTableRoot: FC<Props> = ({
   ) {
     event.preventGridDefault();
     event.preventDefault();
-    setContextMenuProps({
+    setRowContextMenuProps({
       rowIdx: rows.indexOf(args.row),
       top: event.clientY,
       left: event.clientX,
@@ -151,15 +156,15 @@ export const EditableTableRoot: FC<Props> = ({
           renderHeaderCell: (props) => CustomHeaderCell(props) as ReactNode,
         }}
       />
-      {isContextMenuOpen &&
+      {isRowContextMenuOpen &&
         createPortal(
-          <ContextMenu
-            isContextMenuOpen={isContextMenuOpen}
-            menuRef={menuRef}
-            contextMenuProps={contextMenuProps}
+          <RowContextMenu
+            isContextMenuOpen={isRowContextMenuOpen}
+            menuRef={rowMenuRef}
+            contextMenuProps={rowContextMenuProps}
             className={styles.contextMenu}
             onSelect={handleSelectContextMenu}
-            onClose={() => setContextMenuProps(null)}
+            onClose={() => setRowContextMenuProps(null)}
           />,
           document.body
         )}
