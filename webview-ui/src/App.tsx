@@ -1,16 +1,16 @@
 import { Message, UpdateMessage } from "@message/messageTypeToWebview";
 import { VscodeDivider } from "@vscode-elements/react-elements";
+import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
+import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { useCallback, useEffect, useState } from "react";
 import styles from "./App.module.scss";
 import { EditableTableRoot } from "./components/EditableTableRoot";
-import { debounce } from "./utilities/debounce";
-import { vscode } from "./utilities/vscode";
-import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
-import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { Header } from "./components/Header";
 import { RowSizeType } from "./types";
+import { debounce } from "./utilities/debounce";
+import { vscode } from "./utilities/vscode";
 
-function App() {
+export default function App() {
   const [rawText, setRawText] = useState("");
   const [csvArray, setCSVArray] = useState<Array<Array<string>>>([]);
 
@@ -82,6 +82,13 @@ function App() {
     setRawText(text);
   }
 
+  // function addColumn() {
+  //   const newArray = csvArray.map((row, index) => {
+  //     return [...row, index === 0 ? "new column" : ""];
+  //   });
+  //   updateCSVArray(newArray);
+  // }
+
   const [isIgnoreHeaderRow, setIsIgnoreHeaderRow] = useState(false);
   const [rowSize, setRowSize] = useState<RowSizeType>("normal");
 
@@ -109,5 +116,3 @@ function App() {
     </>
   );
 }
-
-export default App;

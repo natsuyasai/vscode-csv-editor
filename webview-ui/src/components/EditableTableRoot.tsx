@@ -1,4 +1,4 @@
-import { FC, useCallback, useEffect, useMemo } from "react";
+import { FC, ReactNode, useCallback, useEffect, useMemo } from "react";
 import styles from "./EditableTableRoot.module.scss";
 import {
   CellClickArgs,
@@ -7,6 +7,7 @@ import {
   CellMouseEvent,
   DataGrid,
   FillEvent,
+  RenderHeaderCellProps,
 } from "react-data-grid";
 import { useDirection } from "@/hooks/useDirection";
 import { createPortal } from "react-dom";
@@ -17,6 +18,7 @@ import { useCellCopy } from "@/hooks/useCellCopy";
 import { ContextMenu } from "./ContextMenu";
 import { useUpdateRows } from "@/hooks/useUpdateRows";
 import { RowSizeType } from "@/types";
+import { CustomHeaderCell } from "./CustomHeaderCell";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -145,6 +147,10 @@ export const EditableTableRoot: FC<Props> = ({
         direction={direction}
         onCellContextMenu={handleCellContextMenu}
         onCellKeyDown={handleKeyDown}
+        defaultColumnOptions={{
+          renderHeaderCell: (props) => CustomHeaderCell(props) as ReactNode,
+        }}
+        onCellClick={(e) => console.log(e)}
       />
       {isContextMenuOpen &&
         createPortal(
