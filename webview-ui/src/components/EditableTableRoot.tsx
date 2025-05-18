@@ -75,9 +75,9 @@ export const EditableTableRoot: FC<Props> = ({
 
     if (value === "deleteHeaderCel") {
       deleteCol(headerContextMenuProps.itemIdx);
-    } else if (value === "insertHeaderCelAbove") {
+    } else if (value === "insertHeaderCelLeft") {
       insertCol(headerContextMenuProps.itemIdx);
-    } else if (value === "insertHeaderCelBelow") {
+    } else if (value === "insertHeaderCelRight") {
       insertCol(headerContextMenuProps.itemIdx + 1);
     }
   }
