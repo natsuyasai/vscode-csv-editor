@@ -17,7 +17,7 @@ import { useColumns } from "@/hooks/useColumns";
 import { useContextMenu } from "@/hooks/useContextMenu";
 import { useCellCopy } from "@/hooks/useCellCopy";
 import { RowContextMenu } from "./RowContextMenu";
-import { useUpdateRows } from "@/hooks/useUpdateRows";
+import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { RowSizeType } from "@/types";
 import { CustomHeaderCell } from "./CustomHeaderCell";
 import { HeaderCelContextMenu } from "./HeaderCelContextMenu";
@@ -51,7 +51,7 @@ export const EditableTableRoot: FC<Props> = ({
     isContextMenuOpen: isHeaderContextMenuOpen,
   } = useContextMenu();
   const { handleCellCopy } = useCellCopy();
-  const { insertRow, deleteRow, updateRow, undo, redo } = useUpdateRows(csvArray, setCSVArray);
+  const { insertRow, deleteRow, updateRow, undo, redo } = useUpdateCsvArray(csvArray, setCSVArray);
 
   function handleSelectRowContextMenu(value: string) {
     if (rowContextMenuProps === null) {
