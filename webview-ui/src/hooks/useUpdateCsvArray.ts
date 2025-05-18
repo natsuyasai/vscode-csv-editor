@@ -75,5 +75,11 @@ export function useUpdateCsvArray(
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
 
-  return { insertRow, deleteRow, updateRow, undo, redo };
+  function insertCol(insertColIdx: number) {}
+
+  function deleteCol(deleteRowIdx: number) {}
+
+  function updateCol(updatedRows: Array<Record<string, string>>) {}
+
+  return { insertRow, deleteRow, updateRow, insertCol, deleteCol, updateCol, undo, redo };
 }
