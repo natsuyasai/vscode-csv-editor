@@ -75,9 +75,27 @@ export function useUpdateCsvArray(
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
 
-  function insertCol(insertColIdx: number) {}
+  function insertCol(insertColIdx: number) {
+    if (csvArray.length === 0) {
+      return;
+    }
+    const updatedCSVArray = csvArray.map((row, rowIdx) => {
+      const newRow = [...row];
+      newRow.splice(insertColIdx + 1, 0, rowIdx === 0 ? "new column" : "");
+      return newRow;
+    });
+    setCSVArrayAndPushHistory(updatedCSVArray);
+  }
 
-  function deleteCol(deleteRowIdx: number) {}
+  function deleteCol(deleteColIdx: number) {
+    if (csvArray.length === 0) return;
+    const updatedCSVArray = csvArray.map((row) => {
+      const newRow = [...row];
+      newRow.splice(deleteColIdx, 1);
+      return newRow;
+    });
+    setCSVArrayAndPushHistory(updatedCSVArray);
+  }
 
   function updateCol(updatedRows: Array<Record<string, string>>) {}
 
