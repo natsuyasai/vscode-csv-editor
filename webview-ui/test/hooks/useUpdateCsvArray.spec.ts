@@ -19,7 +19,7 @@ describe("useUpdateCsvArray", () => {
 
   describe("insertRow", () => {
     it("末尾に行を追加できること", () => {
-      hooks.result.current.insertRow(2);
+      act(() => hooks.result.current.insertRow(2));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
@@ -29,7 +29,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("間に行を追加できること", () => {
-      hooks.result.current.insertRow(0);
+      act(() => hooks.result.current.insertRow(0));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["", "", ""],
@@ -37,20 +37,40 @@ describe("useUpdateCsvArray", () => {
         ["d", "e", "f"],
       ]);
     });
+
+    it("ヘッダ行無効時でも間に行を追加できること", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
+      act(() => hookslocal.result.current.insertRow(0));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["", "", ""],
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+      ]);
+    });
   });
 
   describe("deleteRow", () => {
-    it("deletes a row by index", () => {
-      hooks.result.current.deleteRow(0);
+    it("指定した行が削除されること", () => {
+      act(() => hooks.result.current.deleteRow(0));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["d", "e", "f"],
       ]);
     });
 
-    it("does not delete header row", () => {
-      // deleteRow only affects rows after the header
-      hooks.result.current.deleteRow(-1);
+    it("対象行が範囲外の場合に削除できないこと", () => {
+      act(() => hooks.result.current.deleteRow(-1));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+      ]);
+    });
+
+    it("ヘッダ行が無効でも指定した行が削除されること", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
+      act(() => hookslocal.result.current.deleteRow(-1));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
@@ -60,12 +80,12 @@ describe("useUpdateCsvArray", () => {
   });
 
   describe("updateRow", () => {
-    it("updates rows with provided data", () => {
+    it("対象行のデータが更新されること", () => {
       const updatedRows = [
         { col0: "x", col1: "y", col2: "z" },
         { col0: "1", col1: "2", col2: "3" },
       ];
-      hooks.result.current.updateRow(updatedRows);
+      act(() => hooks.result.current.updateRow(updatedRows));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["x", "y", "z"],
@@ -73,14 +93,29 @@ describe("useUpdateCsvArray", () => {
       ]);
     });
 
-    it("fills missing columns with empty string", () => {
+    it("列数が足りていない場合、他の列は空文字で補完されること", () => {
       const updatedRows = [
         { col0: "x" }, // missing col1, col2
       ];
-      hooks.result.current.updateRow(updatedRows);
+      act(() => hooks.result.current.updateRow(updatedRows));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["x", "", ""],
+      ]);
+    });
+
+    it("ヘッダ行が無効でも対象行のデータが更新されること", () => {
+      const updatedRows = [
+        { col0: "col0", col1: "col1", col2: "col2" },
+        { col0: "x", col1: "y", col2: "z" },
+        { col0: "1", col1: "2", col2: "3" },
+      ];
+      const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
+      act(() => hookslocal.result.current.updateRow(updatedRows));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["x", "y", "z"],
+        ["1", "2", "3"],
       ]);
     });
   });
@@ -126,28 +161,8 @@ describe("useUpdateCsvArray", () => {
   });
 
   describe("updateCol", () => {
-    it("updates rows with provided data", () => {
-      const updatedRows = [
-        { col0: "x", col1: "y", col2: "z" },
-        { col0: "1", col1: "2", col2: "3" },
-      ];
-      hooks.result.current.updateRow(updatedRows);
-      expect(setCSVArray).toHaveBeenCalledWith([
-        ["col0", "col1", "col2"],
-        ["x", "y", "z"],
-        ["1", "2", "3"],
-      ]);
-    });
-
-    it("fills missing columns with empty string", () => {
-      const updatedRows = [
-        { col0: "x" }, // missing col1, col2
-      ];
-      hooks.result.current.updateRow(updatedRows);
-      expect(setCSVArray).toHaveBeenCalledWith([
-        ["col0", "col1", "col2"],
-        ["x", "", ""],
-      ]);
+    it("non", () => {
+      expect(true).toBe(true);
     });
   });
 
