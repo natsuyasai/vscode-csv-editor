@@ -1,4 +1,4 @@
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, useCallback, useEffect, useRef, useState } from "react";
 import { CalculatedColumn, RenderHeaderCellProps } from "react-data-grid";
 import styles from "./CustomHeaderCell.module.scss";
 
@@ -8,6 +8,10 @@ interface Props {
     e: MouseEvent
   ) => void;
   onHeaderEdit: (cellIdx: number, updateText: string) => void;
+  onKeyDown: (
+    cell: CalculatedColumn<NoInfer<Record<string, string>>, unknown>,
+    e: KeyboardEvent
+  ) => void;
 }
 
 export const CustomHeaderCell: FC<
@@ -23,9 +27,19 @@ export const CustomHeaderCell: FC<
     textAreaRef.current?.setSelectionRange(textLen, textLen);
   }, [isEditing]);
 
-  function handleContextMenu(e: Event) {
-    props.onHeaderCellContextMenu(props.column, e as MouseEvent);
-  }
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      props.onKeyDown(props.column, e);
+    },
+    [props.column]
+  );
+
+  const handleContextMenu = useCallback(
+    (e: Event) => {
+      props.onHeaderCellContextMenu(props.column, e as MouseEvent);
+    },
+    [props.column]
+  );
 
   function handleDoubleClick() {
     setIsEditing(true);
@@ -38,16 +52,18 @@ export const CustomHeaderCell: FC<
   }
 
   useEffect(() => {
+    ref.current?.parentElement?.addEventListener("keydown", handleKeyDown);
     ref.current?.parentElement?.addEventListener("contextmenu", handleContextMenu);
     ref.current?.parentElement?.addEventListener("dblclick", handleDoubleClick);
     window.addEventListener("click", handleWindowClick);
 
     return () => {
+      ref.current?.parentElement?.removeEventListener("keydown", handleKeyDown);
       ref.current?.parentElement?.removeEventListener("contextmenu", handleContextMenu);
       ref.current?.parentElement?.removeEventListener("dblclick", handleDoubleClick);
       window.removeEventListener("click", handleWindowClick);
     };
-  }, []);
+  }, [props.column]);
 
   return (
     <>
