@@ -68,16 +68,16 @@ export const EditableTableRoot: FC<Props> = ({
   }
 
   function handleSelectHeaderContextMenu(value: string) {
-    if (rowContextMenuProps === null) {
+    if (headerContextMenuProps === null) {
       return;
     }
 
-    if (value === "deleteCol") {
-      deleteRow(rowContextMenuProps.rowIdx);
-    } else if (value === "insertColAbove") {
-      insertRow(rowContextMenuProps.rowIdx);
-    } else if (value === "insertColBelow") {
-      insertRow(rowContextMenuProps.rowIdx + 1);
+    if (value === "deleteHeaderCel") {
+      console.log("deleteHeaderCel");
+    } else if (value === "insertHeaderCelAbove") {
+      console.log("insertHeaderCelAbove");
+    } else if (value === "insertHeaderCelBelow") {
+      console.log("insertHeaderCelBelow");
     }
   }
 
