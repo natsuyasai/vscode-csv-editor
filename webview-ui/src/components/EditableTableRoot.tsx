@@ -1,6 +1,7 @@
 import { FC, ReactNode, useCallback, useEffect, useMemo } from "react";
 import styles from "./EditableTableRoot.module.scss";
 import {
+  CalculatedColumn,
   CellClickArgs,
   CellKeyboardEvent,
   CellKeyDownArgs,
@@ -42,6 +43,12 @@ export const EditableTableRoot: FC<Props> = ({
     menuRef: rowMenuRef,
     isContextMenuOpen: isRowContextMenuOpen,
   } = useContextMenu();
+  const {
+    contextMenuProps: headerContextMenuProps,
+    setContextMenuProps: setHeaderContextMenuProps,
+    menuRef: headerMenuRef,
+    isContextMenuOpen: isHeaderContextMenuOpen,
+  } = useContextMenu();
   const { handleCellCopy } = useCellCopy();
   const { insertRow, deleteRow, updateRow, undo, redo } = useUpdateRows(csvArray, setCSVArray);
 
@@ -69,6 +76,18 @@ export const EditableTableRoot: FC<Props> = ({
       rowIdx: rows.indexOf(args.row),
       top: event.clientY,
       left: event.clientX,
+    });
+  }
+
+  function handleHeaderCellContextMenu(
+    cell: CalculatedColumn<NoInfer<Record<string, string>>, unknown>,
+    e: PointerEvent
+  ) {
+    e.preventDefault();
+    setHeaderContextMenuProps({
+      rowIdx: columns.indexOf(cell),
+      top: e.clientY,
+      left: e.clientX,
     });
   }
 
@@ -153,7 +172,11 @@ export const EditableTableRoot: FC<Props> = ({
         onCellContextMenu={handleCellContextMenu}
         onCellKeyDown={handleKeyDown}
         defaultColumnOptions={{
-          renderHeaderCell: (props) => CustomHeaderCell(props) as ReactNode,
+          renderHeaderCell: (props) =>
+            CustomHeaderCell({
+              ...props,
+              onHeaderCellContextMenu: handleHeaderCellContextMenu,
+            }) as ReactNode,
         }}
       />
       {isRowContextMenuOpen &&
@@ -165,6 +188,18 @@ export const EditableTableRoot: FC<Props> = ({
             className={styles.contextMenu}
             onSelect={handleSelectContextMenu}
             onClose={() => setRowContextMenuProps(null)}
+          />,
+          document.body
+        )}
+      {isHeaderContextMenuOpen &&
+        createPortal(
+          <RowContextMenu
+            isContextMenuOpen={isHeaderContextMenuOpen}
+            menuRef={headerMenuRef}
+            contextMenuProps={headerContextMenuProps}
+            className={styles.contextMenu}
+            onSelect={() => {}}
+            onClose={() => setHeaderContextMenuProps(null)}
           />,
           document.body
         )}
