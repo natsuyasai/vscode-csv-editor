@@ -24,14 +24,28 @@ export default function App() {
     [rawText]
   );
   useEffect(() => {
-    window.addEventListener("message", (event: MessageEvent<Message>) => {
-      handleMessagesFromExtension(event);
-    });
+    window.addEventListener("message", handleMessagesFromExtension);
 
     return () => {
       window.removeEventListener("message", handleMessagesFromExtension);
     };
   }, [handleMessagesFromExtension]);
+
+  function handleKeyDown(e: KeyboardEvent) {
+    const key = e.key.toUpperCase();
+    if (key === "S" && e.ctrlKey) {
+      e.stopPropagation();
+      handleApply();
+      return;
+    }
+  }
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleKeyDown]);
 
   const handleReloadWebview = () => {
     vscode.postMessage({
@@ -81,13 +95,6 @@ export default function App() {
     const text = csvStringfy(csv);
     setRawText(text);
   }
-
-  // function addColumn() {
-  //   const newArray = csvArray.map((row, index) => {
-  //     return [...row, index === 0 ? "new column" : ""];
-  //   });
-  //   updateCSVArray(newArray);
-  // }
 
   const [isIgnoreHeaderRow, setIsIgnoreHeaderRow] = useState(false);
   const [rowSize, setRowSize] = useState<RowSizeType>("normal");

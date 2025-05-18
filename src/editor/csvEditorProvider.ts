@@ -143,7 +143,8 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     // Just replace the entire document every time for this example extension.
     // A more complete extension should compute minimal edits instead.
     edit.replace(document.uri, new vscode.Range(0, 0, document.lineCount, 0), jsonString);
+    vscode.workspace.applyEdit(edit);
 
-    return vscode.workspace.applyEdit(edit);
+    return vscode.workspace.save(document.uri);
   }
 }
