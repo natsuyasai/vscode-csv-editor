@@ -51,7 +51,8 @@ export const EditableTableRoot: FC<Props> = ({
     isContextMenuOpen: isHeaderContextMenuOpen,
   } = useContextMenu();
   const { handleCellCopy } = useCellCopy();
-  const { insertRow, deleteRow, updateRow, undo, redo } = useUpdateCsvArray(csvArray, setCSVArray);
+  const { insertRow, deleteRow, updateRow, insertCol, deleteCol, updateCol, undo, redo } =
+    useUpdateCsvArray(csvArray, setCSVArray);
 
   function handleSelectRowContextMenu(value: string) {
     if (rowContextMenuProps === null) {
@@ -73,11 +74,11 @@ export const EditableTableRoot: FC<Props> = ({
     }
 
     if (value === "deleteHeaderCel") {
-      console.log("deleteHeaderCel");
+      deleteCol(headerContextMenuProps.itemIdx);
     } else if (value === "insertHeaderCelAbove") {
-      console.log("insertHeaderCelAbove");
+      insertCol(headerContextMenuProps.itemIdx);
     } else if (value === "insertHeaderCelBelow") {
-      console.log("insertHeaderCelBelow");
+      insertCol(headerContextMenuProps.itemIdx + 1);
     }
   }
 
