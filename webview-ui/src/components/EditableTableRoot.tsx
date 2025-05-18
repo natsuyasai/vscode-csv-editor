@@ -20,6 +20,7 @@ import { RowContextMenu } from "./RowContextMenu";
 import { useUpdateRows } from "@/hooks/useUpdateRows";
 import { RowSizeType } from "@/types";
 import { CustomHeaderCell } from "./CustomHeaderCell";
+import { HeaderCelContextMenu } from "./HeaderCelContextMenu";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -52,7 +53,7 @@ export const EditableTableRoot: FC<Props> = ({
   const { handleCellCopy } = useCellCopy();
   const { insertRow, deleteRow, updateRow, undo, redo } = useUpdateRows(csvArray, setCSVArray);
 
-  function handleSelectContextMenu(value: string) {
+  function handleSelectRowContextMenu(value: string) {
     if (rowContextMenuProps === null) {
       return;
     }
@@ -62,6 +63,20 @@ export const EditableTableRoot: FC<Props> = ({
     } else if (value === "insertRowAbove") {
       insertRow(rowContextMenuProps.rowIdx);
     } else if (value === "insertRowBelow") {
+      insertRow(rowContextMenuProps.rowIdx + 1);
+    }
+  }
+
+  function handleSelectHeaderContextMenu(value: string) {
+    if (rowContextMenuProps === null) {
+      return;
+    }
+
+    if (value === "deleteCol") {
+      deleteRow(rowContextMenuProps.rowIdx);
+    } else if (value === "insertColAbove") {
+      insertRow(rowContextMenuProps.rowIdx);
+    } else if (value === "insertColBelow") {
       insertRow(rowContextMenuProps.rowIdx + 1);
     }
   }
@@ -186,19 +201,19 @@ export const EditableTableRoot: FC<Props> = ({
             menuRef={rowMenuRef}
             contextMenuProps={rowContextMenuProps}
             className={styles.contextMenu}
-            onSelect={handleSelectContextMenu}
+            onSelect={handleSelectRowContextMenu}
             onClose={() => setRowContextMenuProps(null)}
           />,
           document.body
         )}
       {isHeaderContextMenuOpen &&
         createPortal(
-          <RowContextMenu
+          <HeaderCelContextMenu
             isContextMenuOpen={isHeaderContextMenuOpen}
             menuRef={headerMenuRef}
             contextMenuProps={headerContextMenuProps}
             className={styles.contextMenu}
-            onSelect={() => {}}
+            onSelect={handleSelectHeaderContextMenu}
             onClose={() => setHeaderContextMenuProps(null)}
           />,
           document.body
