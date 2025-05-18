@@ -140,6 +140,28 @@ export const EditableTableRoot: FC<Props> = ({
     }
   }
 
+  function handleKeyDownHeaderCell(
+    cell: CalculatedColumn<NoInfer<Record<string, string>>, unknown>,
+    e: KeyboardEvent
+  ) {
+    const key = e.key.toUpperCase();
+    if (key === "D" && e.ctrlKey && e.shiftKey) {
+      e.stopPropagation();
+      deleteCol(cell.idx);
+      return;
+    }
+    if (key === "L" && e.ctrlKey && e.shiftKey) {
+      e.stopPropagation();
+      insertCol(cell.idx);
+      return;
+    }
+    if (key === "R" && e.ctrlKey && e.shiftKey) {
+      e.stopPropagation();
+      insertCol(cell.idx + 1);
+      return;
+    }
+  }
+
   function handleKeyDownForDocument(e: KeyboardEvent) {
     const key = e.key.toUpperCase();
     if (key === "Z" && e.ctrlKey) {
@@ -197,6 +219,7 @@ export const EditableTableRoot: FC<Props> = ({
               ...props,
               onHeaderCellContextMenu: handleHeaderCellContextMenu,
               onHeaderEdit: handleHeaderEdit,
+              onKeyDown: handleKeyDownHeaderCell,
             }) as ReactNode,
         }}
       />
