@@ -101,7 +101,7 @@ export const EditableTableRoot: FC<Props> = ({
   ) {
     e.preventDefault();
     setHeaderContextMenuProps({
-      itemIdx: columns.indexOf(cell),
+      itemIdx: cell.idx,
       top: e.clientY,
       left: e.clientX,
     });
