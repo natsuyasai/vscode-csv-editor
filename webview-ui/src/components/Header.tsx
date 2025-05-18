@@ -61,7 +61,7 @@ export const Header: FC<Props> = ({
           </VscodeSingleSelect>
         </div>
         <VscodeButton className={styles.applyButton} onClick={(e) => onClickApply()}>
-          Apply
+          Save
         </VscodeButton>
       </div>
     </>
