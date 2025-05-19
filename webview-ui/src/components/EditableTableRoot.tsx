@@ -1,4 +1,4 @@
-import { FC, ReactNode, useCallback, useEffect, useMemo } from "react";
+import { FC, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./EditableTableRoot.module.scss";
 import {
   CalculatedColumn,
@@ -21,6 +21,7 @@ import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { RowSizeType } from "@/types";
 import { CustomHeaderCell } from "./CustomHeaderCell";
 import { HeaderCelContextMenu } from "./HeaderCelContextMenu";
+import { CustomCell } from "./CustomCell";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -198,6 +199,12 @@ export const EditableTableRoot: FC<Props> = ({
     }
   }, [rowSize]);
 
+  // const [rowHeight, setRowHeight] = useState(40);
+
+  // function handleUpdateRowHeight(rowIdx: number, height: number) {
+  //   setRowHeight(height);
+  // }
+
   return (
     <>
       <DataGrid
@@ -206,13 +213,21 @@ export const EditableTableRoot: FC<Props> = ({
         columns={columns}
         rows={rows}
         rowHeight={rowHeight}
-        // rowKeyGetter={(row) => row.col0}
+        rowKeyGetter={(row) => crypto.randomUUID()}
         onRowsChange={updateRow}
         onFill={handleFill}
         onCellCopy={handleCellCopy}
         direction={direction}
         onCellContextMenu={handleCellContextMenu}
         onCellKeyDown={handleKeyDown}
+        renderers={{
+          renderCell: (key, props) =>
+            CustomCell({
+              ...props,
+              rowKey: key,
+              onUpdateRowHeight: () => {},
+            }) as ReactNode,
+        }}
         defaultColumnOptions={{
           renderHeaderCell: (props) =>
             CustomHeaderCell({
