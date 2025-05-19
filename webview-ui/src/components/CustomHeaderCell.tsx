@@ -85,7 +85,7 @@ export const CustomHeaderCell: FC<
           onKeyDown={(e) => {
             if (e.key === "Enter" && e.shiftKey) {
               props.onHeaderEdit(props.column.idx, (e.target as HTMLTextAreaElement).value);
-            } else if (e.key === "Enter") {
+            } else if (e.key === "Enter" || e.key === "Tab") {
               setIsEditing(false);
             } else if (
               e.key === "ArrowDown" ||
