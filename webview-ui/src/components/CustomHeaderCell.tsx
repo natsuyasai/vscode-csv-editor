@@ -42,7 +42,10 @@ export const CustomHeaderCell: FC<
     [props.column]
   );
 
-  function handleDoubleClick() {
+  function handleDoubleClick(e: Event) {
+    if (e.target !== ref.current?.parentElement) {
+      return;
+    }
     setIsEditing(true);
   }
 
