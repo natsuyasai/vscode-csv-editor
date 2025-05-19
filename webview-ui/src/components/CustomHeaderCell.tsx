@@ -30,6 +30,9 @@ export const CustomHeaderCell: FC<
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      if (e.key === "F2") {
+        setIsEditing(true);
+      }
       props.onKeyDown(props.column, e);
     },
     [props.column]
