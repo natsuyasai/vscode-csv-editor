@@ -22,6 +22,7 @@ import { RowSizeType } from "@/types";
 import { CustomHeaderCell } from "./CustomHeaderCell";
 import { HeaderCelContextMenu } from "./HeaderCelContextMenu";
 import { CustomCell } from "./CustomCell";
+import { CustomRow } from "./CustomRow";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -221,6 +222,12 @@ export const EditableTableRoot: FC<Props> = ({
         onCellContextMenu={handleCellContextMenu}
         onCellKeyDown={handleKeyDown}
         renderers={{
+          // renderRow: (key, props) =>
+          //   CustomRow({
+          //     ...props,
+          //     rowKey: key,
+          //     onUpdateRowHeight: () => {},
+          //   }) as ReactNode,
           renderCell: (key, props) =>
             CustomCell({
               ...props,
