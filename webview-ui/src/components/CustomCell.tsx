@@ -14,45 +14,35 @@ export const CustomCell: FC<CellRendererProps<NoInfer<Record<string, string>>, u
   const startY = useRef(0);
   const [isResizing, setIsResizing] = useState(false);
 
-  function handleMouseDown(e: MouseEvent) {
+  function handleMouseDown(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
     setIsResizing(true);
     startY.current = e.clientY - (refCell.current?.getBoundingClientRect()?.height ?? 0);
   }
 
-  function handleMouseUp(e: MouseEvent) {
+  function handleMouseUp(_e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
     setIsResizing(false);
   }
 
-  useEffect(() => {
-    refCell.current?.addEventListener("mousedown", handleMouseDown);
-    refCell.current?.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      refCell.current?.removeEventListener("mousedown", handleMouseDown);
-      refCell.current?.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, []);
-
-  useLayoutEffect(() => {
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
     if (!isResizing) {
       return;
     }
-    function handleMouseMove(e: MouseEvent) {
-      if (!isResizing) {
-        return;
-      }
-      const height = e.clientY - startY.current;
-      const minHeight = 24;
-      if (height < minHeight) {
-        return;
-      }
-      props.onUpdateRowHeight(props.rowIdx, height);
+    const height = e.clientY - startY.current;
+    const minHeight = 24;
+    if (height < minHeight) {
+      return;
     }
+    props.onUpdateRowHeight(props.rowIdx, height);
+  }
 
-    refCell.current?.addEventListener("mousemove", handleMouseMove);
-    return () => {
-      refCell.current?.removeEventListener("mousemove", handleMouseMove);
-    };
-  }, [isResizing]);
-
-  return <Cell ref={refCell} key={props.rowKey} className={styles.cell} {...props}></Cell>;
+  return (
+    <Cell
+      ref={refCell}
+      key={props.rowKey}
+      className={styles.cell}
+      {...props}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}></Cell>
+  );
 };
