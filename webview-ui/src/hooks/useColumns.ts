@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Column } from "react-data-grid";
-import TextAreaEditor from "@/components/TextAreaEditor";
+import TextAreaEditor from "@/components/Row/TextAreaEditor";
 
 export function useColumns(csvArray: Array<Array<string>>, isIgnoreHeaderRow: boolean) {
   const empty: Column<Record<string, string>>[] = [];
