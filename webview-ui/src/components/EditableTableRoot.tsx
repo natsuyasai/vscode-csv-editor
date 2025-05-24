@@ -16,13 +16,13 @@ import { useRows } from "@/hooks/useRows";
 import { useColumns } from "@/hooks/useColumns";
 import { useContextMenu } from "@/hooks/useContextMenu";
 import { useCellCopy } from "@/hooks/useCellCopy";
-import { RowContextMenu } from "./RowContextMenu";
+import { RowContextMenu } from "./Row/RowContextMenu";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { RowSizeType } from "@/types";
-import { CustomHeaderCell } from "./CustomHeaderCell";
-import { HeaderCelContextMenu } from "./HeaderCelContextMenu";
-import { CustomCell } from "./CustomCell";
-import { CustomRow } from "./CustomRow";
+import { CustomHeaderCell } from "./Header/CustomHeaderCell";
+import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
+import { CustomCell } from "./Row/CustomCell";
+import { CustomRow } from "./Row/CustomRow";
 
 interface Props {
   csvArray: Array<Array<string>>;
