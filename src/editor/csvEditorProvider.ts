@@ -137,12 +137,12 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     `;
   }
 
-  private updateTextDocument(document: vscode.TextDocument, jsonString: string) {
+  private updateTextDocument(document: vscode.TextDocument, csvText: string) {
     const edit = new vscode.WorkspaceEdit();
 
     // Just replace the entire document every time for this example extension.
     // A more complete extension should compute minimal edits instead.
-    edit.replace(document.uri, new vscode.Range(0, 0, document.lineCount, 0), jsonString);
+    edit.replace(document.uri, new vscode.Range(0, 0, document.lineCount, 0), csvText);
     vscode.workspace.applyEdit(edit);
 
     return vscode.workspace.save(document.uri);
