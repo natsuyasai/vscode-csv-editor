@@ -132,5 +132,26 @@ export function useUpdateCsvArray(
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
 
-  return { insertRow, deleteRow, updateRow, insertCol, deleteCol, updateCol, undo, redo };
+  function swapColumns(sourceIdx: number, targetIdx: number) {
+    const newCsvArray = csvArray.map((row) => {
+      const newRow = [...row];
+      const [movedCell] = newRow.splice(sourceIdx, 1);
+      newRow.splice(targetIdx, 0, movedCell);
+      return newRow;
+    });
+
+    setCSVArrayAndPushHistory(newCsvArray);
+  }
+
+  return {
+    insertRow,
+    deleteRow,
+    updateRow,
+    insertCol,
+    deleteCol,
+    updateCol,
+    swapColumns,
+    undo,
+    redo,
+  };
 }

@@ -320,4 +320,49 @@ describe("useUpdateCsvArray", () => {
       ]);
     });
   });
+  describe("swapColumns", () => {
+    it("指定した2つの列の位置が入れ替わること", () => {
+      act(() => hooks.result.current.swapColumns(0, 2));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col1", "col2", "col0"],
+        ["b", "c", "a"],
+        ["e", "f", "d"],
+      ]);
+    });
+
+    it("同じ列インデックスを指定した場合、配列が変化しないこと", () => {
+      act(() => hooks.result.current.swapColumns(1, 1));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+      ]);
+    });
+
+    it("先頭と末尾の列を入れ替えられること", () => {
+      act(() => hooks.result.current.swapColumns(0, 2));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col1", "col2", "col0"],
+        ["b", "c", "a"],
+        ["e", "f", "d"],
+      ]);
+    });
+
+    it("2列目と1列目を入れ替えられること", () => {
+      act(() => hooks.result.current.swapColumns(1, 0));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col1", "col0", "col2"],
+        ["b", "a", "c"],
+        ["e", "d", "f"],
+      ]);
+    });
+
+    it("空のcsvArrayの場合、何も起きないこと", () => {
+      const emptyArray: string[][] = [];
+      const setCSVArrayMock = vi.fn();
+      const hooksEmpty = renderHook(() => useUpdateCsvArray(emptyArray, setCSVArrayMock, false));
+      act(() => hooksEmpty.result.current.swapColumns(0, 1));
+      expect(setCSVArrayMock).toHaveBeenCalledWith([]);
+    });
+  });
 });
