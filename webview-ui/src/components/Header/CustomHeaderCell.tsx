@@ -19,6 +19,7 @@ export const CustomHeaderCell: FC<
   RenderHeaderCellProps<NoInfer<Record<string, string>>, unknown> & Props
 > = (props) => {
   const ref = useRef<HTMLSpanElement>(null);
+  const headerTextRef = useRef<HTMLSpanElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -46,7 +47,7 @@ export const CustomHeaderCell: FC<
   );
 
   function handleDoubleClick(e: Event) {
-    if (e.target !== ref.current?.parentElement) {
+    if (e.target !== headerTextRef.current) {
       return;
     }
     setIsEditing(true);
@@ -77,35 +78,53 @@ export const CustomHeaderCell: FC<
 
   return (
     <>
-      {!props.isIgnoreHeaderRow && isEditing && (
-        <textarea
-          ref={textAreaRef}
-          className={styles.textArea}
-          value={props.column.name as string}
-          onChange={(e) => {
-            props.onHeaderEdit(props.column.idx, e.target.value);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && e.shiftKey) {
-              props.onHeaderEdit(props.column.idx, (e.target as HTMLTextAreaElement).value);
-            } else if (e.key === "Enter" || e.key === "Tab") {
-              setIsEditing(false);
-            } else if (
-              e.key === "ArrowDown" ||
-              e.key === "ArrowLeft" ||
-              e.key === "ArrowRight" ||
-              e.key === "ArrowUp" ||
-              e.key === "End" ||
-              e.key === "Home" ||
-              e.key === "PageDown" ||
-              e.key === "PageUp"
-            ) {
-              // DataGridの移動処理を止める
+      <span ref={ref} className={styles.cellRoot}>
+        {!props.isIgnoreHeaderRow && isEditing && (
+          <textarea
+            ref={textAreaRef}
+            className={styles.textArea}
+            value={props.column.name as string}
+            onChange={(e) => {
+              props.onHeaderEdit(props.column.idx, e.target.value);
+            }}
+            onClick={(e) => {
               e.stopPropagation();
-            }
-          }}></textarea>
-      )}
-      {!isEditing && <span ref={ref}>{props.column.name}</span>}
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.shiftKey) {
+                props.onHeaderEdit(props.column.idx, (e.target as HTMLTextAreaElement).value);
+              } else if (e.key === "Enter" || e.key === "Tab" || e.key === "Escape") {
+                setIsEditing(false);
+              } else if (
+                e.key === "ArrowDown" ||
+                e.key === "ArrowLeft" ||
+                e.key === "ArrowRight" ||
+                e.key === "ArrowUp" ||
+                e.key === "End" ||
+                e.key === "Home" ||
+                e.key === "PageDown" ||
+                e.key === "PageUp"
+              ) {
+                // DataGridの移動処理を止める
+                e.stopPropagation();
+              }
+            }}></textarea>
+        )}
+        {!isEditing && (
+          <span ref={headerTextRef} className={styles.headerText}>
+            {props.column.name}
+          </span>
+        )}
+
+        <span className={styles.sortDirection}>
+          {props.sortDirection !== undefined
+            ? props.sortDirection === "ASC"
+              ? "\u2B9D"
+              : "\u2B9F"
+            : null}
+        </span>
+        <span>{props.priority}</span>
+      </span>
     </>
   );
 };

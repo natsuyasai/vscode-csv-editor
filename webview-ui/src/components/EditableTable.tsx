@@ -9,6 +9,7 @@ import {
   DataGrid,
   FillEvent,
   RenderHeaderCellProps,
+  RenderSortStatusProps,
 } from "react-data-grid";
 import { createPortal } from "react-dom";
 import { useRows } from "@/hooks/useRows";
@@ -31,7 +32,7 @@ interface Props {
 }
 
 export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize, setCSVArray }) => {
-  const { rows } = useRows(csvArray, isIgnoreHeaderRow);
+  const { rows, sortedRows, sortColumns, setSortColumns } = useRows(csvArray, isIgnoreHeaderRow);
   const { columns } = useColumns(csvArray, isIgnoreHeaderRow);
   const {
     contextMenuProps: rowContextMenuProps,
@@ -205,10 +206,12 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
         className={styles.dataGrid}
         enableVirtualization={true}
         columns={columns}
-        rows={rows}
+        rows={sortedRows}
         rowHeight={rowHeight}
         rowKeyGetter={(row) => crypto.randomUUID()}
         onRowsChange={updateRow}
+        sortColumns={sortColumns}
+        onSortColumnsChange={setSortColumns}
         onFill={handleFill}
         onCellCopy={handleCellCopy}
         onCellContextMenu={handleCellContextMenu}
@@ -236,6 +239,9 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
               onHeaderEdit: handleHeaderEdit,
               onKeyDown: handleKeyDownHeaderCell,
             }) as ReactNode,
+          sortable: true,
+          draggable: true,
+          resizable: true,
         }}
       />
       {isRowContextMenuOpen &&
