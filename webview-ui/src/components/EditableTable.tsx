@@ -48,8 +48,17 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     isContextMenuOpen: isHeaderContextMenuOpen,
   } = useContextMenu();
   const { handleCellCopy } = useCellCopy();
-  const { insertRow, deleteRow, updateRow, insertCol, deleteCol, updateCol, undo, redo } =
-    useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
+  const {
+    insertRow,
+    deleteRow,
+    updateRow,
+    insertCol,
+    deleteCol,
+    updateCol,
+    swapColumns,
+    undo,
+    redo,
+  } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
 
   function handleSelectRowContextMenu(value: string) {
     if (rowContextMenuProps === null) {
@@ -205,6 +214,15 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     SortColumn[]
   >([]);
 
+  function handleColumnsReorder(sourceKey: string, targetKey: string) {
+    const sourceIdx = columns.findIndex((col) => col.key === sourceKey);
+    const targetIdx = columns.findIndex((col) => col.key === targetKey);
+    if (sourceIdx === -1 || targetIdx === -1 || sourceIdx === targetIdx) {
+      return;
+    }
+    swapColumns(sourceIdx, targetIdx);
+  }
+
   return (
     <>
       <DataGrid
@@ -224,6 +242,7 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
         onCellCopy={handleCellCopy}
         onCellContextMenu={handleCellContextMenu}
         onCellKeyDown={handleKeyDown}
+        onColumnsReorder={handleColumnsReorder}
         renderers={{
           // renderRow: (key, props) =>
           //   CustomRow({
