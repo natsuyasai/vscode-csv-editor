@@ -1,9 +1,10 @@
 import { FC, useCallback, useEffect, useRef, useState } from "react";
-import { CalculatedColumn, RenderHeaderCellProps } from "react-data-grid";
+import { CalculatedColumn, RenderHeaderCellProps, SortColumn } from "react-data-grid";
 import styles from "./CustomHeaderCell.module.scss";
 
 interface Props {
   isIgnoreHeaderRow: boolean;
+  sortColumnsForWaitingDoubleClick: SortColumn[];
   onHeaderCellContextMenu: (
     cell: CalculatedColumn<NoInfer<Record<string, string>>, unknown>,
     e: MouseEvent
@@ -13,6 +14,8 @@ interface Props {
     cell: CalculatedColumn<NoInfer<Record<string, string>>, unknown>,
     e: KeyboardEvent
   ) => void;
+  onCanSortColumnsChange: (sortColumns: SortColumn[]) => void;
+  onDoubleClick: () => void;
 }
 
 export const CustomHeaderCell: FC<
@@ -22,6 +25,7 @@ export const CustomHeaderCell: FC<
   const headerTextRef = useRef<HTMLSpanElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const WAIT_DOUBLE_CLICK_TH_MS = 200;
 
   useEffect(() => {
     textAreaRef.current?.focus();
@@ -46,12 +50,38 @@ export const CustomHeaderCell: FC<
     [props.column]
   );
 
-  function handleDoubleClick(e: Event) {
-    if (e.target !== headerTextRef.current) {
-      return;
-    }
-    setIsEditing(true);
-  }
+  const setTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleClick = useCallback(
+    (e: Event) => {
+      if (e.target !== headerTextRef.current) {
+        return;
+      }
+      if (setTimeoutRef.current !== null) {
+        return;
+      }
+
+      setTimeoutRef.current = setTimeout(() => {
+        setTimeoutRef.current = null;
+        props.onCanSortColumnsChange(props.sortColumnsForWaitingDoubleClick);
+      }, WAIT_DOUBLE_CLICK_TH_MS);
+    },
+    [props.sortColumnsForWaitingDoubleClick]
+  );
+
+  const handleDoubleClick = useCallback(
+    (e: Event) => {
+      if (e.target !== headerTextRef.current) {
+        return;
+      }
+      if (setTimeoutRef.current) {
+        clearTimeout(setTimeoutRef.current);
+        setTimeoutRef.current = null;
+      }
+      setIsEditing(true);
+      props.onDoubleClick();
+    },
+    [props.sortColumnsForWaitingDoubleClick]
+  );
 
   function handleWindowClick(e: MouseEvent) {
     if (e.target !== textAreaRef.current) {
@@ -66,13 +96,25 @@ export const CustomHeaderCell: FC<
     ref.current?.parentElement?.addEventListener("keydown", handleKeyDown);
     ref.current?.parentElement?.addEventListener("contextmenu", handleContextMenu);
     ref.current?.parentElement?.addEventListener("dblclick", handleDoubleClick);
+    ref.current?.parentElement?.addEventListener("click", handleClick);
     window.addEventListener("click", handleWindowClick);
+    if (setTimeoutRef) {
+      // クリック判定待ちタイマーが起動していた場合は再度最新の情報でタイマーをセットしなおす
+      setTimeoutRef.current = setTimeout(() => {
+        setTimeoutRef.current = null;
+        props.onCanSortColumnsChange(props.sortColumnsForWaitingDoubleClick);
+      }, WAIT_DOUBLE_CLICK_TH_MS);
+    }
 
     return () => {
       ref.current?.parentElement?.removeEventListener("keydown", handleKeyDown);
       ref.current?.parentElement?.removeEventListener("contextmenu", handleContextMenu);
       ref.current?.parentElement?.removeEventListener("dblclick", handleDoubleClick);
+      ref.current?.parentElement?.removeEventListener("click", handleClick);
       window.removeEventListener("click", handleWindowClick);
+      if (setTimeoutRef.current) {
+        clearTimeout(setTimeoutRef.current);
+      }
     };
   }, [props.column, props.isIgnoreHeaderRow]);
 

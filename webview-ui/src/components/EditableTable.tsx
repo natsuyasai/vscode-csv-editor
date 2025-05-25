@@ -1,4 +1,4 @@
-import { FC, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { FC, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./EditableTable.module.scss";
 import {
   CalculatedColumn,
@@ -10,6 +10,7 @@ import {
   FillEvent,
   RenderHeaderCellProps,
   RenderSortStatusProps,
+  SortColumn,
 } from "react-data-grid";
 import { createPortal } from "react-dom";
 import { useRows } from "@/hooks/useRows";
@@ -200,6 +201,10 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
   //   setRowHeight(height);
   // }
 
+  const [sortColumnsForWaitingDoubleClick, setSortColumnsForWaitingDoubleClick] = useState<
+    SortColumn[]
+  >([]);
+
   return (
     <>
       <DataGrid
@@ -211,7 +216,10 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
         rowKeyGetter={(row) => crypto.randomUUID()}
         onRowsChange={updateRow}
         sortColumns={sortColumns}
-        onSortColumnsChange={setSortColumns}
+        onSortColumnsChange={(sortColumns) => {
+          // ヘッダの編集用のダブルクリックの判定を待つ必要があるため、保持だけして何もしない
+          setSortColumnsForWaitingDoubleClick(sortColumns);
+        }}
         onFill={handleFill}
         onCellCopy={handleCellCopy}
         onCellContextMenu={handleCellContextMenu}
@@ -235,9 +243,16 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
             CustomHeaderCell({
               ...props,
               isIgnoreHeaderRow,
+              sortColumnsForWaitingDoubleClick: sortColumnsForWaitingDoubleClick,
               onHeaderCellContextMenu: handleHeaderCellContextMenu,
               onHeaderEdit: handleHeaderEdit,
               onKeyDown: handleKeyDownHeaderCell,
+              onCanSortColumnsChange: (sortColumns) => {
+                setSortColumns(sortColumns);
+              },
+              onDoubleClick: () => {
+                setSortColumnsForWaitingDoubleClick([]);
+              },
             }) as ReactNode,
           sortable: true,
           draggable: true,
