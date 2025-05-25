@@ -28,7 +28,7 @@ export function useUpdateCsvArray(
   }
 
   function setCSVArrayAndPushHistory(newArray: Array<Array<string>>) {
-    setHistory([...history, csvArray]);
+    setHistory((prevHistory) => [...prevHistory, csvArray]);
     setCSVArray(newArray);
   }
 
