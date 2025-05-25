@@ -4,9 +4,15 @@ import TextAreaEditor from "@/components/Row/TextAreaEditor";
 
 export function useColumns(csvArray: Array<Array<string>>, isIgnoreHeaderRow: boolean) {
   const empty: Column<Record<string, string>>[] = [];
-  const columns = useMemo(() => createColumns(csvArray), [csvArray, isIgnoreHeaderRow]);
+  const columns = useMemo(
+    () => createColumns(csvArray, isIgnoreHeaderRow),
+    [csvArray, isIgnoreHeaderRow]
+  );
 
-  function createColumns(csvArray: Array<Array<string>>): Column<Record<string, string>>[] {
+  function createColumns(
+    csvArray: Array<Array<string>>,
+    isIgnoreHeaderRow: boolean
+  ): Column<Record<string, string>>[] {
     if (csvArray.length === 0) {
       return empty;
     }
