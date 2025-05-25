@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { useRows } from "@/hooks/useRows";
 
 describe("useRows", () => {
@@ -65,6 +65,72 @@ describe("useRows", () => {
     expect(result.current.rows).toEqual([
       { col0: "B1", col1: "B2" },
       { col0: "C1", col1: "C2" },
+    ]);
+  });
+
+  it("sortedRows: ソート条件が指定された場合、昇順でソートされること", () => {
+    const csvArray = [
+      ["Header1", "Header2"],
+      ["B", "2"],
+      ["A", "1"],
+      ["C", "3"],
+    ];
+    const { result } = renderHook(() => useRows(csvArray, false));
+    // 初期状態はソートなし
+    expect(result.current.sortedRows).toEqual([
+      { col0: "B", col1: "2" },
+      { col0: "A", col1: "1" },
+      { col0: "C", col1: "3" },
+    ]);
+    // col0で昇順ソート
+    act(() => {
+      result.current.setSortColumns([{ columnKey: "col0", direction: "ASC" }]);
+    });
+    expect(result.current.sortedRows).toEqual([
+      { col0: "A", col1: "1" },
+      { col0: "B", col1: "2" },
+      { col0: "C", col1: "3" },
+    ]);
+  });
+
+  it("sortedRows: ソート条件が指定された場合、降順でソートされること", () => {
+    const csvArray = [
+      ["Header1", "Header2"],
+      ["B", "2"],
+      ["A", "1"],
+      ["C", "3"],
+    ];
+    const { result } = renderHook(() => useRows(csvArray, false));
+    // col1で降順ソート
+    act(() => {
+      result.current.setSortColumns([{ columnKey: "col1", direction: "DESC" }]);
+    });
+    expect(result.current.sortedRows).toEqual([
+      { col0: "C", col1: "3" },
+      { col0: "B", col1: "2" },
+      { col0: "A", col1: "1" },
+    ]);
+  });
+
+  it("sortedRows: 複数カラムでソートできること", () => {
+    const csvArray = [
+      ["Header1", "Header2"],
+      ["A", "2"],
+      ["A", "1"],
+      ["B", "1"],
+    ];
+    const { result } = renderHook(() => useRows(csvArray, false));
+    // col0昇順, col1昇順
+    act(() => {
+      result.current.setSortColumns([
+        { columnKey: "col0", direction: "ASC" },
+        { columnKey: "col1", direction: "ASC" },
+      ]);
+    });
+    expect(result.current.sortedRows).toEqual([
+      { col0: "A", col1: "1" },
+      { col0: "A", col1: "2" },
+      { col0: "B", col1: "1" },
     ]);
   });
 });
