@@ -205,6 +205,38 @@ describe("useUpdateCsvArray", () => {
         ["d", "e", "f"],
       ]);
     });
+
+    it("undo操作を履歴が空の状態で行っても何も起きないこと", () => {
+      act(() => hooks.result.current.undo());
+      // setCSVArray should not be called since there is no history
+      expect(setCSVArray).not.toHaveBeenCalled();
+    });
+
+    it("redo操作を履歴が空の状態で行っても何も起きないこと", () => {
+      act(() => hooks.result.current.redo());
+      // setCSVArray should not be called since there is no poppedHistory
+      expect(setCSVArray).not.toHaveBeenCalled();
+    });
+
+    it("複数回undoした後にredoで状態が戻ること", () => {
+      act(() => hooks.result.current.insertRow(2));
+      act(() => hooks.result.current.insertCol(1));
+      act(() => hooks.result.current.deleteRow(1));
+      // Undo 3 times
+      act(() => hooks.result.current.undo());
+      act(() => hooks.result.current.undo());
+      act(() => hooks.result.current.undo());
+      // Redo 3 times
+      act(() => hooks.result.current.redo());
+      act(() => hooks.result.current.redo());
+      act(() => hooks.result.current.redo());
+      // After redo, setCSVArray should have been called with the latest state
+      expect(setCSVArray).toHaveBeenLastCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+      ]);
+    });
   });
 
   describe("poppedHistory", () => {
@@ -239,6 +271,52 @@ describe("useUpdateCsvArray", () => {
         ["col0", "col1", "col2"],
         ["x", "y", "z"],
         ["1", "2", "3"],
+      ]);
+    });
+
+    it("複数回undoした後にredoを複数回行うと履歴通りに戻ること", () => {
+      act(() => hooks.result.current.insertRow(2));
+      act(() => hooks.result.current.insertCol(1));
+      act(() => hooks.result.current.deleteRow(1));
+      // Undo 3 times
+      act(() => hooks.result.current.undo());
+      act(() => hooks.result.current.undo());
+      act(() => hooks.result.current.undo());
+      // Redo 3 times
+      act(() => hooks.result.current.redo());
+      act(() => hooks.result.current.redo());
+      act(() => hooks.result.current.redo());
+      expect(setCSVArray).toHaveBeenLastCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+      ]);
+    });
+
+    it("redoを履歴が空の状態で行っても何も起きないこと", () => {
+      act(() => hooks.result.current.redo());
+      expect(setCSVArray).not.toHaveBeenCalled();
+    });
+
+    it("undoを複数回行い、redoを途中まで行った後に新たな操作をするとredo履歴がクリアされること", () => {
+      act(() => hooks.result.current.insertRow(2));
+      act(() => hooks.result.current.insertCol(1));
+      act(() => hooks.result.current.deleteRow(1));
+      // Undo 3 times
+      act(() => hooks.result.current.undo());
+      act(() => hooks.result.current.undo());
+      act(() => hooks.result.current.undo());
+      // Redo 2 times
+      act(() => hooks.result.current.redo());
+      act(() => hooks.result.current.redo());
+      // 新たな操作
+      act(() => hooks.result.current.insertRow(0));
+      // redoしても何も起きない
+      act(() => hooks.result.current.redo());
+      expect(setCSVArray).toHaveBeenLastCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
       ]);
     });
   });
