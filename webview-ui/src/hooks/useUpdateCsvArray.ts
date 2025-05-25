@@ -9,19 +9,21 @@ export function useUpdateCsvArray(
   const [poppedHistory, setPoppedHistory] = useState<Array<Array<Array<string>>>>([]);
 
   function undo() {
-    const lastItem = history.pop();
+    const lastItem = history.slice(-1)[0];
+    const newHistroy = history.slice(0, -1);
     if (lastItem) {
-      setPoppedHistory([...history, csvArray]);
+      setPoppedHistory([...poppedHistory, csvArray]);
       setCSVArray(lastItem);
-      setHistory(history);
+      setHistory(newHistroy);
     }
   }
 
   function redo() {
-    const lastItem = poppedHistory.pop();
+    const lastItem = poppedHistory.slice(-1)[0];
+    const newHistroy = poppedHistory.slice(0, -1);
     if (lastItem) {
       setCSVArrayAndPushHistory(lastItem);
-      setPoppedHistory(history);
+      setPoppedHistory(newHistroy);
     }
   }
 
