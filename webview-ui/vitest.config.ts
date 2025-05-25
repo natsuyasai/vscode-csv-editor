@@ -10,6 +10,7 @@ export default defineConfig({
     include: ["test/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
     globals: true,
     environment: "jsdom",
+    setupFiles: "./test/setup.ts",
     alias: {
       "@message": resolve("../src/message"),
       "@": resolve("src/"),
