@@ -1,5 +1,5 @@
 import { FC, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import styles from "./EditableTableRoot.module.scss";
+import styles from "./EditableTable.module.scss";
 import {
   CalculatedColumn,
   CellClickArgs,
@@ -10,7 +10,6 @@ import {
   FillEvent,
   RenderHeaderCellProps,
 } from "react-data-grid";
-import { useDirection } from "@/hooks/useDirection";
 import { createPortal } from "react-dom";
 import { useRows } from "@/hooks/useRows";
 import { useColumns } from "@/hooks/useColumns";
@@ -31,13 +30,7 @@ interface Props {
   setCSVArray: (csv: Array<Array<string>>) => void;
 }
 
-export const EditableTableRoot: FC<Props> = ({
-  csvArray,
-  isIgnoreHeaderRow,
-  rowSize,
-  setCSVArray,
-}) => {
-  const direction = useDirection();
+export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize, setCSVArray }) => {
   const { rows } = useRows(csvArray, isIgnoreHeaderRow);
   const { columns } = useColumns(csvArray, isIgnoreHeaderRow);
   const {
@@ -218,7 +211,6 @@ export const EditableTableRoot: FC<Props> = ({
         onRowsChange={updateRow}
         onFill={handleFill}
         onCellCopy={handleCellCopy}
-        direction={direction}
         onCellContextMenu={handleCellContextMenu}
         onCellKeyDown={handleKeyDown}
         renderers={{

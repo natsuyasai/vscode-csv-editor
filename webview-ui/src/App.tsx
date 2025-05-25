@@ -4,7 +4,7 @@ import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { useCallback, useEffect, useState } from "react";
 import styles from "./App.module.scss";
-import { EditableTableRoot } from "./components/EditableTableRoot";
+import { EditableTable } from "./components/EditableTable";
 import { Header } from "./components/Header";
 import { RowSizeType } from "./types";
 import { debounce } from "./utilities/debounce";
@@ -113,11 +113,11 @@ export default function App() {
           <VscodeDivider className={styles.divider} />
         </header>
         <main className={styles.main}>
-          <EditableTableRoot
+          <EditableTable
             csvArray={csvArray}
             isIgnoreHeaderRow={isIgnoreHeaderRow}
             rowSize={rowSize}
-            setCSVArray={updateCSVArray}></EditableTableRoot>
+            setCSVArray={updateCSVArray}></EditableTable>
         </main>
       </div>
     </>
