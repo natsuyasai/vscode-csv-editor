@@ -44,7 +44,7 @@ export const CustomHeaderCell: FC<
   );
 
   const handleContextMenu = useCallback(
-    (e: Event) => {
+    (e: MouseEvent) => {
       props.onHeaderCellContextMenu(props.column, e as MouseEvent);
     },
     [props.column]
@@ -52,7 +52,7 @@ export const CustomHeaderCell: FC<
 
   const setTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleClick = useCallback(
-    (e: Event) => {
+    (e: MouseEvent) => {
       if (e.target !== headerTextRef.current) {
         return;
       }
@@ -69,7 +69,7 @@ export const CustomHeaderCell: FC<
   );
 
   const handleDoubleClick = useCallback(
-    (e: Event) => {
+    (e: MouseEvent) => {
       if (e.target !== headerTextRef.current) {
         return;
       }
@@ -98,7 +98,7 @@ export const CustomHeaderCell: FC<
     ref.current?.parentElement?.addEventListener("dblclick", handleDoubleClick);
     ref.current?.parentElement?.addEventListener("click", handleClick);
     window.addEventListener("click", handleWindowClick);
-    if (setTimeoutRef) {
+    if (setTimeoutRef.current) {
       // クリック判定待ちタイマーが起動していた場合は再度最新の情報でタイマーをセットしなおす
       setTimeoutRef.current = setTimeout(() => {
         setTimeoutRef.current = null;
