@@ -8,7 +8,7 @@ const meta = {
   component: EditableTable,
   args: {
     csvArray: [
-      ["A", "B", "C", "D", "E"],
+      ["A", "B", "CCCCCCCCCCCCCCCCC", "D", "E"],
       ["1", "11", "111", "1111", "1\n1\n1\n1\n1"],
       ["2", "22", "222", "2222", "22222"],
       ["", "", "", "", ""],
