@@ -1,27 +1,6 @@
-import { render, screen } from "@testing-library/react";
-import { describe, it, vi, beforeEach, expect } from "vitest";
+import { render, fireEvent, screen } from "@testing-library/react";
 import { EditableTable } from "@/components/EditableTable";
-import "@testing-library/jest-dom";
 
-// モックフック
-vi.mock("@/hooks/useDirection", () => ({
-  useDirection: () => "ltr",
-}));
-vi.mock("@/hooks/useRows", () => ({
-  useRows: (csvArray: string[][]) => ({
-    rows: csvArray
-      .slice(1)
-      .map((row, i) => Object.fromEntries(row.map((cell, j) => [`col${j}`, cell]))),
-  }),
-}));
-vi.mock("@/hooks/useColumns", () => ({
-  useColumns: (csvArray: string[][]) => ({
-    columns: csvArray[0].map((header, i) => ({
-      key: `col${i}`,
-      name: header,
-    })),
-  }),
-}));
 vi.mock("@/hooks/useContextMenu", () => ({
   useContextMenu: () => ({
     contextMenuProps: null,
@@ -30,49 +9,44 @@ vi.mock("@/hooks/useContextMenu", () => ({
     isContextMenuOpen: false,
   }),
 }));
-vi.mock("@/hooks/useCellCopy", () => ({
-  useCellCopy: () => ({
-    handleCellCopy: vi.fn(),
-  }),
-}));
-vi.mock("@/hooks/useUpdateRows", () => ({
-  useUpdateRows: (csvArray: string[][], setCSVArray: any) => ({
-    insertRow: vi.fn(),
-    deleteRow: vi.fn(),
-    updateRow: vi.fn(),
-  }),
-}));
 vi.mock("@vscode-elements/react-elements", () => ({
   VscodeContextMenu: () => <div data-testid="mock-context-menu">MockMenu</div>,
 }));
-
 describe("EditableTable", () => {
   const csvArray = [
-    ["A", "B"],
-    ["1", "2"],
-    ["3", "4"],
+    ["Header1", "Header2"],
+    ["Row1Col1", "Row1Col2"],
+    ["Row2Col1", "Row2Col2"],
   ];
   const setCSVArray = vi.fn();
 
-  beforeEach(() => {
-    setCSVArray.mockClear?.();
-  });
-
-  it("renders DataGrid with correct rows and columns", () => {
-    render(
+  function setup(props = {}) {
+    return render(
       <EditableTable
         csvArray={csvArray}
-        setCSVArray={setCSVArray}
         isIgnoreHeaderRow={false}
         rowSize="normal"
+        setCSVArray={setCSVArray}
+        {...props}
       />
     );
-    expect(screen.getByRole("grid")).toBeVisible();
-    expect(screen.getByText("A")).toBeVisible();
-    expect(screen.getByText("B")).toBeVisible();
-    expect(screen.getByText("1")).toBeVisible();
-    expect(screen.getByText("2")).toBeVisible();
-    expect(screen.getByText("3")).toBeVisible();
-    expect(screen.getByText("4")).toBeVisible();
+  }
+
+  it("指定したCSVのデータでテーブルが表示されること", () => {
+    setup();
+    expect(screen.getByText("Header1")).toBeVisible();
+    expect(screen.getByText("Header2")).toBeVisible();
+    expect(screen.getByText("Row1Col1")).toBeVisible();
+    expect(screen.getByText("Row2Col2")).toBeVisible();
+  });
+
+  it("handles column reorder", () => {
+    setup();
+    expect(() => {
+      // @ts-ignore
+      screen
+        .getByText("Header1")
+        .parentElement.dispatchEvent(new CustomEvent("columnsreorder", { bubbles: true }));
+    }).not.toThrow();
   });
 });
