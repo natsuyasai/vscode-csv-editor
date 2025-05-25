@@ -40,7 +40,7 @@ export const CustomCell: FC<CellRendererProps<NoInfer<Record<string, string>>, u
       ref={refCell}
       key={props.rowKey}
       className={styles.cell}
-      {...props}
+      {...(({ rowKey, onUpdateRowHeight, ...rest }) => rest)(props)}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}></Cell>
