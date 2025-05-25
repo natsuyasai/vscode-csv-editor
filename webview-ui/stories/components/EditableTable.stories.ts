@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 
-import { EditableTableRoot } from "@/components/EditableTableRoot";
+import { EditableTable } from "@/components/EditableTable";
 
 const meta = {
-  title: "components/EditableTableRoot",
-  component: EditableTableRoot,
+  title: "components/EditableTable",
+  component: EditableTable,
   args: {
     csvArray: [
       ["A", "B", "C", "D", "E"],
@@ -22,7 +22,7 @@ const meta = {
     rowSize: "normal",
     setCSVArray: fn(),
   },
-} satisfies Meta<typeof EditableTableRoot>;
+} satisfies Meta<typeof EditableTable>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, vi, beforeEach, expect } from "vitest";
-import { EditableTableRoot } from "@/components/EditableTableRoot";
+import { EditableTable } from "@/components/EditableTable";
 import "@testing-library/jest-dom";
 
 // モックフック
@@ -46,7 +46,7 @@ vi.mock("@vscode-elements/react-elements", () => ({
   VscodeContextMenu: () => <div data-testid="mock-context-menu">MockMenu</div>,
 }));
 
-describe("EditableTableRoot", () => {
+describe("EditableTable", () => {
   const csvArray = [
     ["A", "B"],
     ["1", "2"],
@@ -60,7 +60,7 @@ describe("EditableTableRoot", () => {
 
   it("renders DataGrid with correct rows and columns", () => {
     render(
-      <EditableTableRoot
+      <EditableTable
         csvArray={csvArray}
         setCSVArray={setCSVArray}
         isIgnoreHeaderRow={false}
