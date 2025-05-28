@@ -57,6 +57,7 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     insertCol,
     deleteCol,
     updateCol,
+    updateCell,
     swapColumns,
     swapRows,
     undo,
@@ -146,6 +147,9 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
       e.stopPropagation();
       insertRow(args.rowIdx + 1);
       return;
+    }
+    if (e.key === "Delete") {
+      updateCell(args.rowIdx, args.column.idx, "");
     }
   }
 
