@@ -2,7 +2,7 @@
   "name": "csv-editor",
   "displayName": "csv-editor",
   "description": "edit csv",
-  "version": "0.0.1-alpha",
+  "version": "0.0.2-alpha",
   "repository": {
     "url": "https://github.com/natsuyasai/vscode-csv-editor"
   },
