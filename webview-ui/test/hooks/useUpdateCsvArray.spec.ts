@@ -365,4 +365,60 @@ describe("useUpdateCsvArray", () => {
       expect(setCSVArrayMock).toHaveBeenCalledWith([]);
     });
   });
+  describe("swapRows", () => {
+    it("指定した2つの行の位置が入れ替わること（ヘッダ有効）", () => {
+      act(() => hooks.result.current.swapRows(0, 1));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["d", "e", "f"],
+        ["a", "b", "c"],
+      ]);
+    });
+
+    it("同じ行インデックスを指定した場合、配列が変化しないこと（ヘッダ有効）", () => {
+      act(() => hooks.result.current.swapRows(0, 0));
+      expect(setCSVArray).not.toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+      ]);
+    });
+
+    it("範囲外のインデックスを指定した場合、何も起きないこと（ヘッダ有効）", () => {
+      act(() => hooks.result.current.swapRows(-1, 2));
+      act(() => hooks.result.current.swapRows(1, 100));
+      expect(setCSVArray).not.toHaveBeenCalledWith(expect.anything());
+    });
+
+    it("指定した2つの行の位置が入れ替わること（ヘッダ無効）", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
+      act(() => hookslocal.result.current.swapRows(0, 2));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["d", "e", "f"],
+        ["a", "b", "c"],
+        ["col0", "col1", "col2"],
+      ]);
+    });
+
+    it("同じ行インデックスを指定した場合、配列が変化しないこと（ヘッダ無効）", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
+      act(() => hookslocal.result.current.swapRows(1, 1));
+      expect(setCSVArray).not.toHaveBeenCalledWith(expect.anything());
+    });
+
+    it("範囲外のインデックスを指定した場合、何も起きないこと（ヘッダ無効）", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
+      act(() => hookslocal.result.current.swapRows(-1, 2));
+      act(() => hookslocal.result.current.swapRows(0, 100));
+      expect(setCSVArray).not.toHaveBeenCalledWith(expect.anything());
+    });
+
+    it("空のcsvArrayの場合、何も起きないこと", () => {
+      const emptyArray: string[][] = [];
+      const setCSVArrayMock = vi.fn();
+      const hooksEmpty = renderHook(() => useUpdateCsvArray(emptyArray, setCSVArrayMock, false));
+      act(() => hooksEmpty.result.current.swapRows(0, 1));
+      expect(setCSVArrayMock).not.toHaveBeenCalled();
+    });
+  });
 });
