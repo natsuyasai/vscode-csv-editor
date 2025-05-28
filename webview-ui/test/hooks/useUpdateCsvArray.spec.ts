@@ -421,4 +421,53 @@ describe("useUpdateCsvArray", () => {
       expect(setCSVArrayMock).not.toHaveBeenCalled();
     });
   });
+  describe("updateCell", () => {
+    it("指定したセルの内容が更新されること（ヘッダ有効）", () => {
+      // rowIdx=0, colIdx=1, text="updated"
+      act(() => hooks.result.current.updateCell(0, 1, "updated"));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "updated", "c"],
+        ["d", "e", "f"],
+      ]);
+    });
+
+    it("2行目2列目のセルが更新されること（ヘッダ有効）", () => {
+      act(() => hooks.result.current.updateCell(1, 2, "zzz"));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "zzz"],
+      ]);
+    });
+
+    it("空のcsvArrayの場合、何も起きないこと", () => {
+      const emptyArray: string[][] = [];
+      const setCSVArrayMock = vi.fn();
+      const hooksEmpty = renderHook(() => useUpdateCsvArray(emptyArray, setCSVArrayMock, false));
+      act(() => hooksEmpty.result.current.updateCell(0, 0, "test"));
+      expect(setCSVArrayMock).not.toHaveBeenCalled();
+    });
+
+    it("ヘッダ行無効時、指定したセルの内容が更新されること", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
+      // rowIdx=1, colIdx=2, text="abc"
+      act(() => hookslocal.result.current.updateCell(1, 2, "abc"));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "abc"],
+        ["d", "e", "f"],
+      ]);
+    });
+
+    it("ヘッダ行無効時、1行目1列目のセルが更新されること", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
+      act(() => hookslocal.result.current.updateCell(0, 0, "headerless"));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["headerless", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+      ]);
+    });
+  });
 });

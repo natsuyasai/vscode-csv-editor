@@ -91,6 +91,24 @@ export function useUpdateCsvArray(
     }
   }
 
+  function updateCell(rowIdx: number, colIdx: number, text: string) {
+    if (csvArray.length === 0) {
+      return;
+    }
+    let correctionRowIdx = rowIdx;
+    if (!isIgnoreHeaderRow) {
+      correctionRowIdx += 1;
+    }
+    const updatedCSVArray = csvArray.map((row, idx) => {
+      const newRow = [...row];
+      if (idx === correctionRowIdx) {
+        newRow[colIdx] = text;
+      }
+      return newRow;
+    });
+    setCSVArrayAndPushHistory(updatedCSVArray);
+  }
+
   function insertCol(insertColIdx: number) {
     if (csvArray.length === 0) {
       return;
@@ -174,6 +192,7 @@ export function useUpdateCsvArray(
     insertCol,
     deleteCol,
     updateCol,
+    updateCell,
     swapColumns,
     swapRows,
     undo,

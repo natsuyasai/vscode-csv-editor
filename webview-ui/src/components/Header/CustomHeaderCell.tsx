@@ -55,6 +55,10 @@ export const CustomHeaderCell: FC<
     (e: KeyboardEvent) => {
       if (e.key === "F2") {
         setIsEditing(true);
+      } else if (e.key === "Backspace") {
+        setIsEditing(true);
+      } else if (e.key === "Delete") {
+        props.onHeaderEdit(props.column.idx, "");
       }
       props.onKeyDown(props.column, e);
     },
