@@ -1,6 +1,7 @@
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import { CalculatedColumn, RenderHeaderCellProps, SortColumn } from "react-data-grid";
 import styles from "./CustomHeaderCell.module.scss";
+import { useDrag, useDrop } from "react-dnd";
 
 interface Props {
   isIgnoreHeaderRow: boolean;
@@ -21,11 +22,28 @@ interface Props {
 export const CustomHeaderCell: FC<
   RenderHeaderCellProps<NoInfer<Record<string, string>>, unknown> & Props
 > = (props) => {
-  const ref = useRef<HTMLSpanElement>(null);
+  const rootRef = useRef<HTMLSpanElement>(null);
   const headerTextRef = useRef<HTMLSpanElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const WAIT_DOUBLE_CLICK_TH_MS = 200;
+
+  const [{}, drag] = useDrag({
+    type: "COL_DRAG",
+    item: { index: props.column.idx },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  const [{}, drop] = useDrop({
+    accept: "COL_DRAG",
+    drop({ index }: { index: number }) {},
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  });
 
   useEffect(() => {
     textAreaRef.current?.focus();
@@ -37,6 +55,10 @@ export const CustomHeaderCell: FC<
     (e: KeyboardEvent) => {
       if (e.key === "F2") {
         setIsEditing(true);
+      } else if (e.key === "Backspace") {
+        setIsEditing(true);
+      } else if (e.key === "Delete") {
+        props.onHeaderEdit(props.column.idx, "");
       }
       props.onKeyDown(props.column, e);
     },
@@ -93,10 +115,10 @@ export const CustomHeaderCell: FC<
     if (props.isIgnoreHeaderRow) {
       return;
     }
-    ref.current?.parentElement?.addEventListener("keydown", handleKeyDown);
-    ref.current?.parentElement?.addEventListener("contextmenu", handleContextMenu);
-    ref.current?.parentElement?.addEventListener("dblclick", handleDoubleClick);
-    ref.current?.parentElement?.addEventListener("click", handleClick);
+    rootRef.current?.parentElement?.addEventListener("keydown", handleKeyDown);
+    rootRef.current?.parentElement?.addEventListener("contextmenu", handleContextMenu);
+    rootRef.current?.parentElement?.addEventListener("dblclick", handleDoubleClick);
+    rootRef.current?.parentElement?.addEventListener("click", handleClick);
     window.addEventListener("click", handleWindowClick);
     if (setTimeoutRef.current) {
       // クリック判定待ちタイマーが起動していた場合は再度最新の情報でタイマーをセットしなおす
@@ -107,10 +129,10 @@ export const CustomHeaderCell: FC<
     }
 
     return () => {
-      ref.current?.parentElement?.removeEventListener("keydown", handleKeyDown);
-      ref.current?.parentElement?.removeEventListener("contextmenu", handleContextMenu);
-      ref.current?.parentElement?.removeEventListener("dblclick", handleDoubleClick);
-      ref.current?.parentElement?.removeEventListener("click", handleClick);
+      rootRef.current?.parentElement?.removeEventListener("keydown", handleKeyDown);
+      rootRef.current?.parentElement?.removeEventListener("contextmenu", handleContextMenu);
+      rootRef.current?.parentElement?.removeEventListener("dblclick", handleDoubleClick);
+      rootRef.current?.parentElement?.removeEventListener("click", handleClick);
       window.removeEventListener("click", handleWindowClick);
       if (setTimeoutRef.current) {
         clearTimeout(setTimeoutRef.current);
@@ -120,7 +142,15 @@ export const CustomHeaderCell: FC<
 
   return (
     <>
-      <span ref={ref} className={styles.cellRoot}>
+      <span
+        ref={(ref) => {
+          rootRef.current = ref;
+          if (ref) {
+            drag(ref.firstElementChild);
+          }
+          drop(ref);
+        }}
+        className={styles.cellRoot}>
         {!props.isIgnoreHeaderRow && isEditing && (
           <textarea
             ref={textAreaRef}

@@ -23,7 +23,9 @@ import { RowSizeType } from "@/types";
 import { CustomHeaderCell } from "./Header/CustomHeaderCell";
 import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
 import { CustomCell } from "./Row/CustomCell";
-import { CustomRow } from "./Row/CustomRow";
+import { CustomRow, CustomRowProps } from "./Row/CustomRow";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -55,7 +57,9 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     insertCol,
     deleteCol,
     updateCol,
+    updateCell,
     swapColumns,
+    swapRows,
     undo,
     redo,
   } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
@@ -144,6 +148,9 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
       insertRow(args.rowIdx + 1);
       return;
     }
+    if (e.key === "Delete") {
+      updateCell(args.rowIdx, args.column.idx, "");
+    }
   }
 
   function handleKeyDownHeaderCell(
@@ -223,85 +230,92 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     swapColumns(sourceIdx, targetIdx);
   }
 
+  const renderRow = useCallback(
+    (props: CustomRowProps) => {
+      function onRowReorder(fromIndex: number, toIndex: number) {
+        swapRows(fromIndex, toIndex);
+      }
+      return <CustomRow key={props.rowKey} {...props} onRowReorder={onRowReorder} />;
+    },
+    [csvArray]
+  );
+
   return (
     <>
-      <DataGrid
-        className={styles.dataGrid}
-        enableVirtualization={true}
-        columns={columns}
-        rows={sortedRows}
-        rowHeight={rowHeight}
-        rowKeyGetter={(row) => crypto.randomUUID()}
-        onRowsChange={updateRow}
-        sortColumns={sortColumns}
-        onSortColumnsChange={(sortColumns) => {
-          // ヘッダの編集用のダブルクリックの判定を待つ必要があるため、保持だけして何もしない
-          setSortColumnsForWaitingDoubleClick(sortColumns);
-        }}
-        onFill={handleFill}
-        onCellCopy={handleCellCopy}
-        onCellContextMenu={handleCellContextMenu}
-        onCellKeyDown={handleKeyDown}
-        onColumnsReorder={handleColumnsReorder}
-        renderers={{
-          // renderRow: (key, props) =>
-          //   CustomRow({
-          //     ...props,
-          //     rowKey: key,
-          //     onUpdateRowHeight: () => {},
-          //   }) as ReactNode,
-          renderCell: (key, props) =>
-            CustomCell({
-              ...props,
-              rowKey: key,
-              onUpdateRowHeight: () => {},
-            }) as ReactNode,
-        }}
-        defaultColumnOptions={{
-          renderHeaderCell: (props) =>
-            CustomHeaderCell({
-              ...props,
-              isIgnoreHeaderRow,
-              sortColumnsForWaitingDoubleClick: sortColumnsForWaitingDoubleClick,
-              onHeaderCellContextMenu: handleHeaderCellContextMenu,
-              onHeaderEdit: handleHeaderEdit,
-              onKeyDown: handleKeyDownHeaderCell,
-              onCanSortColumnsChange: (sortColumns) => {
-                setSortColumns(sortColumns);
-              },
-              onDoubleClick: () => {
-                setSortColumnsForWaitingDoubleClick([]);
-              },
-            }) as ReactNode,
-          sortable: true,
-          draggable: true,
-          resizable: true,
-        }}
-      />
-      {isRowContextMenuOpen &&
-        createPortal(
-          <RowContextMenu
-            isContextMenuOpen={isRowContextMenuOpen}
-            menuRef={rowMenuRef}
-            contextMenuProps={rowContextMenuProps}
-            className={styles.contextMenu}
-            onSelect={handleSelectRowContextMenu}
-            onClose={() => setRowContextMenuProps(null)}
-          />,
-          document.body
-        )}
-      {isHeaderContextMenuOpen &&
-        createPortal(
-          <HeaderCelContextMenu
-            isContextMenuOpen={isHeaderContextMenuOpen}
-            menuRef={headerMenuRef}
-            contextMenuProps={headerContextMenuProps}
-            className={styles.contextMenu}
-            onSelect={handleSelectHeaderContextMenu}
-            onClose={() => setHeaderContextMenuProps(null)}
-          />,
-          document.body
-        )}
+      <DndProvider backend={HTML5Backend}>
+        <DataGrid
+          className={styles.dataGrid}
+          enableVirtualization={true}
+          columns={columns}
+          rows={sortedRows}
+          rowHeight={rowHeight}
+          rowKeyGetter={(row) => rows.indexOf(row).toString()}
+          onRowsChange={updateRow}
+          sortColumns={sortColumns}
+          onSortColumnsChange={(sortColumns) => {
+            // ヘッダの編集用のダブルクリックの判定を待つ必要があるため、保持だけして何もしない
+            setSortColumnsForWaitingDoubleClick(sortColumns);
+          }}
+          onFill={handleFill}
+          onCellCopy={handleCellCopy}
+          onCellContextMenu={handleCellContextMenu}
+          onCellKeyDown={handleKeyDown}
+          onColumnsReorder={handleColumnsReorder}
+          renderers={{
+            renderRow: (key, props) =>
+              renderRow({
+                ...props,
+                rowKey: key,
+                onUpdateRowHeight: () => {},
+                onRowReorder: () => {},
+              }) as ReactNode,
+          }}
+          defaultColumnOptions={{
+            renderHeaderCell: (props) =>
+              CustomHeaderCell({
+                ...props,
+                isIgnoreHeaderRow,
+                sortColumnsForWaitingDoubleClick: sortColumnsForWaitingDoubleClick,
+                onHeaderCellContextMenu: handleHeaderCellContextMenu,
+                onHeaderEdit: handleHeaderEdit,
+                onKeyDown: handleKeyDownHeaderCell,
+                onCanSortColumnsChange: (sortColumns) => {
+                  setSortColumns(sortColumns);
+                },
+                onDoubleClick: () => {
+                  setSortColumnsForWaitingDoubleClick([]);
+                },
+              }) as ReactNode,
+            sortable: true,
+            draggable: true,
+            resizable: true,
+          }}
+        />
+        {isRowContextMenuOpen &&
+          createPortal(
+            <RowContextMenu
+              isContextMenuOpen={isRowContextMenuOpen}
+              menuRef={rowMenuRef}
+              contextMenuProps={rowContextMenuProps}
+              className={styles.contextMenu}
+              onSelect={handleSelectRowContextMenu}
+              onClose={() => setRowContextMenuProps(null)}
+            />,
+            document.body
+          )}
+        {isHeaderContextMenuOpen &&
+          createPortal(
+            <HeaderCelContextMenu
+              isContextMenuOpen={isHeaderContextMenuOpen}
+              menuRef={headerMenuRef}
+              contextMenuProps={headerContextMenuProps}
+              className={styles.contextMenu}
+              onSelect={handleSelectHeaderContextMenu}
+              onClose={() => setHeaderContextMenuProps(null)}
+            />,
+            document.body
+          )}
+      </DndProvider>
     </>
   );
 };

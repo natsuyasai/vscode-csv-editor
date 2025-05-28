@@ -91,6 +91,24 @@ export function useUpdateCsvArray(
     }
   }
 
+  function updateCell(rowIdx: number, colIdx: number, text: string) {
+    if (csvArray.length === 0) {
+      return;
+    }
+    let correctionRowIdx = rowIdx;
+    if (!isIgnoreHeaderRow) {
+      correctionRowIdx += 1;
+    }
+    const updatedCSVArray = csvArray.map((row, idx) => {
+      const newRow = [...row];
+      if (idx === correctionRowIdx) {
+        newRow[colIdx] = text;
+      }
+      return newRow;
+    });
+    setCSVArrayAndPushHistory(updatedCSVArray);
+  }
+
   function insertCol(insertColIdx: number) {
     if (csvArray.length === 0) {
       return;
@@ -143,6 +161,30 @@ export function useUpdateCsvArray(
     setCSVArrayAndPushHistory(newCsvArray);
   }
 
+  function swapRows(sourceIdx: number, targetIdx: number) {
+    // ヘッダー行を無視する場合、インデックス調整
+    // sourceIdxとtargetIdxは実データの1行目を0としてくる
+    // そのためヘッダー表示がある場合はcsvArrayの2要素目を0としてやってくるため補正が必要
+    const correctionSourceIdx = isIgnoreHeaderRow ? sourceIdx : sourceIdx + 1;
+    const CorrectionTargetIdx = isIgnoreHeaderRow ? targetIdx : targetIdx + 1;
+    const offset = isIgnoreHeaderRow ? 0 : 1;
+    const maxIdx = csvArray.length - 1;
+    if (
+      correctionSourceIdx < offset ||
+      CorrectionTargetIdx < offset ||
+      correctionSourceIdx > maxIdx ||
+      CorrectionTargetIdx > maxIdx ||
+      correctionSourceIdx === CorrectionTargetIdx
+    ) {
+      return;
+    }
+    const newCsvArray = csvArray.map((row) => [...row]);
+    const temp = newCsvArray[correctionSourceIdx];
+    newCsvArray[correctionSourceIdx] = newCsvArray[CorrectionTargetIdx];
+    newCsvArray[CorrectionTargetIdx] = temp;
+    setCSVArrayAndPushHistory(newCsvArray);
+  }
+
   return {
     insertRow,
     deleteRow,
@@ -150,7 +192,9 @@ export function useUpdateCsvArray(
     insertCol,
     deleteCol,
     updateCol,
+    updateCell,
     swapColumns,
+    swapRows,
     undo,
     redo,
   };
