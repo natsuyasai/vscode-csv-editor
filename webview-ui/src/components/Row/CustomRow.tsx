@@ -70,7 +70,7 @@ export const CustomRow: FC<CustomRowProps> = (props) => {
         isDragging ? styles.rowDragging : "",
         isOver ? styles.rowOver : "",
       ].join(" ")}
-      {...(({ rowKey, onUpdateRowHeight, ...rest }) => rest)(props)}
+      {...(({ rowKey, onUpdateRowHeight, onRowReorder, ...rest }) => rest)(props)}
       // onMouseDown={(e) => handleMouseDown}
       // onMouseMove={(e) => handleMouseMove}
       // onMouseUp={(e) => handleMouseUp}
