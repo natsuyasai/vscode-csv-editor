@@ -245,7 +245,7 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
           columns={columns}
           rows={sortedRows}
           rowHeight={rowHeight}
-          rowKeyGetter={(row) => crypto.randomUUID()}
+          rowKeyGetter={(row) => rows.indexOf(row).toString()}
           onRowsChange={updateRow}
           sortColumns={sortColumns}
           onSortColumnsChange={(sortColumns) => {
@@ -264,12 +264,6 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
                 rowKey: key,
                 onUpdateRowHeight: () => {},
                 onRowReorder: () => {},
-              }) as ReactNode,
-            renderCell: (key, props) =>
-              CustomCell({
-                ...props,
-                rowKey: key,
-                onUpdateRowHeight: () => {},
               }) as ReactNode,
           }}
           defaultColumnOptions={{
