@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Column } from "react-data-grid";
 import TextAreaEditor from "@/components/Row/TextAreaEditor";
+import { ROW_IDX_COL } from "@/types";
 
 export function useColumns(csvArray: Array<Array<string>>, isIgnoreHeaderRow: boolean) {
   const empty: Column<Record<string, string>>[] = [];
@@ -16,14 +17,16 @@ export function useColumns(csvArray: Array<Array<string>>, isIgnoreHeaderRow: bo
     if (csvArray.length === 0) {
       return empty;
     }
-    return (
+    const columns: Column<Record<string, string>>[] =
       csvArray[0]?.map((header, index) => ({
         key: `col${index}`,
         name: isIgnoreHeaderRow ? "" : header,
         resizable: true,
+        frozen: false,
         renderEditCell: TextAreaEditor,
-      })) || empty
-    );
+      })) || empty;
+    columns.unshift(ROW_IDX_COL);
+    return columns;
   }
   return { columns };
 }
