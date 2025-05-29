@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { fn } from "@storybook/test";
+import { fn, userEvent, expect } from "@storybook/test";
 
 import { Header } from "@/components/Header";
 import { useState } from "react";
@@ -27,5 +27,16 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     isIgnoreHeaderRow: false,
+  },
+};
+
+export const OpenSlectRow: Story = {
+  play: async ({ canvas }) => {
+    const listbox = canvas.getByRole("listbox");
+    const listItem = listbox.shadowRoot?.querySelector("div[class*='select-face']");
+    expect(listItem).toBeVisible();
+    await userEvent.click(listItem!);
+    const option = listbox.shadowRoot?.querySelector("div[class*=' dropdown ']");
+    expect(option).toBeVisible();
   },
 };
