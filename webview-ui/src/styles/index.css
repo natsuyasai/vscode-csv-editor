@@ -9,3 +9,7 @@ body {
   height: calc(100% - 20px);
   width: calc(100% - 20px - 20px);
 }
+
+.csv-row-index {
+  cursor: pointer;
+}

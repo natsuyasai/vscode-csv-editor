@@ -122,7 +122,7 @@ describe("useUpdateCsvArray", () => {
 
   describe("insertCol", () => {
     it("最終要素を選択したとき末尾に列が追加されること", () => {
-      act(() => hooks.result.current.insertCol(3));
+      act(() => hooks.result.current.insertCol(4));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2", "new column"],
         ["a", "b", "c", ""],
@@ -131,7 +131,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("2列目の要素を選択したとき、3列目に追加されること", () => {
-      act(() => hooks.result.current.insertCol(2));
+      act(() => hooks.result.current.insertCol(3));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "new column", "col2"],
         ["a", "b", "", "c"],
@@ -142,7 +142,7 @@ describe("useUpdateCsvArray", () => {
 
   describe("deleteCol", () => {
     it("最終要素を選択したとき最後の列が削除されること", () => {
-      act(() => hooks.result.current.deleteCol(2));
+      act(() => hooks.result.current.deleteCol(3));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1"],
         ["a", "b"],
@@ -151,7 +151,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("2列目の要素を選択したとき、2列目が削除されること", () => {
-      act(() => hooks.result.current.deleteCol(1));
+      act(() => hooks.result.current.deleteCol(2));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col2"],
         ["a", "c"],
@@ -162,7 +162,7 @@ describe("useUpdateCsvArray", () => {
 
   describe("updateCol", () => {
     it("ヘッダ行の指定セルの内容が更新できること", () => {
-      act(() => hooks.result.current.updateCol(1, "testCol1"));
+      act(() => hooks.result.current.updateCol(2, "testCol1"));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "testCol1", "col2"],
         ["a", "b", "c"],
@@ -322,7 +322,7 @@ describe("useUpdateCsvArray", () => {
   });
   describe("swapColumns", () => {
     it("指定した2つの列の位置が入れ替わること", () => {
-      act(() => hooks.result.current.swapColumns(0, 2));
+      act(() => hooks.result.current.swapColumns(1, 3));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col1", "col2", "col0"],
         ["b", "c", "a"],
@@ -340,7 +340,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("先頭と末尾の列を入れ替えられること", () => {
-      act(() => hooks.result.current.swapColumns(0, 2));
+      act(() => hooks.result.current.swapColumns(1, 3));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col1", "col2", "col0"],
         ["b", "c", "a"],
@@ -424,7 +424,7 @@ describe("useUpdateCsvArray", () => {
   describe("updateCell", () => {
     it("指定したセルの内容が更新されること（ヘッダ有効）", () => {
       // rowIdx=0, colIdx=1, text="updated"
-      act(() => hooks.result.current.updateCell(0, 1, "updated"));
+      act(() => hooks.result.current.updateCell(0, 2, "updated"));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "updated", "c"],
@@ -433,7 +433,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("2行目2列目のセルが更新されること（ヘッダ有効）", () => {
-      act(() => hooks.result.current.updateCell(1, 2, "zzz"));
+      act(() => hooks.result.current.updateCell(1, 3, "zzz"));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
@@ -452,7 +452,7 @@ describe("useUpdateCsvArray", () => {
     it("ヘッダ行無効時、指定したセルの内容が更新されること", () => {
       const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
       // rowIdx=1, colIdx=2, text="abc"
-      act(() => hookslocal.result.current.updateCell(1, 2, "abc"));
+      act(() => hookslocal.result.current.updateCell(1, 3, "abc"));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "abc"],
@@ -462,7 +462,7 @@ describe("useUpdateCsvArray", () => {
 
     it("ヘッダ行無効時、1行目1列目のセルが更新されること", () => {
       const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
-      act(() => hookslocal.result.current.updateCell(0, 0, "headerless"));
+      act(() => hookslocal.result.current.updateCell(0, 1, "headerless"));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["headerless", "col1", "col2"],
         ["a", "b", "c"],

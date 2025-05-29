@@ -17,16 +17,18 @@ export function useColumns(csvArray: Array<Array<string>>, isIgnoreHeaderRow: bo
     if (csvArray.length === 0) {
       return empty;
     }
-    const columns: Column<Record<string, string>>[] =
-      csvArray[0]?.map((header, index) => ({
+    if (csvArray[0].length === 0) {
+      return empty;
+    }
+    return [
+      ROW_IDX_COL,
+      ...csvArray[0].map((header, index) => ({
         key: `col${index}`,
         name: isIgnoreHeaderRow ? "" : header,
         resizable: true,
-        frozen: false,
         renderEditCell: TextAreaEditor,
-      })) || empty;
-    columns.unshift(ROW_IDX_COL);
-    return columns;
+      })),
+    ];
   }
   return { columns };
 }
