@@ -102,7 +102,8 @@ export function useUpdateCsvArray(
     const updatedCSVArray = csvArray.map((row, idx) => {
       const newRow = [...row];
       if (idx === correctionRowIdx) {
-        newRow[colIdx] = text;
+        // 先頭にインデックス表示列があるので補正する
+        newRow[colIdx - 1] = text;
       }
       return newRow;
     });
@@ -115,7 +116,8 @@ export function useUpdateCsvArray(
     }
     const updatedCSVArray = csvArray.map((row, rowIdx) => {
       const newRow = [...row];
-      newRow.splice(insertColIdx, 0, rowIdx === 0 ? "new column" : "");
+      // 先頭にインデックス表示列があるので補正する
+      newRow.splice(insertColIdx - 1, 0, rowIdx === 0 ? "new column" : "");
       return newRow;
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
@@ -127,7 +129,8 @@ export function useUpdateCsvArray(
     }
     const updatedCSVArray = csvArray.map((row) => {
       const newRow = [...row];
-      newRow.splice(deleteColIdx, 1);
+      // 先頭にインデックス表示列があるので補正する
+      newRow.splice(deleteColIdx - 1, 1);
       return newRow;
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
@@ -143,7 +146,8 @@ export function useUpdateCsvArray(
     const updatedCSVArray = csvArray.map((row, rowIdx) => {
       const newRow = [...row];
       if (rowIdx === 0) {
-        newRow[idx] = text;
+        // 先頭にインデックス表示列があるので補正する
+        newRow[idx - 1] = text;
       }
       return newRow;
     });
@@ -153,8 +157,9 @@ export function useUpdateCsvArray(
   function swapColumns(sourceIdx: number, targetIdx: number) {
     const newCsvArray = csvArray.map((row) => {
       const newRow = [...row];
-      const [movedCell] = newRow.splice(sourceIdx, 1);
-      newRow.splice(targetIdx, 0, movedCell);
+      // 先頭にインデックス表示列があるので補正するs
+      const [movedCell] = newRow.splice(sourceIdx - 1, 1);
+      newRow.splice(targetIdx - 1, 0, movedCell);
       return newRow;
     });
 
