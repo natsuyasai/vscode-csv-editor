@@ -1,5 +1,6 @@
 import type { Preview } from "@storybook/react";
 import "react-data-grid/lib/styles.css";
+import "../src/styles/index.css";
 
 const preview: Preview = {
   parameters: {
