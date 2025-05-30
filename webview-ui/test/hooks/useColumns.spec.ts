@@ -19,21 +19,18 @@ describe("カラムの作成", () => {
     expect(result.current.columns).toEqual([
       ROW_IDX_COL,
       {
-        frozen: false,
         key: "col0",
         name: "Header1",
         resizable: true,
         renderEditCell: TextAreaEditor,
       },
       {
-        frozen: false,
         key: "col1",
         name: "Header2",
         resizable: true,
         renderEditCell: TextAreaEditor,
       },
       {
-        frozen: false,
         key: "col2",
         name: "Header3",
         resizable: true,
@@ -48,14 +45,12 @@ describe("カラムの作成", () => {
     expect(result.current.columns).toEqual([
       ROW_IDX_COL,
       {
-        frozen: false,
         key: "col0",
         name: "Header1",
         resizable: true,
         renderEditCell: TextAreaEditor,
       },
       {
-        frozen: false,
         key: "col1",
         name: "Header2",
         resizable: true,
@@ -72,9 +67,9 @@ describe("カラムの作成", () => {
     const { result } = renderHook(() => useColumns(csvArray, true));
     expect(result.current.columns).toEqual([
       ROW_IDX_COL,
-      { frozen: false, key: "col0", name: "", resizable: true, renderEditCell: TextAreaEditor },
-      { frozen: false, key: "col1", name: "", resizable: true, renderEditCell: TextAreaEditor },
-      { frozen: false, key: "col2", name: "", resizable: true, renderEditCell: TextAreaEditor },
+      { key: "col0", name: "", resizable: true, renderEditCell: TextAreaEditor },
+      { key: "col1", name: "", resizable: true, renderEditCell: TextAreaEditor },
+      { key: "col2", name: "", resizable: true, renderEditCell: TextAreaEditor },
     ]);
   });
 });
