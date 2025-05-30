@@ -12,4 +12,5 @@ body {
 
 .csv-row-index {
   cursor: pointer;
+  font-weight: bolder;
 }
