@@ -1,10 +1,7 @@
 // WebViewの内容を表示するためのクラス
 import * as vscode from "vscode";
-import {
-  MessageType as MessageTypeToWebview,
-  UpdateMessage,
-} from "../message/messageTypeToWebview";
-import { MessageType as MessageTypeFromWebview } from "../message/messageTypeToExtention";
+import { UpdateMessage } from "../message/messageTypeToWebview";
+import { Message } from "../message/messageTypeToExtention";
 import { getUri } from "../util/getUri";
 import { getNonce } from "../util/util";
 
@@ -42,8 +39,11 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 
   // package.jsonのviewTypeと一致させる
   private static readonly viewType = "csv-editor.openEditor";
+  private readonly context: vscode.ExtensionContext;
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(context: vscode.ExtensionContext) {
+    this.context = context;
+  }
 
   /**
    * Called when our custom editor is opened.
@@ -51,11 +51,11 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
    * コマンドで表示を行った場合もvscode.openWithで実行しているのでこちらが呼ばれる
    *
    */
-  public async resolveCustomTextEditor(
+  public resolveCustomTextEditor(
     document: vscode.TextDocument,
     webviewPanel: vscode.WebviewPanel,
     _token: vscode.CancellationToken
-  ): Promise<void> {
+  ): void {
     // Setup initial content for the webview
     webviewPanel.webview.options = {
       enableScripts: true,
@@ -84,14 +84,18 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 
     // Receive message from the webview.
     const webviewReceiveMessageSubscription = webviewPanel.webview.onDidReceiveMessage(
-      async (e) => {
-        console.log(`${e.type}:${e.payload}`);
-        switch (e.type as MessageTypeFromWebview) {
+      (e: Message) => {
+        // console.log(`${e.type}:${e.payload}`);
+        switch (e.type) {
           case "update":
-            this.updateTextDocument(document, e.payload);
+            if (e.payload !== undefined) {
+              this.updateTextDocument(document, e.payload);
+            }
             return;
           case "save":
-            this.updateTextDocument(document, e.payload);
+            if (e.payload !== undefined) {
+              this.updateTextDocument(document, e.payload);
+            }
             return;
           case "reload":
             updateWebview();
@@ -129,12 +133,12 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
-          <link rel="stylesheet" type="text/css" href="${stylesUri}">
+          <link rel="stylesheet" type="text/css" href="${stylesUri.toString()}" />
           <title>CSVEditor</title>
         </head>
         <body>
           <div id="root"></div>
-          <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+          <script type="module" nonce="${nonce}" src="${scriptUri.toString()}"></script>
         </body>
       </html>
     `;

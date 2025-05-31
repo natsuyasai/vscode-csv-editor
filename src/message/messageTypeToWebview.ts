@@ -2,7 +2,7 @@ export type MessageType = "init" | "update";
 
 export interface Message {
   type: MessageType;
-  payload?: any;
+  payload?: string;
 }
 
 export interface InitMessage extends Message {
