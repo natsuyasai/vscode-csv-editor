@@ -4,12 +4,13 @@ import styles from "./CustomCell.module.scss";
 
 interface Props {
   rowKey: React.Key;
+  isSearchTarget?: boolean;
   onUpdateRowHeight: (rowIdx: number, height: number) => void;
 }
 
-export const CustomCell: FC<CellRendererProps<NoInfer<Record<string, string>>, unknown> & Props> = (
-  props
-) => {
+export type CustomCellProps = Props & CellRendererProps<NoInfer<Record<string, string>>, unknown>;
+
+export const CustomCell: FC<CustomCellProps> = (props) => {
   const refCell = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const [isResizing, setIsResizing] = useState(false);
@@ -39,7 +40,7 @@ export const CustomCell: FC<CellRendererProps<NoInfer<Record<string, string>>, u
     <Cell
       ref={refCell}
       key={props.rowKey}
-      className={styles.cell}
+      className={[`${styles.cell}`, `${props.isSearchTarget ? styles.searchTarget : ""}`].join(" ")}
       {...(({ rowKey: _rowKey, onUpdateRowHeight: _onUpdateRowHeight, ...rest }) => rest)(props)}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}

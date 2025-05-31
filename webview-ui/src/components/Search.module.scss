@@ -1,0 +1,12 @@
+.searchRoot {
+  position: absolute;
+  top: 0;
+  left: 70%;
+  display: flex;
+  width: 15rem;
+  height: 2rem;
+  padding: 8px;
+  gap: 8px;
+  align-items: center;
+  background-color: var(--vscode-settings-textInputBackground, #313131);
+}
