@@ -394,8 +394,8 @@ describe("useUpdateCsvArray", () => {
       const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
       act(() => hookslocal.result.current.swapRows(0, 2));
       expect(setCSVArray).toHaveBeenCalledWith([
-        ["d", "e", "f"],
         ["a", "b", "c"],
+        ["d", "e", "f"],
         ["col0", "col1", "col2"],
       ]);
     });
