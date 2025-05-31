@@ -320,9 +320,9 @@ describe("useUpdateCsvArray", () => {
       ]);
     });
   });
-  describe("swapColumns", () => {
+  describe("moveColumns", () => {
     it("指定した2つの列の位置が入れ替わること", () => {
-      act(() => hooks.result.current.swapColumns(1, 3));
+      act(() => hooks.result.current.moveColumns(1, 3));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col1", "col2", "col0"],
         ["b", "c", "a"],
@@ -331,7 +331,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("同じ列インデックスを指定した場合、配列が変化しないこと", () => {
-      act(() => hooks.result.current.swapColumns(1, 1));
+      act(() => hooks.result.current.moveColumns(1, 1));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
@@ -340,7 +340,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("先頭と末尾の列を入れ替えられること", () => {
-      act(() => hooks.result.current.swapColumns(1, 3));
+      act(() => hooks.result.current.moveColumns(1, 3));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col1", "col2", "col0"],
         ["b", "c", "a"],
@@ -349,7 +349,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("2列目と1列目を入れ替えられること", () => {
-      act(() => hooks.result.current.swapColumns(1, 0));
+      act(() => hooks.result.current.moveColumns(1, 0));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col1", "col0", "col2"],
         ["b", "a", "c"],
@@ -361,13 +361,13 @@ describe("useUpdateCsvArray", () => {
       const emptyArray: string[][] = [];
       const setCSVArrayMock = vi.fn();
       const hooksEmpty = renderHook(() => useUpdateCsvArray(emptyArray, setCSVArrayMock, false));
-      act(() => hooksEmpty.result.current.swapColumns(0, 1));
+      act(() => hooksEmpty.result.current.moveColumns(0, 1));
       expect(setCSVArrayMock).toHaveBeenCalledWith([]);
     });
   });
-  describe("swapRows", () => {
+  describe("updateRows", () => {
     it("指定した2つの行の位置が入れ替わること（ヘッダ有効）", () => {
-      act(() => hooks.result.current.swapRows(0, 1));
+      act(() => hooks.result.current.moveRows(0, 1));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["d", "e", "f"],
@@ -376,7 +376,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("同じ行インデックスを指定した場合、配列が変化しないこと（ヘッダ有効）", () => {
-      act(() => hooks.result.current.swapRows(0, 0));
+      act(() => hooks.result.current.moveRows(0, 0));
       expect(setCSVArray).not.toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
@@ -385,14 +385,14 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("範囲外のインデックスを指定した場合、何も起きないこと（ヘッダ有効）", () => {
-      act(() => hooks.result.current.swapRows(-1, 2));
-      act(() => hooks.result.current.swapRows(1, 100));
+      act(() => hooks.result.current.moveRows(-1, 2));
+      act(() => hooks.result.current.moveRows(1, 100));
       expect(setCSVArray).not.toHaveBeenCalledWith(expect.anything());
     });
 
     it("指定した2つの行の位置が入れ替わること（ヘッダ無効）", () => {
       const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
-      act(() => hookslocal.result.current.swapRows(0, 2));
+      act(() => hookslocal.result.current.moveRows(0, 2));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["a", "b", "c"],
         ["d", "e", "f"],
@@ -402,14 +402,14 @@ describe("useUpdateCsvArray", () => {
 
     it("同じ行インデックスを指定した場合、配列が変化しないこと（ヘッダ無効）", () => {
       const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
-      act(() => hookslocal.result.current.swapRows(1, 1));
+      act(() => hookslocal.result.current.moveRows(1, 1));
       expect(setCSVArray).not.toHaveBeenCalledWith(expect.anything());
     });
 
     it("範囲外のインデックスを指定した場合、何も起きないこと（ヘッダ無効）", () => {
       const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
-      act(() => hookslocal.result.current.swapRows(-1, 2));
-      act(() => hookslocal.result.current.swapRows(0, 100));
+      act(() => hookslocal.result.current.moveRows(-1, 2));
+      act(() => hookslocal.result.current.moveRows(0, 100));
       expect(setCSVArray).not.toHaveBeenCalledWith(expect.anything());
     });
 
@@ -417,7 +417,7 @@ describe("useUpdateCsvArray", () => {
       const emptyArray: string[][] = [];
       const setCSVArrayMock = vi.fn();
       const hooksEmpty = renderHook(() => useUpdateCsvArray(emptyArray, setCSVArrayMock, false));
-      act(() => hooksEmpty.result.current.swapRows(0, 1));
+      act(() => hooksEmpty.result.current.moveRows(0, 1));
       expect(setCSVArrayMock).not.toHaveBeenCalled();
     });
   });
