@@ -2,9 +2,10 @@ import { useCellCopy } from "@/hooks/useCellCopy";
 import { useColumns } from "@/hooks/useColumns";
 import { useContextMenu } from "@/hooks/useContextMenu";
 import { useRows } from "@/hooks/useRows";
+import { useSearch } from "@/hooks/useSearch";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { RowSizeType } from "@/types";
-import { FC, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CalculatedColumn,
   CellClickArgs,
@@ -20,13 +21,12 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { createPortal } from "react-dom";
 import styles from "./EditableTable.module.scss";
-import { CustomHeaderCell } from "./Header/CustomHeaderCell";
+import { CustomHeaderCell, CustomHeaderCellProps } from "./Header/CustomHeaderCell";
 import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
+import { CustomCell, CustomCellProps } from "./Row/CustomCell";
 import { CustomRow, CustomRowProps } from "./Row/CustomRow";
 import { RowContextMenu } from "./Row/RowContextMenu";
 import { Search } from "./Search";
-import { useSearch } from "@/hooks/useSearch";
-import { CustomCell, CustomCellProps } from "./Row/CustomCell";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -265,6 +265,10 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     return <CustomCell key={props.rowKey} {...props} onUpdateRowHeight={() => {}} />;
   }, []);
 
+  const renderHeaderCell = useCallback((props: CustomHeaderCellProps) => {
+    return <CustomHeaderCell {...props} />;
+  }, []);
+
   return (
     <>
       <DndProvider backend={HTML5Backend}>
@@ -294,7 +298,7 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
                 rowKey: key,
                 onUpdateRowHeight: () => {},
                 onRowReorder: () => {},
-              }) as ReactNode,
+              }),
             renderCell: (key, props) =>
               renderCell({
                 ...props,
@@ -302,11 +306,11 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
                 isSearchTarget:
                   currentCell?.rowIdx === props.rowIdx && currentCell?.colIdx === props.column.idx,
                 onUpdateRowHeight: () => {},
-              }) as ReactNode,
+              }),
           }}
           defaultColumnOptions={{
             renderHeaderCell: (props) =>
-              CustomHeaderCell({
+              renderHeaderCell({
                 ...props,
                 isIgnoreHeaderRow,
                 sortColumnsForWaitingDoubleClick: sortColumnsForWaitingDoubleClick,
@@ -319,7 +323,7 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
                 onDoubleClick: () => {
                   setSortColumnsForWaitingDoubleClick([]);
                 },
-              }) as ReactNode,
+              }),
             sortable: true,
             draggable: true,
             resizable: true,
