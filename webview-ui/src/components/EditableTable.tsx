@@ -4,7 +4,7 @@ import { useContextMenu } from "@/hooks/useContextMenu";
 import { useRows } from "@/hooks/useRows";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { RowSizeType } from "@/types";
-import { FC, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { FC, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CalculatedColumn,
   CellClickArgs,
@@ -12,6 +12,7 @@ import {
   CellKeyDownArgs,
   CellMouseEvent,
   DataGrid,
+  DataGridHandle,
   FillEvent,
   SortColumn,
 } from "react-data-grid";
@@ -23,6 +24,9 @@ import { CustomHeaderCell } from "./Header/CustomHeaderCell";
 import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
 import { CustomRow, CustomRowProps } from "./Row/CustomRow";
 import { RowContextMenu } from "./Row/RowContextMenu";
+import { Search } from "./Search";
+import { useSearch } from "@/hooks/useSearch";
+import { CustomCell, CustomCellProps } from "./Row/CustomCell";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -60,6 +64,20 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     undo,
     redo,
   } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
+
+  const gridRef = useRef<DataGridHandle>(null);
+  const [isShowSearch, setIsShowSearch] = useState(false);
+  const {
+    isMatched,
+    currentCell,
+    handleSearch,
+    handleNextSearch,
+    handlePreviousSearch,
+    handleClose,
+  } = useSearch({
+    sortedRows,
+    gridRef,
+  });
 
   function handleSelectRowContextMenu(value: string) {
     if (rowContextMenuProps === null) {
@@ -185,6 +203,11 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
         redo();
         return;
       }
+      if (key === "F" && e.ctrlKey) {
+        e.stopPropagation();
+        setIsShowSearch((prev) => !prev);
+        return;
+      }
     }
 
     window.addEventListener("keydown", handleKeyDownForDocument);
@@ -238,10 +261,15 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     [swapRows]
   );
 
+  const renderCell = useCallback((props: CustomCellProps) => {
+    return <CustomCell key={props.rowKey} {...props} onUpdateRowHeight={() => {}} />;
+  }, []);
+
   return (
     <>
       <DndProvider backend={HTML5Backend}>
         <DataGrid
+          ref={gridRef}
           className={styles.dataGrid}
           enableVirtualization={true}
           columns={columns}
@@ -267,6 +295,14 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
                 onUpdateRowHeight: () => {},
                 onRowReorder: () => {},
               }) as ReactNode,
+            renderCell: (key, props) =>
+              renderCell({
+                ...props,
+                rowKey: key,
+                isSearchTarget:
+                  currentCell?.rowIdx === props.rowIdx && currentCell?.colIdx === props.column.idx,
+                onUpdateRowHeight: () => {},
+              }) as ReactNode,
           }}
           defaultColumnOptions={{
             renderHeaderCell: (props) =>
@@ -289,6 +325,20 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
             resizable: true,
           }}
         />
+        {isShowSearch &&
+          createPortal(
+            <Search
+              isMatching={isMatched}
+              onSearch={(text) => handleSearch(text)}
+              onClose={() => {
+                setIsShowSearch(false);
+                handleClose();
+              }}
+              onNext={() => handleNextSearch()}
+              onPrevious={() => handlePreviousSearch()}
+            />,
+            document.body
+          )}
         {isRowContextMenuOpen &&
           createPortal(
             <RowContextMenu
