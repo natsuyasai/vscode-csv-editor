@@ -14,15 +14,13 @@ export default function App() {
   const [rawText, setRawText] = useState("");
   const [csvArray, setCSVArray] = useState<Array<Array<string>>>([]);
 
-  const handleMessagesFromExtension = useCallback(
-    (event: MessageEvent<Message>) => {
-      if (event.data.type === "update") {
-        const message = event.data as UpdateMessage;
-        updateCSVFromExtension(message.payload);
-      }
-    },
-    [rawText]
-  );
+  const handleMessagesFromExtension = useCallback((event: MessageEvent<Message>) => {
+    if (event.data.type === "update") {
+      const message = event.data as UpdateMessage;
+      updateCSVFromExtension(message.payload);
+    }
+  }, []);
+
   useEffect(() => {
     window.addEventListener("message", handleMessagesFromExtension);
 
@@ -31,23 +29,30 @@ export default function App() {
     };
   }, [handleMessagesFromExtension]);
 
-  function handleKeyDown(e: KeyboardEvent) {
-    const key = e.key.toUpperCase();
-    if (key === "S" && e.ctrlKey) {
-      e.stopPropagation();
-      handleApply();
-      return;
-    }
-  }
+  const handleApply = useCallback(() => {
+    vscode.postMessage({
+      type: "save",
+      payload: rawText,
+    });
+  }, [rawText]);
+
   useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const key = e.key.toUpperCase();
+      if (key === "S" && e.ctrlKey) {
+        e.stopPropagation();
+        handleApply();
+        return;
+      }
+    }
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [handleKeyDown]);
+  }, [handleApply]);
 
-  const handleReloadWebview = () => {
+  const _handleReloadWebview = () => {
     vscode.postMessage({
       type: "reload",
       payload: rawText,
@@ -81,13 +86,6 @@ export default function App() {
     setRawText(text);
     const records = csvParseSync(text);
     setCSVArray(records);
-  }
-
-  function handleApply() {
-    vscode.postMessage({
-      type: "save",
-      payload: rawText,
-    });
   }
 
   function updateCSVArray(csv: Array<Array<string>>) {

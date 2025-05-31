@@ -1,5 +1,10 @@
-import { FC, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import styles from "./EditableTable.module.scss";
+import { useCellCopy } from "@/hooks/useCellCopy";
+import { useColumns } from "@/hooks/useColumns";
+import { useContextMenu } from "@/hooks/useContextMenu";
+import { useRows } from "@/hooks/useRows";
+import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
+import { RowSizeType } from "@/types";
+import { FC, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalculatedColumn,
   CellClickArgs,
@@ -8,24 +13,16 @@ import {
   CellMouseEvent,
   DataGrid,
   FillEvent,
-  RenderHeaderCellProps,
-  RenderSortStatusProps,
   SortColumn,
 } from "react-data-grid";
-import { createPortal } from "react-dom";
-import { useRows } from "@/hooks/useRows";
-import { useColumns } from "@/hooks/useColumns";
-import { useContextMenu } from "@/hooks/useContextMenu";
-import { useCellCopy } from "@/hooks/useCellCopy";
-import { RowContextMenu } from "./Row/RowContextMenu";
-import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
-import { RowSizeType } from "@/types";
-import { CustomHeaderCell } from "./Header/CustomHeaderCell";
-import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
-import { CustomCell } from "./Row/CustomCell";
-import { CustomRow, CustomRowProps } from "./Row/CustomRow";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { createPortal } from "react-dom";
+import styles from "./EditableTable.module.scss";
+import { CustomHeaderCell } from "./Header/CustomHeaderCell";
+import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
+import { CustomRow, CustomRowProps } from "./Row/CustomRow";
+import { RowContextMenu } from "./Row/RowContextMenu";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -175,26 +172,27 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     }
   }
 
-  function handleKeyDownForDocument(e: KeyboardEvent) {
-    const key = e.key.toUpperCase();
-    if (key === "Z" && e.ctrlKey) {
-      e.stopPropagation();
-      undo();
-      return;
-    }
-    if (key === "Y" && e.ctrlKey) {
-      e.stopPropagation();
-      redo();
-      return;
-    }
-  }
   useEffect(() => {
+    function handleKeyDownForDocument(e: KeyboardEvent) {
+      const key = e.key.toUpperCase();
+      if (key === "Z" && e.ctrlKey) {
+        e.stopPropagation();
+        undo();
+        return;
+      }
+      if (key === "Y" && e.ctrlKey) {
+        e.stopPropagation();
+        redo();
+        return;
+      }
+    }
+
     window.addEventListener("keydown", handleKeyDownForDocument);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDownForDocument);
     };
-  }, [handleKeyDownForDocument]);
+  }, [undo, redo]);
 
   const rowHeight = useMemo(() => {
     switch (rowSize) {
@@ -237,7 +235,7 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
       }
       return <CustomRow key={props.rowKey} {...props} onRowReorder={onRowReorder} />;
     },
-    [csvArray]
+    [swapRows]
   );
 
   return (

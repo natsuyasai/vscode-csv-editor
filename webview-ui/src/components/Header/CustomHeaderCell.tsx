@@ -1,7 +1,7 @@
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import { CalculatedColumn, RenderHeaderCellProps, SortColumn } from "react-data-grid";
-import styles from "./CustomHeaderCell.module.scss";
 import { useDrag, useDrop } from "react-dnd";
+import styles from "./CustomHeaderCell.module.scss";
 
 interface Props {
   isIgnoreHeaderRow: boolean;
@@ -21,7 +21,19 @@ interface Props {
 
 export const CustomHeaderCell: FC<
   RenderHeaderCellProps<NoInfer<Record<string, string>>, unknown> & Props
-> = (props) => {
+> = ({
+  column,
+  sortDirection,
+  priority,
+  isIgnoreHeaderRow,
+  onHeaderCellContextMenu,
+  onHeaderEdit,
+  onKeyDown,
+  onCanSortColumnsChange,
+  onDoubleClick,
+  sortColumnsForWaitingDoubleClick,
+  ..._props
+}) => {
   const rootRef = useRef<HTMLSpanElement>(null);
   const headerTextRef = useRef<HTMLSpanElement>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -30,7 +42,7 @@ export const CustomHeaderCell: FC<
 
   const [{}, drag] = useDrag({
     type: "COL_DRAG",
-    item: { index: props.column.idx },
+    item: { index: column.idx },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -38,7 +50,7 @@ export const CustomHeaderCell: FC<
 
   const [{}, drop] = useDrop({
     accept: "COL_DRAG",
-    drop({ index }: { index: number }) {},
+    drop({ index: _index }: { index: number }) {},
     collect: (monitor) => ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
@@ -58,18 +70,18 @@ export const CustomHeaderCell: FC<
       } else if (e.key === "Backspace") {
         setIsEditing(true);
       } else if (e.key === "Delete") {
-        props.onHeaderEdit(props.column.idx, "");
+        onHeaderEdit(column.idx, "");
       }
-      props.onKeyDown(props.column, e);
+      onKeyDown(column, e);
     },
-    [props.column]
+    [column, onHeaderEdit, onKeyDown]
   );
 
   const handleContextMenu = useCallback(
     (e: MouseEvent) => {
-      props.onHeaderCellContextMenu(props.column, e as MouseEvent);
+      onHeaderCellContextMenu(column, e as MouseEvent);
     },
-    [props.column]
+    [column, onHeaderCellContextMenu]
   );
 
   const setTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -84,10 +96,10 @@ export const CustomHeaderCell: FC<
 
       setTimeoutRef.current = setTimeout(() => {
         setTimeoutRef.current = null;
-        props.onCanSortColumnsChange(props.sortColumnsForWaitingDoubleClick);
+        onCanSortColumnsChange(sortColumnsForWaitingDoubleClick);
       }, WAIT_DOUBLE_CLICK_TH_MS);
     },
-    [props.sortColumnsForWaitingDoubleClick]
+    [sortColumnsForWaitingDoubleClick, onCanSortColumnsChange]
   );
 
   const handleDoubleClick = useCallback(
@@ -100,9 +112,9 @@ export const CustomHeaderCell: FC<
         setTimeoutRef.current = null;
       }
       setIsEditing(true);
-      props.onDoubleClick();
+      onDoubleClick();
     },
-    [props.sortColumnsForWaitingDoubleClick]
+    [onDoubleClick]
   );
 
   function handleWindowClick(e: MouseEvent) {
@@ -112,7 +124,7 @@ export const CustomHeaderCell: FC<
   }
 
   useEffect(() => {
-    if (props.isIgnoreHeaderRow) {
+    if (isIgnoreHeaderRow) {
       return;
     }
     rootRef.current?.parentElement?.addEventListener("keydown", handleKeyDown);
@@ -124,7 +136,7 @@ export const CustomHeaderCell: FC<
       // クリック判定待ちタイマーが起動していた場合は再度最新の情報でタイマーをセットしなおす
       setTimeoutRef.current = setTimeout(() => {
         setTimeoutRef.current = null;
-        props.onCanSortColumnsChange(props.sortColumnsForWaitingDoubleClick);
+        onCanSortColumnsChange(sortColumnsForWaitingDoubleClick);
       }, WAIT_DOUBLE_CLICK_TH_MS);
     }
 
@@ -138,7 +150,16 @@ export const CustomHeaderCell: FC<
         clearTimeout(setTimeoutRef.current);
       }
     };
-  }, [props.column, props.isIgnoreHeaderRow]);
+  }, [
+    column,
+    isIgnoreHeaderRow,
+    onCanSortColumnsChange,
+    sortColumnsForWaitingDoubleClick,
+    handleKeyDown,
+    handleContextMenu,
+    handleDoubleClick,
+    handleClick,
+  ]);
 
   return (
     <>
@@ -151,20 +172,20 @@ export const CustomHeaderCell: FC<
           drop(ref);
         }}
         className={styles.cellRoot}>
-        {!props.isIgnoreHeaderRow && isEditing && (
+        {!isIgnoreHeaderRow && isEditing && (
           <textarea
             ref={textAreaRef}
             className={styles.textArea}
-            value={props.column.name as string}
+            value={column.name as string}
             onChange={(e) => {
-              props.onHeaderEdit(props.column.idx, e.target.value);
+              onHeaderEdit(column.idx, e.target.value);
             }}
             onClick={(e) => {
               e.stopPropagation();
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && e.shiftKey) {
-                props.onHeaderEdit(props.column.idx, (e.target as HTMLTextAreaElement).value);
+                onHeaderEdit(column.idx, (e.target as HTMLTextAreaElement).value);
               } else if (e.key === "Enter" || e.key === "Tab" || e.key === "Escape") {
                 setIsEditing(false);
               } else if (
@@ -184,18 +205,14 @@ export const CustomHeaderCell: FC<
         )}
         {!isEditing && (
           <span ref={headerTextRef} className={styles.headerText}>
-            {props.column.name}
+            {column.name}
           </span>
         )}
 
         <span className={styles.sortDirection}>
-          {props.sortDirection !== undefined
-            ? props.sortDirection === "ASC"
-              ? "\u2B9D"
-              : "\u2B9F"
-            : null}
+          {sortDirection !== undefined ? (sortDirection === "ASC" ? "\u2B9D" : "\u2B9F") : null}
         </span>
-        <span>{props.priority}</span>
+        <span>{priority}</span>
       </span>
     </>
   );
