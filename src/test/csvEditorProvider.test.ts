@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
+import { suite, test } from "mocha";
 import { CSVEditorProvider } from "../editor/csvEditorProvider";
 
 suite("csvEditorProvider Test Suite", () => {
@@ -41,7 +42,7 @@ suite("csvEditorProvider Test Suite", () => {
     const doc = await vscode.workspace.openTextDocument(uri);
     const provider = new CSVEditorProvider({
       extensionUri: vscode.Uri.parse("file:///fake"),
-    } as any);
+    } as unknown as vscode.ExtensionContext);
 
     const result = await provider["updateTextDocument"](doc, "a,b,c\n1,2,3");
     assert.ok(result);
