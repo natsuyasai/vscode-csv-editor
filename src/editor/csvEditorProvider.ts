@@ -29,8 +29,8 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       new CSVEditorProvider(context),
       {
         webviewOptions: {
-          enableFindWidget: true,
-          retainContextWhenHidden: true,
+          enableFindWidget: false,
+          retainContextWhenHidden: false,
         },
         supportsMultipleEditorsPerDocument: false, // 同一ドキュメントに対して複数のエディタをサポートするかどうか
       }
