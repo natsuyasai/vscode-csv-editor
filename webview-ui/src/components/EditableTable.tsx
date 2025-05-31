@@ -23,6 +23,7 @@ import { CustomHeaderCell } from "./Header/CustomHeaderCell";
 import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
 import { CustomRow, CustomRowProps } from "./Row/CustomRow";
 import { RowContextMenu } from "./Row/RowContextMenu";
+import { Search } from "./Search";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -60,6 +61,9 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     undo,
     redo,
   } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
+
+  const [isShowSearch, setIsShowSearch] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
   function handleSelectRowContextMenu(value: string) {
     if (rowContextMenuProps === null) {
@@ -185,6 +189,11 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
         redo();
         return;
       }
+      if (key === "F" && e.ctrlKey) {
+        e.stopPropagation();
+        setIsShowSearch((prev) => !prev);
+        return;
+      }
     }
 
     window.addEventListener("keydown", handleKeyDownForDocument);
@@ -289,6 +298,16 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
             resizable: true,
           }}
         />
+        {isShowSearch &&
+          createPortal(
+            <Search
+              onSearch={(text) => setSearchText(text)}
+              onClose={() => setIsShowSearch(false)}
+              onNext={() => {}}
+              onPrevious={() => {}}
+            />,
+            document.body
+          )}
         {isRowContextMenuOpen &&
           createPortal(
             <RowContextMenu
