@@ -19,9 +19,10 @@ interface Props {
   onDoubleClick: () => void;
 }
 
-export const CustomHeaderCell: FC<
-  RenderHeaderCellProps<NoInfer<Record<string, string>>, unknown> & Props
-> = ({
+export type CustomHeaderCellProps = Props &
+  RenderHeaderCellProps<NoInfer<Record<string, string>>, unknown>;
+
+export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   column,
   sortDirection,
   priority,
