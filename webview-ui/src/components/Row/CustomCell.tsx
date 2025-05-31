@@ -1,4 +1,4 @@
-import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { FC, useRef, useState } from "react";
 import { Cell, CellRendererProps } from "react-data-grid";
 import styles from "./CustomCell.module.scss";
 
@@ -40,7 +40,7 @@ export const CustomCell: FC<CellRendererProps<NoInfer<Record<string, string>>, u
       ref={refCell}
       key={props.rowKey}
       className={styles.cell}
-      {...(({ rowKey, onUpdateRowHeight, ...rest }) => rest)(props)}
+      {...(({ rowKey: _rowKey, onUpdateRowHeight: _onUpdateRowHeight, ...rest }) => rest)(props)}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}></Cell>

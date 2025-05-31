@@ -1,9 +1,9 @@
-import { FC } from "react";
+import { FC, Ref } from "react";
 import { VscodeContextMenu } from "@vscode-elements/react-elements";
 
 interface HeaderCelContextMenuProps {
   isContextMenuOpen: boolean;
-  menuRef: React.RefObject<any>;
+  menuRef: Ref<HTMLElement>;
   contextMenuProps: { itemIdx: number; top: number; left: number } | null;
   onSelect: (value: string) => void;
   onClose: () => void;
@@ -22,7 +22,7 @@ export const HeaderCelContextMenu: FC<HeaderCelContextMenuProps> = ({
 
   return (
     <VscodeContextMenu
-      ref={menuRef}
+      ref={menuRef as never}
       show={isContextMenuOpen}
       className={className}
       data={[

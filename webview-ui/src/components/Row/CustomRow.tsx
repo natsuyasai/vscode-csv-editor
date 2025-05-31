@@ -1,7 +1,7 @@
-import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Row, RenderRowProps } from "react-data-grid";
-import styles from "./CustomRow.module.scss";
+import { FC } from "react";
+import { RenderRowProps, Row } from "react-data-grid";
 import { useDrag, useDrop } from "react-dnd";
+import styles from "./CustomRow.module.scss";
 export interface Props {
   rowKey: React.Key;
   onUpdateRowHeight: (rowIdx: number, height: number) => void;
@@ -11,7 +11,7 @@ export interface Props {
 export type CustomRowProps = Props & RenderRowProps<NoInfer<Record<string, string>>, unknown>;
 
 export const CustomRow: FC<CustomRowProps> = (props) => {
-  const refRow = useRef<HTMLDivElement>(null);
+  // const refRow = useRef<HTMLDivElement>(null);
   // const startY = useRef(0);
   // const [isResizing, setIsResizing] = useState(false);
 
@@ -70,7 +70,12 @@ export const CustomRow: FC<CustomRowProps> = (props) => {
         isDragging ? styles.rowDragging : "",
         isOver ? styles.rowOver : "",
       ].join(" ")}
-      {...(({ rowKey, onUpdateRowHeight, onRowReorder, ...rest }) => rest)(props)}
+      {...(({
+        rowKey: _rowKey,
+        onUpdateRowHeight: _onUpdateRowHeight,
+        onRowReorder: _onRowReorder,
+        ...rest
+      }) => rest)(props)}
       // onMouseDown={(e) => handleMouseDown}
       // onMouseMove={(e) => handleMouseMove}
       // onMouseUp={(e) => handleMouseUp}

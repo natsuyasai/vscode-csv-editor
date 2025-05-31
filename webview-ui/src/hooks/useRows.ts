@@ -1,10 +1,33 @@
 import { ROW_IDX_KEY } from "@/types";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { SortColumn } from "react-data-grid";
 
+const empty: Record<string, string>[] = [];
 export function useRows(csvArray: Array<Array<string>>, isIgnoreHeaderRow: boolean) {
-  const empty: Record<string, string>[] = [];
-  const rows = useMemo(() => createRows(csvArray), [csvArray, isIgnoreHeaderRow]);
+  const createRows = useCallback(
+    (csvArray: Array<Array<string>>): Record<string, string>[] => {
+      if (csvArray.length === 0) {
+        return empty;
+      }
+      const startIndex = isIgnoreHeaderRow ? 0 : 1;
+      return (
+        csvArray.slice(startIndex).map((row, index) =>
+          row.reduce(
+            (acc, cell, colIndex) => {
+              acc[`col${colIndex}`] = cell;
+              return acc;
+            },
+            {
+              [ROW_IDX_KEY]: (index + 1).toString(),
+            } as Record<string, string>
+          )
+        ) || empty
+      );
+    },
+    [isIgnoreHeaderRow]
+  );
+
+  const rows = useMemo(() => createRows(csvArray), [csvArray, createRows]);
   const [sortColumns, setSortColumns] = useState<readonly SortColumn[]>([]);
 
   const sortedRows = useMemo((): Record<string, string>[] => {
@@ -24,26 +47,6 @@ export function useRows(csvArray: Array<Array<string>>, isIgnoreHeaderRow: boole
       })
       .map((row, index) => ({ ...row, [ROW_IDX_KEY]: (index + 1).toString() }));
   }, [rows, sortColumns]);
-
-  function createRows(csvArray: Array<Array<string>>): Record<string, string>[] {
-    if (csvArray.length === 0) {
-      return empty;
-    }
-    const startIndex = isIgnoreHeaderRow ? 0 : 1;
-    return (
-      csvArray.slice(startIndex).map((row, index) =>
-        row.reduce(
-          (acc, cell, colIndex) => {
-            acc[`col${colIndex}`] = cell;
-            return acc;
-          },
-          {
-            [ROW_IDX_KEY]: (index + 1).toString(),
-          } as Record<string, string>
-        )
-      ) || empty
-    );
-  }
 
   return { rows, sortedRows, sortColumns, setSortColumns };
 }
