@@ -154,7 +154,7 @@ export function useUpdateCsvArray(
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
 
-  function swapColumns(sourceIdx: number, targetIdx: number) {
+  function moveColumns(sourceIdx: number, targetIdx: number) {
     const newCsvArray = csvArray.map((row) => {
       const newRow = [...row];
       // 先頭にインデックス表示列があるので補正するs
@@ -166,7 +166,7 @@ export function useUpdateCsvArray(
     setCSVArrayAndPushHistory(newCsvArray);
   }
 
-  function swapRows(sourceIdx: number, targetIdx: number) {
+  function moveRows(sourceIdx: number, targetIdx: number) {
     // ヘッダー行を無視する場合、インデックス調整
     // sourceIdxとtargetIdxは実データの1行目を0としてくる
     // そのためヘッダー表示がある場合はcsvArrayの2要素目を0としてやってくるため補正が必要
@@ -197,8 +197,8 @@ export function useUpdateCsvArray(
     deleteCol,
     updateCol,
     updateCell,
-    swapColumns,
-    swapRows,
+    moveColumns,
+    moveRows,
     undo,
     redo,
   };
