@@ -50,7 +50,6 @@ export const Search: FC<Props> = ({ onSearch, onNext, onPrevious, onClose }) => 
       <div className={styles.searchRoot} onKeyDown={(e) => handleKeyDownForRoot(e)}>
         <VscodeTextfield
           ref={inputRef as never}
-          autoFocus={true}
           value={searchText}
           onInput={(e) => setSearchText((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => handleKeyDown(e)}></VscodeTextfield>
