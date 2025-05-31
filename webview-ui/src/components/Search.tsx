@@ -3,13 +3,14 @@ import { FC, useEffect, useRef, useState } from "react";
 import styles from "./Search.module.scss";
 
 interface Props {
+  isMatching?: boolean;
   onSearch: (text: string) => void;
   onNext: () => void;
   onPrevious: () => void;
   onClose: () => void;
 }
 
-export const Search: FC<Props> = ({ onSearch, onNext, onPrevious, onClose }) => {
+export const Search: FC<Props> = ({ isMatching, onSearch, onNext, onPrevious, onClose }) => {
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef<HTMLElement>(null);
   const nextButtonRef = useRef<HTMLElement>(null);
@@ -53,8 +54,13 @@ export const Search: FC<Props> = ({ onSearch, onNext, onPrevious, onClose }) => 
           value={searchText}
           onInput={(e) => setSearchText((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => handleKeyDown(e)}></VscodeTextfield>
-        <VscodeButton onClick={() => onPrevious()}>↑</VscodeButton>
-        <VscodeButton ref={nextButtonRef as never} onClick={() => onNext()}>
+        <VscodeButton onClick={() => onPrevious()} disabled={!searchText || !isMatching}>
+          ↑
+        </VscodeButton>
+        <VscodeButton
+          ref={nextButtonRef as never}
+          onClick={() => onNext()}
+          disabled={!searchText || !isMatching}>
           ↓
         </VscodeButton>
         <VscodeButton onClick={() => onClose()} secondary>
