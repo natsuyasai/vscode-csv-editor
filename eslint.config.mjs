@@ -9,7 +9,7 @@ export default [
       parser: typescriptEslintParser,
       parserOptions: {
         project: true,
-        sourceType: "module",
+        sourceType: "commonjs",
       },
     }
   },
@@ -17,7 +17,15 @@ export default [
   ...tseslint.configs.strictTypeChecked,
   {
     rules: {
-      "no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          "argsIgnorePattern": "^_",
+          "varsIgnorePattern": "^_",
+          "caughtErrorsIgnorePattern": "^_",
+          "destructuredArrayIgnorePattern": "^_"
+        }
+      ],
       "no-undef": "warn",
       "@typescript-eslint/prefer-includes": "error"
     }
