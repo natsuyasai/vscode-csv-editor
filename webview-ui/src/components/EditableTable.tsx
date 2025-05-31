@@ -26,6 +26,7 @@ import { CustomRow, CustomRowProps } from "./Row/CustomRow";
 import { RowContextMenu } from "./Row/RowContextMenu";
 import { Search } from "./Search";
 import { useSearch } from "@/hooks/useSearch";
+import { CustomCell, CustomCellProps } from "./Row/CustomCell";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -66,7 +67,14 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
 
   const gridRef = useRef<DataGridHandle>(null);
   const [isShowSearch, setIsShowSearch] = useState(false);
-  const { isMatched, handleSearch, handleNextSearch, handlePreviousSearch } = useSearch({
+  const {
+    isMatched,
+    currentCell,
+    handleSearch,
+    handleNextSearch,
+    handlePreviousSearch,
+    handleClose,
+  } = useSearch({
     sortedRows,
     gridRef,
   });
@@ -253,6 +261,10 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     [swapRows]
   );
 
+  const renderCell = useCallback((props: CustomCellProps) => {
+    return <CustomCell key={props.rowKey} {...props} onUpdateRowHeight={() => {}} />;
+  }, []);
+
   return (
     <>
       <DndProvider backend={HTML5Backend}>
@@ -283,6 +295,14 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
                 onUpdateRowHeight: () => {},
                 onRowReorder: () => {},
               }) as ReactNode,
+            renderCell: (key, props) =>
+              renderCell({
+                ...props,
+                rowKey: key,
+                isSearchTarget:
+                  currentCell?.rowIdx === props.rowIdx && currentCell?.colIdx === props.column.idx,
+                onUpdateRowHeight: () => {},
+              }) as ReactNode,
           }}
           defaultColumnOptions={{
             renderHeaderCell: (props) =>
@@ -310,7 +330,10 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
             <Search
               isMatching={isMatched}
               onSearch={(text) => handleSearch(text)}
-              onClose={() => setIsShowSearch(false)}
+              onClose={() => {
+                setIsShowSearch(false);
+                handleClose();
+              }}
               onNext={() => handleNextSearch()}
               onPrevious={() => handlePreviousSearch()}
             />,

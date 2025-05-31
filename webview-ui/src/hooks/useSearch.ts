@@ -16,6 +16,17 @@ export function useSearch({ sortedRows, gridRef }: Parameters) {
     return matchedItemPositions.length > 0;
   }, [matchedItemPositions]);
 
+  const currentCell = useMemo(() => {
+    if (matchedItemPositions.length === 0 || searchedSelectedItemIdx < 0) {
+      return null;
+    }
+    const position = matchedItemPositions[searchedSelectedItemIdx];
+    return {
+      colIdx: position.colIdx,
+      rowIdx: position.rowIdx,
+    };
+  }, [matchedItemPositions, searchedSelectedItemIdx]);
+
   function handleSearch(text: string) {
     if (text.trim() === "") {
       return;
@@ -62,7 +73,6 @@ export function useSearch({ sortedRows, gridRef }: Parameters) {
     setSearchedSelectedItemIdx(0);
     const position = positions[0];
     gridRef.current!.scrollToCell({ idx: position.colIdx, rowIdx: position.rowIdx });
-    gridRef.current!.selectCell({ idx: position.colIdx, rowIdx: position.rowIdx });
   }
 
   function handleNextSearch() {
@@ -74,7 +84,6 @@ export function useSearch({ sortedRows, gridRef }: Parameters) {
     const position = matchedItemPositions[nextIdx];
     setSearchedSelectedItemIdx(nextIdx);
     gridRef.current!.scrollToCell({ idx: position.colIdx, rowIdx: position.rowIdx });
-    gridRef.current!.selectCell({ idx: position.colIdx, rowIdx: position.rowIdx });
   }
 
   function handlePreviousSearch() {
@@ -88,8 +97,19 @@ export function useSearch({ sortedRows, gridRef }: Parameters) {
     const position = matchedItemPositions[prevIdx];
     setSearchedSelectedItemIdx(prevIdx);
     gridRef.current!.scrollToCell({ idx: position.colIdx, rowIdx: position.rowIdx });
-    gridRef.current!.selectCell({ idx: position.colIdx, rowIdx: position.rowIdx });
   }
 
-  return { isMatched, handleSearch, handleNextSearch, handlePreviousSearch };
+  function handleClose() {
+    setMatchedItemPositions([]);
+    setSearchedSelectedItemIdx(0);
+  }
+
+  return {
+    isMatched,
+    currentCell,
+    handleSearch,
+    handleNextSearch,
+    handlePreviousSearch,
+    handleClose,
+  };
 }
