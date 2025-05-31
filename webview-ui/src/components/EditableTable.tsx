@@ -4,7 +4,7 @@ import { useContextMenu } from "@/hooks/useContextMenu";
 import { useRows } from "@/hooks/useRows";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { RowSizeType } from "@/types";
-import { FC, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { FC, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CalculatedColumn,
   CellClickArgs,
@@ -12,6 +12,7 @@ import {
   CellKeyDownArgs,
   CellMouseEvent,
   DataGrid,
+  DataGridHandle,
   FillEvent,
   SortColumn,
 } from "react-data-grid";
@@ -24,6 +25,7 @@ import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
 import { CustomRow, CustomRowProps } from "./Row/CustomRow";
 import { RowContextMenu } from "./Row/RowContextMenu";
 import { Search } from "./Search";
+import { useSearch } from "@/hooks/useSearch";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -62,8 +64,12 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     redo,
   } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
 
+  const gridRef = useRef<DataGridHandle>(null);
   const [isShowSearch, setIsShowSearch] = useState(false);
-  const [searchText, setSearchText] = useState("");
+  const { handleSearch, handleNextSearch, handlePreviousSearch } = useSearch({
+    sortedRows,
+    gridRef,
+  });
 
   function handleSelectRowContextMenu(value: string) {
     if (rowContextMenuProps === null) {
@@ -251,6 +257,7 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     <>
       <DndProvider backend={HTML5Backend}>
         <DataGrid
+          ref={gridRef}
           className={styles.dataGrid}
           enableVirtualization={true}
           columns={columns}
@@ -301,10 +308,10 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
         {isShowSearch &&
           createPortal(
             <Search
-              onSearch={(text) => setSearchText(text)}
+              onSearch={(text) => handleSearch(text)}
               onClose={() => setIsShowSearch(false)}
-              onNext={() => {}}
-              onPrevious={() => {}}
+              onNext={() => handleNextSearch()}
+              onPrevious={() => handlePreviousSearch()}
             />,
             document.body
           )}

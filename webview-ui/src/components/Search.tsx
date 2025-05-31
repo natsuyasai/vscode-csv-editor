@@ -52,7 +52,7 @@ export const Search: FC<Props> = ({ onSearch, onNext, onPrevious, onClose }) => 
           ref={inputRef as never}
           autoFocus={true}
           value={searchText}
-          onChange={(e) => setSearchText((e.target as HTMLInputElement).value)}
+          onInput={(e) => setSearchText((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => handleKeyDown(e)}></VscodeTextfield>
         <VscodeButton onClick={() => onPrevious()}>↑</VscodeButton>
         <VscodeButton ref={nextButtonRef as never} onClick={() => onNext()}>
