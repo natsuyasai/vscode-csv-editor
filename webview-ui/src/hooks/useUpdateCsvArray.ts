@@ -171,22 +171,21 @@ export function useUpdateCsvArray(
     // sourceIdxとtargetIdxは実データの1行目を0としてくる
     // そのためヘッダー表示がある場合はcsvArrayの2要素目を0としてやってくるため補正が必要
     const correctionSourceIdx = isIgnoreHeaderRow ? sourceIdx : sourceIdx + 1;
-    const CorrectionTargetIdx = isIgnoreHeaderRow ? targetIdx : targetIdx + 1;
+    const correctionTargetIdx = isIgnoreHeaderRow ? targetIdx : targetIdx + 1;
     const offset = isIgnoreHeaderRow ? 0 : 1;
     const maxIdx = csvArray.length - 1;
     if (
       correctionSourceIdx < offset ||
-      CorrectionTargetIdx < offset ||
+      correctionTargetIdx < offset ||
       correctionSourceIdx > maxIdx ||
-      CorrectionTargetIdx > maxIdx ||
-      correctionSourceIdx === CorrectionTargetIdx
+      correctionTargetIdx > maxIdx ||
+      correctionSourceIdx === correctionTargetIdx
     ) {
       return;
     }
-    const newCsvArray = csvArray.map((row) => [...row]);
-    const temp = newCsvArray[correctionSourceIdx];
-    newCsvArray[correctionSourceIdx] = newCsvArray[CorrectionTargetIdx];
-    newCsvArray[CorrectionTargetIdx] = temp;
+    const movingRow = csvArray[correctionSourceIdx];
+    const newCsvArray = csvArray.filter((_, idx) => idx !== correctionSourceIdx);
+    newCsvArray.splice(correctionTargetIdx, 0, movingRow);
     setCSVArrayAndPushHistory(newCsvArray);
   }
 
