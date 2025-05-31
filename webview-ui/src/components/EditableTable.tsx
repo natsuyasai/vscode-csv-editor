@@ -66,7 +66,7 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
 
   const gridRef = useRef<DataGridHandle>(null);
   const [isShowSearch, setIsShowSearch] = useState(false);
-  const { handleSearch, handleNextSearch, handlePreviousSearch } = useSearch({
+  const { isMatched, handleSearch, handleNextSearch, handlePreviousSearch } = useSearch({
     sortedRows,
     gridRef,
   });
@@ -308,6 +308,7 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
         {isShowSearch &&
           createPortal(
             <Search
+              isMatching={isMatched}
               onSearch={(text) => handleSearch(text)}
               onClose={() => setIsShowSearch(false)}
               onNext={() => handleNextSearch()}

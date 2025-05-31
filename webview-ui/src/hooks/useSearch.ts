@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DataGridHandle } from "react-data-grid";
 
 interface Parameters {
@@ -11,6 +11,10 @@ type Position = { colIdx: number; rowIdx: number };
 export function useSearch({ sortedRows, gridRef }: Parameters) {
   const [matchedItemPositions, setMatchedItemPositions] = useState<Position[]>([]);
   const [searchedSelectedItemIdx, setSearchedSelectedItemIdx] = useState(0);
+
+  const isMatched = useMemo(() => {
+    return matchedItemPositions.length > 0;
+  }, [matchedItemPositions]);
 
   function handleSearch(text: string) {
     if (text.trim() === "") {
@@ -87,5 +91,5 @@ export function useSearch({ sortedRows, gridRef }: Parameters) {
     gridRef.current!.selectCell({ idx: position.colIdx, rowIdx: position.rowIdx });
   }
 
-  return { handleSearch, handleNextSearch, handlePreviousSearch };
+  return { isMatched, handleSearch, handleNextSearch, handlePreviousSearch };
 }
