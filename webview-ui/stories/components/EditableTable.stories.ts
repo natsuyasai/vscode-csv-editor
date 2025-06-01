@@ -43,6 +43,24 @@ export const Default: Story = {
   },
 };
 
+export const IgnoreHeaderRow: Story = {
+  play: async ({ canvas }) => {
+    const checkbox = canvas.getByLabelText("Ignore Header Row");
+    expect(checkbox).toBeVisible();
+    await userEvent.click(checkbox!.shadowRoot!.querySelector("label")!);
+    const headercell = canvas.getAllByRole("columnheader");
+    expect(headercell.length).toBe(6);
+    const cell = canvas.getAllByRole("cell");
+    expect(cell.length).toBe(6);
+    expect(cell[0]).toHaveTextContent("");
+    expect(cell[1]).toHaveTextContent("");
+    expect(cell[2]).toHaveTextContent("");
+    expect(cell[3]).toHaveTextContent("");
+    expect(cell[4]).toHaveTextContent("");
+    expect(cell[5]).toHaveTextContent("");
+  },
+};
+
 async function setRowSize(canvas: Canvas, rowSize: RowSizeType) {
   const listbox = canvas.getByRole("listbox");
   const listItem = listbox.shadowRoot?.querySelector("div[class*='select-face']");
