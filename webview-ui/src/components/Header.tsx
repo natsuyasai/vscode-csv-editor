@@ -2,6 +2,7 @@ import { RowSizeType } from "@/types";
 import {
   VscodeButton,
   VscodeCheckbox,
+  VscodeIcon,
   VscodeLabel,
   VscodeOption,
   VscodeSingleSelect,
@@ -72,18 +73,21 @@ export const Header: FC<Props> = ({
         </div>
         <div className={styles.buttons}>
           <VscodeButton secondary disabled={!isEnabledUndo} onClick={() => onUndo()}>
-            Undo
+            <VscodeIcon name="discard" action-icon />
           </VscodeButton>
           <VscodeButton secondary disabled={!isEnabledRedo} onClick={() => onRedo()}>
-            Redo
+            <VscodeIcon name="redo" action-icon />
           </VscodeButton>
           <VscodeButton secondary onClick={() => onSearch()}>
-            Search
+            <VscodeIcon name="search" action-icon />
           </VscodeButton>
         </div>
-        <VscodeButton className={styles.applyButton} onClick={(_e) => onClickApply()}>
-          Save
-        </VscodeButton>
+        <div className={styles.apply}>
+          <VscodeButton className={styles.applyButton} onClick={(_e) => onClickApply()}>
+            <VscodeIcon name="save" action-icon />
+            Save
+          </VscodeButton>
+        </div>
       </div>
     </>
   );
