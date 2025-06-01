@@ -46,3 +46,4 @@ jobs:
         with:
           name: csv-editor-${{ env.EXT_VERSION }}.vsix
           path: ./csv-editor-${{ env.EXT_VERSION }}.vsix
+          retention-days: 7
