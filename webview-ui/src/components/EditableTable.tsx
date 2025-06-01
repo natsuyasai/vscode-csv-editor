@@ -1,10 +1,11 @@
 import { useCellCopy } from "@/hooks/useCellCopy";
 import { useColumns } from "@/hooks/useColumns";
 import { useContextMenu } from "@/hooks/useContextMenu";
+import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useRows } from "@/hooks/useRows";
 import { useSearch } from "@/hooks/useSearch";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
-import { RowSizeType } from "@/types";
+import { VscodeDivider } from "@vscode-elements/react-elements";
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CalculatedColumn,
@@ -21,6 +22,7 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { createPortal } from "react-dom";
 import styles from "./EditableTable.module.scss";
+import { Header } from "./Header";
 import { CustomHeaderCell, CustomHeaderCellProps } from "./Header/CustomHeaderCell";
 import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
 import { CustomCell, CustomCellProps } from "./Row/CustomCell";
@@ -30,12 +32,12 @@ import { Search } from "./Search";
 
 interface Props {
   csvArray: Array<Array<string>>;
-  isIgnoreHeaderRow: boolean;
-  rowSize: RowSizeType;
   setCSVArray: (csv: Array<Array<string>>) => void;
+  onApply: () => void;
 }
 
-export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize, setCSVArray }) => {
+export const EditableTable: FC<Props> = ({ csvArray, setCSVArray, onApply }) => {
+  const { isIgnoreHeaderRow, rowSize, setIsIgnoreHeaderRow, setRowSize } = useHeaderAction();
   const { rows, sortedRows, sortColumns, setSortColumns } = useRows(csvArray, isIgnoreHeaderRow);
   const { columns } = useColumns(csvArray, isIgnoreHeaderRow);
   const {
@@ -63,6 +65,8 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     moveRows: swapRows,
     undo,
     redo,
+    isEnabledUndo,
+    isEnabledRedo,
   } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
 
   const gridRef = useRef<DataGridHandle>(null);
@@ -271,6 +275,21 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
 
   return (
     <>
+      <div>
+        <Header
+          isIgnoreHeaderRow={isIgnoreHeaderRow}
+          onUpdateIgnoreHeaderRow={setIsIgnoreHeaderRow}
+          rowSize={rowSize}
+          isEnabledUndo={isEnabledUndo}
+          isEnabledRedo={isEnabledRedo}
+          onUndo={undo}
+          onRedo={redo}
+          onSearch={() => setIsShowSearch(true)}
+          onUpdateRowSize={setRowSize}
+          onClickApply={onApply}
+        />
+        <VscodeDivider className={styles.divider} />
+      </div>
       <DndProvider backend={HTML5Backend}>
         <DataGrid
           ref={gridRef}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export function useUpdateCsvArray(
   csvArray: Array<Array<string>>,
@@ -7,6 +7,8 @@ export function useUpdateCsvArray(
 ) {
   const [history, setHistory] = useState<Array<Array<Array<string>>>>([]);
   const [poppedHistory, setPoppedHistory] = useState<Array<Array<Array<string>>>>([]);
+  const isEnabledUndo = useMemo(() => history.length > 0, [history]);
+  const isEnabledRedo = useMemo(() => poppedHistory.length > 0, [poppedHistory]);
 
   function undo() {
     const lastItem = history.slice(-1)[0];
@@ -201,5 +203,7 @@ export function useUpdateCsvArray(
     moveRows,
     undo,
     redo,
+    isEnabledUndo,
+    isEnabledRedo,
   };
 }

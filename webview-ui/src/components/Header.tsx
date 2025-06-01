@@ -14,6 +14,11 @@ interface Props {
   onUpdateIgnoreHeaderRow: (checked: boolean) => void;
   rowSize: RowSizeType;
   onUpdateRowSize: (rowSize: RowSizeType) => void;
+  onSearch: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  isEnabledUndo: boolean;
+  isEnabledRedo: boolean;
   onClickApply: () => void;
 }
 
@@ -22,6 +27,11 @@ export const Header: FC<Props> = ({
   onUpdateIgnoreHeaderRow,
   rowSize,
   onUpdateRowSize,
+  onSearch,
+  onUndo,
+  onRedo,
+  isEnabledUndo,
+  isEnabledRedo,
   onClickApply,
 }) => {
   return (
@@ -37,7 +47,7 @@ export const Header: FC<Props> = ({
             }
           }}></VscodeCheckbox>
         <div className={styles.rowSize}>
-          <VscodeLabel>row size :</VscodeLabel>
+          <VscodeLabel>Row size :</VscodeLabel>
           <VscodeSingleSelect
             className={styles.rowSizeSelect}
             onChange={(e) => {
@@ -59,6 +69,17 @@ export const Header: FC<Props> = ({
               extra large
             </VscodeOption>
           </VscodeSingleSelect>
+        </div>
+        <div className={styles.buttons}>
+          <VscodeButton secondary disabled={!isEnabledUndo} onClick={() => onUndo()}>
+            Undo
+          </VscodeButton>
+          <VscodeButton secondary disabled={!isEnabledRedo} onClick={() => onRedo()}>
+            Redo
+          </VscodeButton>
+          <VscodeButton secondary onClick={() => onSearch()}>
+            Search
+          </VscodeButton>
         </div>
         <VscodeButton className={styles.applyButton} onClick={(_e) => onClickApply()}>
           Save
