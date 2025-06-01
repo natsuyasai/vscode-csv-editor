@@ -180,6 +180,8 @@ describe("useUpdateCsvArray", () => {
         ["d", "e", "f"],
         ["", "", ""],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
       const updatedRows = [
         { col0: "x", col1: "y", col2: "z" },
         { col0: "1", col1: "2", col2: "3" },
@@ -190,6 +192,8 @@ describe("useUpdateCsvArray", () => {
         ["x", "y", "z"],
         ["1", "2", "3"],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
 
       act(() => hooks.result.current.undo());
       expect(setCSVArray).toHaveBeenCalledWith([
@@ -198,39 +202,53 @@ describe("useUpdateCsvArray", () => {
         ["d", "e", "f"],
         ["", "", ""],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeTruthy();
       act(() => hooks.result.current.undo());
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
         ["d", "e", "f"],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeFalsy();
+      expect(hooks.result.current.isEnabledRedo).toBeTruthy();
     });
 
     it("undo操作を履歴が空の状態で行っても何も起きないこと", () => {
       act(() => hooks.result.current.undo());
       // setCSVArray should not be called since there is no history
       expect(setCSVArray).not.toHaveBeenCalled();
+      expect(hooks.result.current.isEnabledUndo).toBeFalsy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
     });
 
     it("redo操作を履歴が空の状態で行っても何も起きないこと", () => {
       act(() => hooks.result.current.redo());
       // setCSVArray should not be called since there is no poppedHistory
       expect(setCSVArray).not.toHaveBeenCalled();
+      expect(hooks.result.current.isEnabledUndo).toBeFalsy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
     });
 
     it("複数回undoした後にredoで状態が戻ること", () => {
       act(() => hooks.result.current.insertRow(2));
       act(() => hooks.result.current.insertCol(1));
       act(() => hooks.result.current.deleteRow(1));
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
       // Undo 3 times
       act(() => hooks.result.current.undo());
       act(() => hooks.result.current.undo());
       act(() => hooks.result.current.undo());
+      expect(hooks.result.current.isEnabledUndo).toBeFalsy();
+      expect(hooks.result.current.isEnabledRedo).toBeTruthy();
       // Redo 3 times
       act(() => hooks.result.current.redo());
       act(() => hooks.result.current.redo());
       act(() => hooks.result.current.redo());
       // After redo, setCSVArray should have been called with the latest state
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
       expect(setCSVArray).toHaveBeenLastCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
@@ -248,6 +266,9 @@ describe("useUpdateCsvArray", () => {
         ["d", "e", "f"],
         ["", "", ""],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
+
       const updatedRows = [
         { col0: "x", col1: "y", col2: "z" },
         { col0: "1", col1: "2", col2: "3" },
@@ -258,6 +279,8 @@ describe("useUpdateCsvArray", () => {
         ["x", "y", "z"],
         ["1", "2", "3"],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
 
       act(() => hooks.result.current.undo());
       expect(setCSVArray).toHaveBeenCalledWith([
@@ -266,22 +289,30 @@ describe("useUpdateCsvArray", () => {
         ["d", "e", "f"],
         ["", "", ""],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeTruthy();
       act(() => hooks.result.current.redo());
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["x", "y", "z"],
         ["1", "2", "3"],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
     });
 
     it("複数回undoした後にredoを複数回行うと履歴通りに戻ること", () => {
       act(() => hooks.result.current.insertRow(2));
       act(() => hooks.result.current.insertCol(1));
       act(() => hooks.result.current.deleteRow(1));
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
       // Undo 3 times
       act(() => hooks.result.current.undo());
       act(() => hooks.result.current.undo());
       act(() => hooks.result.current.undo());
+      expect(hooks.result.current.isEnabledUndo).toBeFalsy();
+      expect(hooks.result.current.isEnabledRedo).toBeTruthy();
       // Redo 3 times
       act(() => hooks.result.current.redo());
       act(() => hooks.result.current.redo());
@@ -291,11 +322,15 @@ describe("useUpdateCsvArray", () => {
         ["a", "b", "c"],
         ["d", "e", "f"],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
     });
 
     it("redoを履歴が空の状態で行っても何も起きないこと", () => {
       act(() => hooks.result.current.redo());
       expect(setCSVArray).not.toHaveBeenCalled();
+      expect(hooks.result.current.isEnabledUndo).toBeFalsy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
     });
 
     it("undoを複数回行い、redoを途中まで行った後に新たな操作をするとredo履歴がクリアされること", () => {
@@ -320,6 +355,7 @@ describe("useUpdateCsvArray", () => {
       ]);
     });
   });
+
   describe("moveColumns", () => {
     it("指定した2つの列の位置が入れ替わること", () => {
       act(() => hooks.result.current.moveColumns(1, 3));

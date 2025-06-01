@@ -1,12 +1,9 @@
 import { Message, UpdateMessage } from "@message/messageTypeToWebview";
-import { VscodeDivider } from "@vscode-elements/react-elements";
 import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { useCallback, useEffect, useState } from "react";
 import styles from "./App.module.scss";
 import { EditableTable } from "./components/EditableTable";
-import { Header } from "./components/Header";
-import { RowSizeType } from "./types";
 import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
 
@@ -94,28 +91,11 @@ export default function App() {
     setRawText(text);
   }
 
-  const [isIgnoreHeaderRow, setIsIgnoreHeaderRow] = useState(false);
-  const [rowSize, setRowSize] = useState<RowSizeType>("normal");
-
   return (
     <>
       <div className={styles.root}>
-        <header className={styles.header}>
-          <Header
-            isIgnoreHeaderRow={isIgnoreHeaderRow}
-            onUpdateIgnoreHeaderRow={setIsIgnoreHeaderRow}
-            rowSize={rowSize}
-            onUpdateRowSize={setRowSize}
-            onClickApply={handleApply}
-          />
-          <VscodeDivider className={styles.divider} />
-        </header>
         <main className={styles.main}>
-          <EditableTable
-            csvArray={csvArray}
-            isIgnoreHeaderRow={isIgnoreHeaderRow}
-            rowSize={rowSize}
-            setCSVArray={updateCSVArray}></EditableTable>
+          <EditableTable csvArray={csvArray} setCSVArray={updateCSVArray} onApply={handleApply} />
         </main>
       </div>
     </>
