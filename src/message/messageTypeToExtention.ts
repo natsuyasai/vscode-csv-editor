@@ -2,7 +2,7 @@ export type MessageType = "update" | "reload" | "save";
 
 export interface Message {
   type: MessageType;
-  payload?: any;
+  payload?: string;
 }
 
 export interface UpdateMessage extends Message {

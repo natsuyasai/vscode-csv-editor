@@ -1,0 +1,49 @@
+name: Package
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    env:
+      EXT_VERSION: ""
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Parse version from package.json
+        run: |
+          echo "EXT_VERSION=$(node -p -e "require('./package.json').version")" >> $GITHUB_ENV
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install webview-ui dependencies
+        run: |
+          cd webview-ui
+          npm ci
+
+      - name: Build webview-ui
+        run: |
+          cd webview-ui
+          npm run build
+
+      - name: package
+        run: |
+          npx vsce package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: csv-editor-${{ env.EXT_VERSION }}.vsix
+          path: ./csv-editor-${{ env.EXT_VERSION }}.vsix
+          retention-days: 7

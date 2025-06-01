@@ -2,6 +2,7 @@ import { RowSizeType } from "@/types";
 import {
   VscodeButton,
   VscodeCheckbox,
+  VscodeIcon,
   VscodeLabel,
   VscodeOption,
   VscodeSingleSelect,
@@ -14,6 +15,11 @@ interface Props {
   onUpdateIgnoreHeaderRow: (checked: boolean) => void;
   rowSize: RowSizeType;
   onUpdateRowSize: (rowSize: RowSizeType) => void;
+  onSearch: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  isEnabledUndo: boolean;
+  isEnabledRedo: boolean;
   onClickApply: () => void;
 }
 
@@ -22,6 +28,11 @@ export const Header: FC<Props> = ({
   onUpdateIgnoreHeaderRow,
   rowSize,
   onUpdateRowSize,
+  onSearch,
+  onUndo,
+  onRedo,
+  isEnabledUndo,
+  isEnabledRedo,
   onClickApply,
 }) => {
   return (
@@ -37,7 +48,7 @@ export const Header: FC<Props> = ({
             }
           }}></VscodeCheckbox>
         <div className={styles.rowSize}>
-          <VscodeLabel>row size :</VscodeLabel>
+          <VscodeLabel>Row size :</VscodeLabel>
           <VscodeSingleSelect
             className={styles.rowSizeSelect}
             onChange={(e) => {
@@ -60,9 +71,23 @@ export const Header: FC<Props> = ({
             </VscodeOption>
           </VscodeSingleSelect>
         </div>
-        <VscodeButton className={styles.applyButton} onClick={(e) => onClickApply()}>
-          Save
-        </VscodeButton>
+        <div className={styles.buttons}>
+          <VscodeButton secondary disabled={!isEnabledUndo} onClick={() => onUndo()}>
+            <VscodeIcon name="discard" action-icon />
+          </VscodeButton>
+          <VscodeButton secondary disabled={!isEnabledRedo} onClick={() => onRedo()}>
+            <VscodeIcon name="redo" action-icon />
+          </VscodeButton>
+          <VscodeButton secondary onClick={() => onSearch()}>
+            <VscodeIcon name="search" action-icon />
+          </VscodeButton>
+        </div>
+        <div className={styles.apply}>
+          <VscodeButton className={styles.applyButton} onClick={(_e) => onClickApply()}>
+            <VscodeIcon name="save" action-icon />
+            Save
+          </VscodeButton>
+        </div>
       </div>
     </>
   );

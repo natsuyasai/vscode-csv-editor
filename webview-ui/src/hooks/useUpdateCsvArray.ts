@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export function useUpdateCsvArray(
   csvArray: Array<Array<string>>,
@@ -7,6 +7,8 @@ export function useUpdateCsvArray(
 ) {
   const [history, setHistory] = useState<Array<Array<Array<string>>>>([]);
   const [poppedHistory, setPoppedHistory] = useState<Array<Array<Array<string>>>>([]);
+  const isEnabledUndo = useMemo(() => history.length > 0, [history]);
+  const isEnabledRedo = useMemo(() => poppedHistory.length > 0, [poppedHistory]);
 
   function undo() {
     const lastItem = history.slice(-1)[0];
@@ -102,7 +104,8 @@ export function useUpdateCsvArray(
     const updatedCSVArray = csvArray.map((row, idx) => {
       const newRow = [...row];
       if (idx === correctionRowIdx) {
-        newRow[colIdx] = text;
+        // 先頭にインデックス表示列があるので補正する
+        newRow[colIdx - 1] = text;
       }
       return newRow;
     });
@@ -115,7 +118,8 @@ export function useUpdateCsvArray(
     }
     const updatedCSVArray = csvArray.map((row, rowIdx) => {
       const newRow = [...row];
-      newRow.splice(insertColIdx, 0, rowIdx === 0 ? "new column" : "");
+      // 先頭にインデックス表示列があるので補正する
+      newRow.splice(insertColIdx - 1, 0, rowIdx === 0 ? "new column" : "");
       return newRow;
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
@@ -127,7 +131,8 @@ export function useUpdateCsvArray(
     }
     const updatedCSVArray = csvArray.map((row) => {
       const newRow = [...row];
-      newRow.splice(deleteColIdx, 1);
+      // 先頭にインデックス表示列があるので補正する
+      newRow.splice(deleteColIdx - 1, 1);
       return newRow;
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
@@ -143,45 +148,46 @@ export function useUpdateCsvArray(
     const updatedCSVArray = csvArray.map((row, rowIdx) => {
       const newRow = [...row];
       if (rowIdx === 0) {
-        newRow[idx] = text;
+        // 先頭にインデックス表示列があるので補正する
+        newRow[idx - 1] = text;
       }
       return newRow;
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
 
-  function swapColumns(sourceIdx: number, targetIdx: number) {
+  function moveColumns(sourceIdx: number, targetIdx: number) {
     const newCsvArray = csvArray.map((row) => {
       const newRow = [...row];
-      const [movedCell] = newRow.splice(sourceIdx, 1);
-      newRow.splice(targetIdx, 0, movedCell);
+      // 先頭にインデックス表示列があるので補正するs
+      const [movedCell] = newRow.splice(sourceIdx - 1, 1);
+      newRow.splice(targetIdx - 1, 0, movedCell);
       return newRow;
     });
 
     setCSVArrayAndPushHistory(newCsvArray);
   }
 
-  function swapRows(sourceIdx: number, targetIdx: number) {
+  function moveRows(sourceIdx: number, targetIdx: number) {
     // ヘッダー行を無視する場合、インデックス調整
     // sourceIdxとtargetIdxは実データの1行目を0としてくる
     // そのためヘッダー表示がある場合はcsvArrayの2要素目を0としてやってくるため補正が必要
     const correctionSourceIdx = isIgnoreHeaderRow ? sourceIdx : sourceIdx + 1;
-    const CorrectionTargetIdx = isIgnoreHeaderRow ? targetIdx : targetIdx + 1;
+    const correctionTargetIdx = isIgnoreHeaderRow ? targetIdx : targetIdx + 1;
     const offset = isIgnoreHeaderRow ? 0 : 1;
     const maxIdx = csvArray.length - 1;
     if (
       correctionSourceIdx < offset ||
-      CorrectionTargetIdx < offset ||
+      correctionTargetIdx < offset ||
       correctionSourceIdx > maxIdx ||
-      CorrectionTargetIdx > maxIdx ||
-      correctionSourceIdx === CorrectionTargetIdx
+      correctionTargetIdx > maxIdx ||
+      correctionSourceIdx === correctionTargetIdx
     ) {
       return;
     }
-    const newCsvArray = csvArray.map((row) => [...row]);
-    const temp = newCsvArray[correctionSourceIdx];
-    newCsvArray[correctionSourceIdx] = newCsvArray[CorrectionTargetIdx];
-    newCsvArray[CorrectionTargetIdx] = temp;
+    const movingRow = csvArray[correctionSourceIdx];
+    const newCsvArray = csvArray.filter((_, idx) => idx !== correctionSourceIdx);
+    newCsvArray.splice(correctionTargetIdx, 0, movingRow);
     setCSVArrayAndPushHistory(newCsvArray);
   }
 
@@ -193,9 +199,11 @@ export function useUpdateCsvArray(
     deleteCol,
     updateCol,
     updateCell,
-    swapColumns,
-    swapRows,
+    moveColumns,
+    moveRows,
     undo,
     redo,
+    isEnabledUndo,
+    isEnabledRedo,
   };
 }

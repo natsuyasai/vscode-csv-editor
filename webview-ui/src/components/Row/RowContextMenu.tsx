@@ -3,7 +3,7 @@ import { VscodeContextMenu } from "@vscode-elements/react-elements";
 
 interface RowContextMenuProps {
   isContextMenuOpen: boolean;
-  menuRef: React.RefObject<any>;
+  menuRef: React.RefObject<HTMLElement | null>;
   contextMenuProps: { itemIdx: number; top: number; left: number } | null;
   onSelect: (value: string) => void;
   onClose: () => void;
@@ -18,11 +18,13 @@ export const RowContextMenu: FC<RowContextMenuProps> = ({
   onClose,
   className,
 }) => {
-  if (!isContextMenuOpen || !contextMenuProps) return null;
+  if (!isContextMenuOpen || !contextMenuProps) {
+    return null;
+  }
 
   return (
     <VscodeContextMenu
-      ref={menuRef}
+      ref={menuRef as never}
       show={isContextMenuOpen}
       className={className}
       data={[

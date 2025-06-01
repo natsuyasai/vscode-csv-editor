@@ -1,10 +1,7 @@
 // WebViewの内容を表示するためのクラス
 import * as vscode from "vscode";
-import {
-  MessageType as MessageTypeToWebview,
-  UpdateMessage,
-} from "../message/messageTypeToWebview";
-import { MessageType as MessageTypeFromWebview } from "../message/messageTypeToExtention";
+import { ThemeKind, UpdateMessage, UpdateTheameMessage } from "../message/messageTypeToWebview";
+import { Message } from "../message/messageTypeToExtention";
 import { getUri } from "../util/getUri";
 import { getNonce } from "../util/util";
 
@@ -32,8 +29,8 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       new CSVEditorProvider(context),
       {
         webviewOptions: {
-          enableFindWidget: true,
-          retainContextWhenHidden: true,
+          enableFindWidget: false,
+          retainContextWhenHidden: false,
         },
         supportsMultipleEditorsPerDocument: false, // 同一ドキュメントに対して複数のエディタをサポートするかどうか
       }
@@ -42,8 +39,11 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 
   // package.jsonのviewTypeと一致させる
   private static readonly viewType = "csv-editor.openEditor";
+  private readonly context: vscode.ExtensionContext;
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(context: vscode.ExtensionContext) {
+    this.context = context;
+  }
 
   /**
    * Called when our custom editor is opened.
@@ -51,22 +51,33 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
    * コマンドで表示を行った場合もvscode.openWithで実行しているのでこちらが呼ばれる
    *
    */
-  public async resolveCustomTextEditor(
+  public resolveCustomTextEditor(
     document: vscode.TextDocument,
     webviewPanel: vscode.WebviewPanel,
     _token: vscode.CancellationToken
-  ): Promise<void> {
+  ): void {
     // Setup initial content for the webview
     webviewPanel.webview.options = {
       enableScripts: true,
     };
     webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
 
+    function updateTheme() {
+      webviewPanel.webview.postMessage({
+        type: "updateTheme",
+        payload: CSVEditorProvider.getThemeKind(),
+      } satisfies UpdateTheameMessage);
+    }
+    updateTheme();
+    vscode.window.onDidChangeActiveColorTheme(() => {
+      updateTheme();
+    });
+
     function updateWebview() {
       webviewPanel.webview.postMessage({
         type: "update",
         payload: document.getText(),
-      } as UpdateMessage);
+      } satisfies UpdateMessage);
     }
     // Update the webview when the document changes
     const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
@@ -84,14 +95,18 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 
     // Receive message from the webview.
     const webviewReceiveMessageSubscription = webviewPanel.webview.onDidReceiveMessage(
-      async (e) => {
-        console.log(`${e.type}:${e.payload}`);
-        switch (e.type as MessageTypeFromWebview) {
+      (e: Message) => {
+        // console.log(`${e.type}:${e.payload}`);
+        switch (e.type) {
           case "update":
-            this.updateTextDocument(document, e.payload);
+            if (e.payload !== undefined) {
+              this.updateTextDocument(document, e.payload);
+            }
             return;
           case "save":
-            this.updateTextDocument(document, e.payload);
+            if (e.payload !== undefined) {
+              this.updateTextDocument(document, e.payload);
+            }
             return;
           case "reload":
             updateWebview();
@@ -110,6 +125,19 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     updateWebview();
   }
 
+  private static getThemeKind(): ThemeKind {
+    switch (vscode.window.activeColorTheme.kind) {
+      case vscode.ColorThemeKind.Light:
+      case vscode.ColorThemeKind.HighContrastLight:
+        return "light";
+      case vscode.ColorThemeKind.Dark:
+      case vscode.ColorThemeKind.HighContrast:
+        return "dark";
+      default:
+        return "light"; // Default to light if unknown
+    }
+  }
+
   /**
    * Get the static HTML used for in our editor's webviews.
    */
@@ -119,6 +147,13 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     const stylesUri = getUri(webview, extensionUri, ["webview-ui", "build", "assets", "index.css"]);
     // The JS file from the React build output
     const scriptUri = getUri(webview, extensionUri, ["webview-ui", "build", "assets", "index.js"]);
+    const codiconsUri = getUri(webview, extensionUri, [
+      "webview-ui",
+      "node_modules",
+      "@vscode/codicons",
+      "dist",
+      "codicon.css",
+    ]);
 
     // Use a nonce to whitelist which scripts can be run
     const nonce = getNonce();
@@ -128,13 +163,14 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
-          <link rel="stylesheet" type="text/css" href="${stylesUri}">
+          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource}; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+          <link rel="stylesheet" href="${codiconsUri.toString()}" id="vscode-codicon-stylesheet">
+          <link rel="stylesheet" type="text/css" href="${stylesUri.toString()}" />
           <title>CSVEditor</title>
         </head>
         <body>
           <div id="root"></div>
-          <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+          <script type="module" nonce="${nonce}" src="${scriptUri.toString()}"></script>
         </body>
       </html>
     `;

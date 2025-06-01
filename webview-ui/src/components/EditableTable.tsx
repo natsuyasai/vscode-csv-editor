@@ -1,5 +1,12 @@
-import { FC, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import styles from "./EditableTable.module.scss";
+import { useCellCopy } from "@/hooks/useCellCopy";
+import { useColumns } from "@/hooks/useColumns";
+import { useContextMenu } from "@/hooks/useContextMenu";
+import { useHeaderAction } from "@/hooks/useHeaderAction";
+import { useRows } from "@/hooks/useRows";
+import { useSearch } from "@/hooks/useSearch";
+import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
+import { VscodeDivider } from "@vscode-elements/react-elements";
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CalculatedColumn,
   CellClickArgs,
@@ -7,34 +14,31 @@ import {
   CellKeyDownArgs,
   CellMouseEvent,
   DataGrid,
+  DataGridHandle,
   FillEvent,
-  RenderHeaderCellProps,
-  RenderSortStatusProps,
   SortColumn,
 } from "react-data-grid";
-import { createPortal } from "react-dom";
-import { useRows } from "@/hooks/useRows";
-import { useColumns } from "@/hooks/useColumns";
-import { useContextMenu } from "@/hooks/useContextMenu";
-import { useCellCopy } from "@/hooks/useCellCopy";
-import { RowContextMenu } from "./Row/RowContextMenu";
-import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
-import { RowSizeType } from "@/types";
-import { CustomHeaderCell } from "./Header/CustomHeaderCell";
-import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
-import { CustomCell } from "./Row/CustomCell";
-import { CustomRow, CustomRowProps } from "./Row/CustomRow";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { createPortal } from "react-dom";
+import styles from "./EditableTable.module.scss";
+import { Header } from "./Header";
+import { CustomHeaderCell, CustomHeaderCellProps } from "./Header/CustomHeaderCell";
+import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
+import { CustomCell, CustomCellProps } from "./Row/CustomCell";
+import { CustomRow, CustomRowProps } from "./Row/CustomRow";
+import { RowContextMenu } from "./Row/RowContextMenu";
+import { Search } from "./Search";
 
 interface Props {
   csvArray: Array<Array<string>>;
-  isIgnoreHeaderRow: boolean;
-  rowSize: RowSizeType;
+  theme: "light" | "dark";
   setCSVArray: (csv: Array<Array<string>>) => void;
+  onApply: () => void;
 }
 
-export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize, setCSVArray }) => {
+export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply }) => {
+  const { isIgnoreHeaderRow, rowSize, setIsIgnoreHeaderRow, setRowSize } = useHeaderAction();
   const { rows, sortedRows, sortColumns, setSortColumns } = useRows(csvArray, isIgnoreHeaderRow);
   const { columns } = useColumns(csvArray, isIgnoreHeaderRow);
   const {
@@ -58,11 +62,29 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     deleteCol,
     updateCol,
     updateCell,
-    swapColumns,
-    swapRows,
+    moveColumns,
+    moveRows,
     undo,
     redo,
+    isEnabledUndo,
+    isEnabledRedo,
   } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
+
+  const gridRef = useRef<DataGridHandle>(null);
+  const [isShowSearch, setIsShowSearch] = useState(false);
+  const {
+    isMatched,
+    currentCell,
+    machedCount,
+    searchedSelectedItemIdx,
+    handleSearch,
+    handleNextSearch,
+    handlePreviousSearch,
+    handleClose,
+  } = useSearch({
+    sortedRows,
+    gridRef,
+  });
 
   function handleSelectRowContextMenu(value: string) {
     if (rowContextMenuProps === null) {
@@ -175,26 +197,32 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     }
   }
 
-  function handleKeyDownForDocument(e: KeyboardEvent) {
-    const key = e.key.toUpperCase();
-    if (key === "Z" && e.ctrlKey) {
-      e.stopPropagation();
-      undo();
-      return;
-    }
-    if (key === "Y" && e.ctrlKey) {
-      e.stopPropagation();
-      redo();
-      return;
-    }
-  }
   useEffect(() => {
+    function handleKeyDownForDocument(e: KeyboardEvent) {
+      const key = e.key.toUpperCase();
+      if (key === "Z" && e.ctrlKey) {
+        e.stopPropagation();
+        undo();
+        return;
+      }
+      if (key === "Y" && e.ctrlKey) {
+        e.stopPropagation();
+        redo();
+        return;
+      }
+      if (key === "F" && e.ctrlKey) {
+        e.stopPropagation();
+        setIsShowSearch((prev) => !prev);
+        return;
+      }
+    }
+
     window.addEventListener("keydown", handleKeyDownForDocument);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDownForDocument);
     };
-  }, [handleKeyDownForDocument]);
+  }, [undo, redo]);
 
   const rowHeight = useMemo(() => {
     switch (rowSize) {
@@ -227,24 +255,48 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
     if (sourceIdx === -1 || targetIdx === -1 || sourceIdx === targetIdx) {
       return;
     }
-    swapColumns(sourceIdx, targetIdx);
+    moveColumns(sourceIdx, targetIdx);
   }
 
   const renderRow = useCallback(
     (props: CustomRowProps) => {
       function onRowReorder(fromIndex: number, toIndex: number) {
-        swapRows(fromIndex, toIndex);
+        moveRows(fromIndex, toIndex);
       }
       return <CustomRow key={props.rowKey} {...props} onRowReorder={onRowReorder} />;
     },
-    [csvArray]
+    [moveRows]
   );
+
+  const renderCell = useCallback((props: CustomCellProps) => {
+    return <CustomCell key={props.rowKey} {...props} onUpdateRowHeight={() => {}} />;
+  }, []);
+
+  const renderHeaderCell = useCallback((props: CustomHeaderCellProps) => {
+    return <CustomHeaderCell {...props} />;
+  }, []);
 
   return (
     <>
+      <div>
+        <Header
+          isIgnoreHeaderRow={isIgnoreHeaderRow}
+          onUpdateIgnoreHeaderRow={setIsIgnoreHeaderRow}
+          rowSize={rowSize}
+          isEnabledUndo={isEnabledUndo}
+          isEnabledRedo={isEnabledRedo}
+          onUndo={undo}
+          onRedo={redo}
+          onSearch={() => setIsShowSearch(true)}
+          onUpdateRowSize={setRowSize}
+          onClickApply={onApply}
+        />
+        <VscodeDivider className={styles.divider} />
+      </div>
       <DndProvider backend={HTML5Backend}>
         <DataGrid
-          className={styles.dataGrid}
+          ref={gridRef}
+          className={[styles.dataGrid, `${theme === "light" ? "rdg-light" : "rdg-dark"}`].join(" ")}
           enableVirtualization={true}
           columns={columns}
           rows={sortedRows}
@@ -268,11 +320,19 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
                 rowKey: key,
                 onUpdateRowHeight: () => {},
                 onRowReorder: () => {},
-              }) as ReactNode,
+              }),
+            renderCell: (key, props) =>
+              renderCell({
+                ...props,
+                rowKey: key,
+                isSearchTarget:
+                  currentCell?.rowIdx === props.rowIdx && currentCell?.colIdx === props.column.idx,
+                onUpdateRowHeight: () => {},
+              }),
           }}
           defaultColumnOptions={{
             renderHeaderCell: (props) =>
-              CustomHeaderCell({
+              renderHeaderCell({
                 ...props,
                 isIgnoreHeaderRow,
                 sortColumnsForWaitingDoubleClick: sortColumnsForWaitingDoubleClick,
@@ -285,12 +345,28 @@ export const EditableTable: FC<Props> = ({ csvArray, isIgnoreHeaderRow, rowSize,
                 onDoubleClick: () => {
                   setSortColumnsForWaitingDoubleClick([]);
                 },
-              }) as ReactNode,
+              }),
             sortable: true,
             draggable: true,
             resizable: true,
           }}
         />
+        {isShowSearch &&
+          createPortal(
+            <Search
+              isMatching={isMatched}
+              machedCount={machedCount}
+              searchedSelectedItemIdx={searchedSelectedItemIdx}
+              onSearch={(text) => handleSearch(text)}
+              onClose={() => {
+                setIsShowSearch(false);
+                handleClose();
+              }}
+              onNext={() => handleNextSearch()}
+              onPrevious={() => handlePreviousSearch()}
+            />,
+            document.body
+          )}
         {isRowContextMenuOpen &&
           createPortal(
             <RowContextMenu

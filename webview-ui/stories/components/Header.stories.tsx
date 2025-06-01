@@ -10,6 +10,11 @@ const meta = {
   component: Header,
   args: {
     isIgnoreHeaderRow: false,
+    isEnabledRedo: true,
+    isEnabledUndo: true,
+    onSearch: fn(),
+    onUndo: fn(),
+    onRedo: fn(),
     onUpdateIgnoreHeaderRow: fn(),
     rowSize: "normal",
     onUpdateRowSize: fn(),
@@ -27,6 +32,13 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     isIgnoreHeaderRow: false,
+  },
+};
+
+export const DisabledUndoRedo: Story = {
+  args: {
+    isEnabledRedo: false,
+    isEnabledUndo: false,
   },
 };
 

@@ -122,7 +122,7 @@ describe("useUpdateCsvArray", () => {
 
   describe("insertCol", () => {
     it("最終要素を選択したとき末尾に列が追加されること", () => {
-      act(() => hooks.result.current.insertCol(3));
+      act(() => hooks.result.current.insertCol(4));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2", "new column"],
         ["a", "b", "c", ""],
@@ -131,7 +131,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("2列目の要素を選択したとき、3列目に追加されること", () => {
-      act(() => hooks.result.current.insertCol(2));
+      act(() => hooks.result.current.insertCol(3));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "new column", "col2"],
         ["a", "b", "", "c"],
@@ -142,7 +142,7 @@ describe("useUpdateCsvArray", () => {
 
   describe("deleteCol", () => {
     it("最終要素を選択したとき最後の列が削除されること", () => {
-      act(() => hooks.result.current.deleteCol(2));
+      act(() => hooks.result.current.deleteCol(3));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1"],
         ["a", "b"],
@@ -151,7 +151,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("2列目の要素を選択したとき、2列目が削除されること", () => {
-      act(() => hooks.result.current.deleteCol(1));
+      act(() => hooks.result.current.deleteCol(2));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col2"],
         ["a", "c"],
@@ -162,7 +162,7 @@ describe("useUpdateCsvArray", () => {
 
   describe("updateCol", () => {
     it("ヘッダ行の指定セルの内容が更新できること", () => {
-      act(() => hooks.result.current.updateCol(1, "testCol1"));
+      act(() => hooks.result.current.updateCol(2, "testCol1"));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "testCol1", "col2"],
         ["a", "b", "c"],
@@ -180,6 +180,8 @@ describe("useUpdateCsvArray", () => {
         ["d", "e", "f"],
         ["", "", ""],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
       const updatedRows = [
         { col0: "x", col1: "y", col2: "z" },
         { col0: "1", col1: "2", col2: "3" },
@@ -190,6 +192,8 @@ describe("useUpdateCsvArray", () => {
         ["x", "y", "z"],
         ["1", "2", "3"],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
 
       act(() => hooks.result.current.undo());
       expect(setCSVArray).toHaveBeenCalledWith([
@@ -198,39 +202,53 @@ describe("useUpdateCsvArray", () => {
         ["d", "e", "f"],
         ["", "", ""],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeTruthy();
       act(() => hooks.result.current.undo());
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
         ["d", "e", "f"],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeFalsy();
+      expect(hooks.result.current.isEnabledRedo).toBeTruthy();
     });
 
     it("undo操作を履歴が空の状態で行っても何も起きないこと", () => {
       act(() => hooks.result.current.undo());
       // setCSVArray should not be called since there is no history
       expect(setCSVArray).not.toHaveBeenCalled();
+      expect(hooks.result.current.isEnabledUndo).toBeFalsy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
     });
 
     it("redo操作を履歴が空の状態で行っても何も起きないこと", () => {
       act(() => hooks.result.current.redo());
       // setCSVArray should not be called since there is no poppedHistory
       expect(setCSVArray).not.toHaveBeenCalled();
+      expect(hooks.result.current.isEnabledUndo).toBeFalsy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
     });
 
     it("複数回undoした後にredoで状態が戻ること", () => {
       act(() => hooks.result.current.insertRow(2));
       act(() => hooks.result.current.insertCol(1));
       act(() => hooks.result.current.deleteRow(1));
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
       // Undo 3 times
       act(() => hooks.result.current.undo());
       act(() => hooks.result.current.undo());
       act(() => hooks.result.current.undo());
+      expect(hooks.result.current.isEnabledUndo).toBeFalsy();
+      expect(hooks.result.current.isEnabledRedo).toBeTruthy();
       // Redo 3 times
       act(() => hooks.result.current.redo());
       act(() => hooks.result.current.redo());
       act(() => hooks.result.current.redo());
       // After redo, setCSVArray should have been called with the latest state
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
       expect(setCSVArray).toHaveBeenLastCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
@@ -248,6 +266,9 @@ describe("useUpdateCsvArray", () => {
         ["d", "e", "f"],
         ["", "", ""],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
+
       const updatedRows = [
         { col0: "x", col1: "y", col2: "z" },
         { col0: "1", col1: "2", col2: "3" },
@@ -258,6 +279,8 @@ describe("useUpdateCsvArray", () => {
         ["x", "y", "z"],
         ["1", "2", "3"],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
 
       act(() => hooks.result.current.undo());
       expect(setCSVArray).toHaveBeenCalledWith([
@@ -266,22 +289,30 @@ describe("useUpdateCsvArray", () => {
         ["d", "e", "f"],
         ["", "", ""],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeTruthy();
       act(() => hooks.result.current.redo());
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["x", "y", "z"],
         ["1", "2", "3"],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
     });
 
     it("複数回undoした後にredoを複数回行うと履歴通りに戻ること", () => {
       act(() => hooks.result.current.insertRow(2));
       act(() => hooks.result.current.insertCol(1));
       act(() => hooks.result.current.deleteRow(1));
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
       // Undo 3 times
       act(() => hooks.result.current.undo());
       act(() => hooks.result.current.undo());
       act(() => hooks.result.current.undo());
+      expect(hooks.result.current.isEnabledUndo).toBeFalsy();
+      expect(hooks.result.current.isEnabledRedo).toBeTruthy();
       // Redo 3 times
       act(() => hooks.result.current.redo());
       act(() => hooks.result.current.redo());
@@ -291,11 +322,15 @@ describe("useUpdateCsvArray", () => {
         ["a", "b", "c"],
         ["d", "e", "f"],
       ]);
+      expect(hooks.result.current.isEnabledUndo).toBeTruthy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
     });
 
     it("redoを履歴が空の状態で行っても何も起きないこと", () => {
       act(() => hooks.result.current.redo());
       expect(setCSVArray).not.toHaveBeenCalled();
+      expect(hooks.result.current.isEnabledUndo).toBeFalsy();
+      expect(hooks.result.current.isEnabledRedo).toBeFalsy();
     });
 
     it("undoを複数回行い、redoを途中まで行った後に新たな操作をするとredo履歴がクリアされること", () => {
@@ -320,9 +355,10 @@ describe("useUpdateCsvArray", () => {
       ]);
     });
   });
-  describe("swapColumns", () => {
+
+  describe("moveColumns", () => {
     it("指定した2つの列の位置が入れ替わること", () => {
-      act(() => hooks.result.current.swapColumns(0, 2));
+      act(() => hooks.result.current.moveColumns(1, 3));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col1", "col2", "col0"],
         ["b", "c", "a"],
@@ -331,7 +367,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("同じ列インデックスを指定した場合、配列が変化しないこと", () => {
-      act(() => hooks.result.current.swapColumns(1, 1));
+      act(() => hooks.result.current.moveColumns(1, 1));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
@@ -340,7 +376,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("先頭と末尾の列を入れ替えられること", () => {
-      act(() => hooks.result.current.swapColumns(0, 2));
+      act(() => hooks.result.current.moveColumns(1, 3));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col1", "col2", "col0"],
         ["b", "c", "a"],
@@ -349,7 +385,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("2列目と1列目を入れ替えられること", () => {
-      act(() => hooks.result.current.swapColumns(1, 0));
+      act(() => hooks.result.current.moveColumns(1, 0));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col1", "col0", "col2"],
         ["b", "a", "c"],
@@ -361,13 +397,13 @@ describe("useUpdateCsvArray", () => {
       const emptyArray: string[][] = [];
       const setCSVArrayMock = vi.fn();
       const hooksEmpty = renderHook(() => useUpdateCsvArray(emptyArray, setCSVArrayMock, false));
-      act(() => hooksEmpty.result.current.swapColumns(0, 1));
+      act(() => hooksEmpty.result.current.moveColumns(0, 1));
       expect(setCSVArrayMock).toHaveBeenCalledWith([]);
     });
   });
-  describe("swapRows", () => {
+  describe("updateRows", () => {
     it("指定した2つの行の位置が入れ替わること（ヘッダ有効）", () => {
-      act(() => hooks.result.current.swapRows(0, 1));
+      act(() => hooks.result.current.moveRows(0, 1));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["d", "e", "f"],
@@ -376,7 +412,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("同じ行インデックスを指定した場合、配列が変化しないこと（ヘッダ有効）", () => {
-      act(() => hooks.result.current.swapRows(0, 0));
+      act(() => hooks.result.current.moveRows(0, 0));
       expect(setCSVArray).not.toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
@@ -385,31 +421,31 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("範囲外のインデックスを指定した場合、何も起きないこと（ヘッダ有効）", () => {
-      act(() => hooks.result.current.swapRows(-1, 2));
-      act(() => hooks.result.current.swapRows(1, 100));
+      act(() => hooks.result.current.moveRows(-1, 2));
+      act(() => hooks.result.current.moveRows(1, 100));
       expect(setCSVArray).not.toHaveBeenCalledWith(expect.anything());
     });
 
     it("指定した2つの行の位置が入れ替わること（ヘッダ無効）", () => {
       const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
-      act(() => hookslocal.result.current.swapRows(0, 2));
+      act(() => hookslocal.result.current.moveRows(0, 2));
       expect(setCSVArray).toHaveBeenCalledWith([
-        ["d", "e", "f"],
         ["a", "b", "c"],
+        ["d", "e", "f"],
         ["col0", "col1", "col2"],
       ]);
     });
 
     it("同じ行インデックスを指定した場合、配列が変化しないこと（ヘッダ無効）", () => {
       const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
-      act(() => hookslocal.result.current.swapRows(1, 1));
+      act(() => hookslocal.result.current.moveRows(1, 1));
       expect(setCSVArray).not.toHaveBeenCalledWith(expect.anything());
     });
 
     it("範囲外のインデックスを指定した場合、何も起きないこと（ヘッダ無効）", () => {
       const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
-      act(() => hookslocal.result.current.swapRows(-1, 2));
-      act(() => hookslocal.result.current.swapRows(0, 100));
+      act(() => hookslocal.result.current.moveRows(-1, 2));
+      act(() => hookslocal.result.current.moveRows(0, 100));
       expect(setCSVArray).not.toHaveBeenCalledWith(expect.anything());
     });
 
@@ -417,14 +453,14 @@ describe("useUpdateCsvArray", () => {
       const emptyArray: string[][] = [];
       const setCSVArrayMock = vi.fn();
       const hooksEmpty = renderHook(() => useUpdateCsvArray(emptyArray, setCSVArrayMock, false));
-      act(() => hooksEmpty.result.current.swapRows(0, 1));
+      act(() => hooksEmpty.result.current.moveRows(0, 1));
       expect(setCSVArrayMock).not.toHaveBeenCalled();
     });
   });
   describe("updateCell", () => {
     it("指定したセルの内容が更新されること（ヘッダ有効）", () => {
       // rowIdx=0, colIdx=1, text="updated"
-      act(() => hooks.result.current.updateCell(0, 1, "updated"));
+      act(() => hooks.result.current.updateCell(0, 2, "updated"));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "updated", "c"],
@@ -433,7 +469,7 @@ describe("useUpdateCsvArray", () => {
     });
 
     it("2行目2列目のセルが更新されること（ヘッダ有効）", () => {
-      act(() => hooks.result.current.updateCell(1, 2, "zzz"));
+      act(() => hooks.result.current.updateCell(1, 3, "zzz"));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "c"],
@@ -452,7 +488,7 @@ describe("useUpdateCsvArray", () => {
     it("ヘッダ行無効時、指定したセルの内容が更新されること", () => {
       const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
       // rowIdx=1, colIdx=2, text="abc"
-      act(() => hookslocal.result.current.updateCell(1, 2, "abc"));
+      act(() => hookslocal.result.current.updateCell(1, 3, "abc"));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["col0", "col1", "col2"],
         ["a", "b", "abc"],
@@ -462,7 +498,7 @@ describe("useUpdateCsvArray", () => {
 
     it("ヘッダ行無効時、1行目1列目のセルが更新されること", () => {
       const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
-      act(() => hookslocal.result.current.updateCell(0, 0, "headerless"));
+      act(() => hookslocal.result.current.updateCell(0, 1, "headerless"));
       expect(setCSVArray).toHaveBeenCalledWith([
         ["headerless", "col1", "col2"],
         ["a", "b", "c"],

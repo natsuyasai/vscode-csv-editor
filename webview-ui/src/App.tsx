@@ -1,28 +1,28 @@
-import { Message, UpdateMessage } from "@message/messageTypeToWebview";
-import { VscodeDivider } from "@vscode-elements/react-elements";
+import { Message, ThemeKind, UpdateMessage } from "@message/messageTypeToWebview";
 import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { useCallback, useEffect, useState } from "react";
 import styles from "./App.module.scss";
 import { EditableTable } from "./components/EditableTable";
-import { Header } from "./components/Header";
-import { RowSizeType } from "./types";
 import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
 
 export default function App() {
   const [rawText, setRawText] = useState("");
   const [csvArray, setCSVArray] = useState<Array<Array<string>>>([]);
+  const [theme, setTheme] = useState<ThemeKind>("light");
 
-  const handleMessagesFromExtension = useCallback(
-    (event: MessageEvent<Message>) => {
-      if (event.data.type === "update") {
-        const message = event.data as UpdateMessage;
-        updateCSVFromExtension(message.payload);
-      }
-    },
-    [rawText]
-  );
+  const handleMessagesFromExtension = useCallback((event: MessageEvent<Message>) => {
+    if (event.data.type === "update") {
+      const message = event.data as UpdateMessage;
+      updateCSVFromExtension(message.payload);
+    }
+    if (event.data.type === "updateTheme") {
+      const theme = event.data.payload as ThemeKind;
+      setTheme(theme);
+    }
+  }, []);
+
   useEffect(() => {
     window.addEventListener("message", handleMessagesFromExtension);
 
@@ -31,23 +31,30 @@ export default function App() {
     };
   }, [handleMessagesFromExtension]);
 
-  function handleKeyDown(e: KeyboardEvent) {
-    const key = e.key.toUpperCase();
-    if (key === "S" && e.ctrlKey) {
-      e.stopPropagation();
-      handleApply();
-      return;
-    }
-  }
+  const handleApply = useCallback(() => {
+    vscode.postMessage({
+      type: "save",
+      payload: rawText,
+    });
+  }, [rawText]);
+
   useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const key = e.key.toUpperCase();
+      if (key === "S" && e.ctrlKey) {
+        e.stopPropagation();
+        handleApply();
+        return;
+      }
+    }
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [handleKeyDown]);
+  }, [handleApply]);
 
-  const handleReloadWebview = () => {
+  const _handleReloadWebview = () => {
     vscode.postMessage({
       type: "reload",
       payload: rawText,
@@ -83,41 +90,22 @@ export default function App() {
     setCSVArray(records);
   }
 
-  function handleApply() {
-    vscode.postMessage({
-      type: "save",
-      payload: rawText,
-    });
-  }
-
   function updateCSVArray(csv: Array<Array<string>>) {
     setCSVArray(csv);
     const text = csvStringfy(csv);
     setRawText(text);
   }
 
-  const [isIgnoreHeaderRow, setIsIgnoreHeaderRow] = useState(false);
-  const [rowSize, setRowSize] = useState<RowSizeType>("normal");
-
   return (
     <>
       <div className={styles.root}>
-        <header className={styles.header}>
-          <Header
-            isIgnoreHeaderRow={isIgnoreHeaderRow}
-            onUpdateIgnoreHeaderRow={setIsIgnoreHeaderRow}
-            rowSize={rowSize}
-            onUpdateRowSize={setRowSize}
-            onClickApply={handleApply}
-          />
-          <VscodeDivider className={styles.divider} />
-        </header>
         <main className={styles.main}>
           <EditableTable
             csvArray={csvArray}
-            isIgnoreHeaderRow={isIgnoreHeaderRow}
-            rowSize={rowSize}
-            setCSVArray={updateCSVArray}></EditableTable>
+            theme={theme}
+            setCSVArray={updateCSVArray}
+            onApply={handleApply}
+          />
         </main>
       </div>
     </>

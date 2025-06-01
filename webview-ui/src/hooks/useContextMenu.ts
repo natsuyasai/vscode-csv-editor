@@ -6,7 +6,7 @@ export function useContextMenu() {
     top: number;
     left: number;
   } | null>(null);
-  const menuRef = useRef<any>(null);
+  const menuRef = useRef<HTMLElement>(null);
   const isContextMenuOpen = contextMenuProps !== null;
 
   useLayoutEffect(() => {

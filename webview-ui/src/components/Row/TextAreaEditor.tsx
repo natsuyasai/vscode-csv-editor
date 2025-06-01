@@ -1,5 +1,5 @@
-import { useRef, useEffect } from "react";
-import { Column, RenderEditCellProps } from "react-data-grid";
+import { useEffect, useRef } from "react";
+import { RenderEditCellProps } from "react-data-grid";
 import styles from "./TextAreaEditor.module.scss";
 
 export default function TextAreaEditor({
