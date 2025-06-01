@@ -12,6 +12,10 @@ export function useSearch({ sortedRows, gridRef }: Parameters) {
   const [matchedItemPositions, setMatchedItemPositions] = useState<Position[]>([]);
   const [searchedSelectedItemIdx, setSearchedSelectedItemIdx] = useState(0);
 
+  const machedCount = useMemo(() => {
+    return matchedItemPositions.length;
+  }, [matchedItemPositions]);
+
   const isMatched = useMemo(() => {
     return matchedItemPositions.length > 0;
   }, [matchedItemPositions]);
@@ -107,6 +111,8 @@ export function useSearch({ sortedRows, gridRef }: Parameters) {
   return {
     isMatched,
     currentCell,
+    machedCount,
+    searchedSelectedItemIdx,
     handleSearch,
     handleNextSearch,
     handlePreviousSearch,

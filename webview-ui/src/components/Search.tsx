@@ -4,13 +4,23 @@ import styles from "./Search.module.scss";
 
 interface Props {
   isMatching?: boolean;
+  machedCount: number;
+  searchedSelectedItemIdx: number;
   onSearch: (text: string) => void;
   onNext: () => void;
   onPrevious: () => void;
   onClose: () => void;
 }
 
-export const Search: FC<Props> = ({ isMatching, onSearch, onNext, onPrevious, onClose }) => {
+export const Search: FC<Props> = ({
+  isMatching,
+  machedCount,
+  searchedSelectedItemIdx,
+  onSearch,
+  onNext,
+  onPrevious,
+  onClose,
+}) => {
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef<HTMLElement>(null);
   const nextButtonRef = useRef<HTMLElement>(null);
@@ -51,9 +61,15 @@ export const Search: FC<Props> = ({ isMatching, onSearch, onNext, onPrevious, on
       <div className={styles.searchRoot} onKeyDown={(e) => handleKeyDownForRoot(e)}>
         <VscodeTextfield
           ref={inputRef as never}
+          className={styles.searchInput}
           value={searchText}
           onInput={(e) => setSearchText((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => handleKeyDown(e)}></VscodeTextfield>
+        {isMatching && (
+          <div className={styles.searchStatus}>
+            {isMatching ? `${searchedSelectedItemIdx + 1} of ${machedCount}` : ""}
+          </div>
+        )}
         <VscodeButton onClick={() => onPrevious()} disabled={!searchText || !isMatching}>
           <VscodeIcon name="arrow-up" action-icon />
         </VscodeButton>

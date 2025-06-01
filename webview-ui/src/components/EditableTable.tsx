@@ -74,6 +74,8 @@ export const EditableTable: FC<Props> = ({ csvArray, setCSVArray, onApply }) => 
   const {
     isMatched,
     currentCell,
+    machedCount,
+    searchedSelectedItemIdx,
     handleSearch,
     handleNextSearch,
     handlePreviousSearch,
@@ -352,6 +354,8 @@ export const EditableTable: FC<Props> = ({ csvArray, setCSVArray, onApply }) => 
           createPortal(
             <Search
               isMatching={isMatched}
+              machedCount={machedCount}
+              searchedSelectedItemIdx={searchedSelectedItemIdx}
               onSearch={(text) => handleSearch(text)}
               onClose={() => {
                 setIsShowSearch(false);
