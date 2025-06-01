@@ -27,6 +27,10 @@
 			]
 		}
 	},
+	"include": [
+		"src/**/*.ts",
+		".vscode-test.mjs"
+	],
 	"exclude": [
 		"node_modules",
 		".vscode-test",
