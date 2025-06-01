@@ -5,10 +5,16 @@
   gap: 16px;
 }
 
-.applyButton {
+.apply {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 80px;
   height: 32px;
   margin-left: auto;
+}
+.applyButton {
+  width: 100%;
 }
 
 .rowSize {
@@ -17,6 +23,9 @@
   flex-wrap: nowrap;
   justify-content: center;
   align-items: center;
+  > vscode-label {
+    margin-right: 8px;
+  }
 }
 .rowSizeSelect {
   width: 10em;
