@@ -32,11 +32,12 @@ import { Search } from "./Search";
 
 interface Props {
   csvArray: Array<Array<string>>;
+  theme: "light" | "dark";
   setCSVArray: (csv: Array<Array<string>>) => void;
   onApply: () => void;
 }
 
-export const EditableTable: FC<Props> = ({ csvArray, setCSVArray, onApply }) => {
+export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply }) => {
   const { isIgnoreHeaderRow, rowSize, setIsIgnoreHeaderRow, setRowSize } = useHeaderAction();
   const { rows, sortedRows, sortColumns, setSortColumns } = useRows(csvArray, isIgnoreHeaderRow);
   const { columns } = useColumns(csvArray, isIgnoreHeaderRow);
@@ -295,7 +296,7 @@ export const EditableTable: FC<Props> = ({ csvArray, setCSVArray, onApply }) => 
       <DndProvider backend={HTML5Backend}>
         <DataGrid
           ref={gridRef}
-          className={styles.dataGrid}
+          className={[styles.dataGrid, `${theme === "light" ? "rdg-light" : "rdg-dark"}`].join(" ")}
           enableVirtualization={true}
           columns={columns}
           rows={sortedRows}

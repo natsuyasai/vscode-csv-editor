@@ -20,6 +20,7 @@ const meta = {
       ["4", "44", "444", "4444", "44444"],
       ["", "", "", "", ""],
     ],
+    theme: "light",
     setCSVArray: fn(),
     onApply: fn(),
   },

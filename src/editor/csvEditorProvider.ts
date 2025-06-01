@@ -1,6 +1,6 @@
 // WebViewの内容を表示するためのクラス
 import * as vscode from "vscode";
-import { UpdateMessage } from "../message/messageTypeToWebview";
+import { ThemeKind, UpdateMessage, UpdateTheameMessage } from "../message/messageTypeToWebview";
 import { Message } from "../message/messageTypeToExtention";
 import { getUri } from "../util/getUri";
 import { getNonce } from "../util/util";
@@ -62,11 +62,22 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     };
     webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
 
+    function updateTheme() {
+      webviewPanel.webview.postMessage({
+        type: "updateTheme",
+        payload: CSVEditorProvider.getThemeKind(),
+      } satisfies UpdateTheameMessage);
+    }
+    updateTheme();
+    vscode.window.onDidChangeActiveColorTheme(() => {
+      updateTheme();
+    });
+
     function updateWebview() {
       webviewPanel.webview.postMessage({
         type: "update",
         payload: document.getText(),
-      } as UpdateMessage);
+      } satisfies UpdateMessage);
     }
     // Update the webview when the document changes
     const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
@@ -112,6 +123,19 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     });
 
     updateWebview();
+  }
+
+  private static getThemeKind(): ThemeKind {
+    switch (vscode.window.activeColorTheme.kind) {
+      case vscode.ColorThemeKind.Light:
+      case vscode.ColorThemeKind.HighContrastLight:
+        return "light";
+      case vscode.ColorThemeKind.Dark:
+      case vscode.ColorThemeKind.HighContrast:
+        return "dark";
+      default:
+        return "light"; // Default to light if unknown
+    }
   }
 
   /**

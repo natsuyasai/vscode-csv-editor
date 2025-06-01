@@ -1,4 +1,4 @@
-import { Message, UpdateMessage } from "@message/messageTypeToWebview";
+import { Message, ThemeKind, UpdateMessage } from "@message/messageTypeToWebview";
 import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { useCallback, useEffect, useState } from "react";
@@ -10,11 +10,16 @@ import { vscode } from "./utilities/vscode";
 export default function App() {
   const [rawText, setRawText] = useState("");
   const [csvArray, setCSVArray] = useState<Array<Array<string>>>([]);
+  const [theme, setTheme] = useState<ThemeKind>("light");
 
   const handleMessagesFromExtension = useCallback((event: MessageEvent<Message>) => {
     if (event.data.type === "update") {
       const message = event.data as UpdateMessage;
       updateCSVFromExtension(message.payload);
+    }
+    if (event.data.type === "updateTheme") {
+      const theme = event.data.payload as ThemeKind;
+      setTheme(theme);
     }
   }, []);
 
@@ -95,7 +100,12 @@ export default function App() {
     <>
       <div className={styles.root}>
         <main className={styles.main}>
-          <EditableTable csvArray={csvArray} setCSVArray={updateCSVArray} onApply={handleApply} />
+          <EditableTable
+            csvArray={csvArray}
+            theme={theme}
+            setCSVArray={updateCSVArray}
+            onApply={handleApply}
+          />
         </main>
       </div>
     </>
