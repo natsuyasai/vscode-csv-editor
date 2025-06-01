@@ -205,7 +205,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
             }}></textarea>
         )}
         {!isEditing && (
-          <span ref={headerTextRef} className={styles.headerText}>
+          <span ref={headerTextRef} className={styles.headerText} role="cell">
             {column.name}
           </span>
         )}
