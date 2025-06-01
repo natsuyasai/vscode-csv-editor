@@ -94,7 +94,9 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
       if (setTimeoutRef.current !== null) {
         return;
       }
-
+      if (rootRef.current?.parentElement?.getAttribute("aria-selected") === "false") {
+        return;
+      }
       setTimeoutRef.current = setTimeout(() => {
         setTimeoutRef.current = null;
         onCanSortColumnsChange(sortColumnsForWaitingDoubleClick);
