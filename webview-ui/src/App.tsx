@@ -94,28 +94,11 @@ export default function App() {
     setRawText(text);
   }
 
-  const [isIgnoreHeaderRow, setIsIgnoreHeaderRow] = useState(false);
-  const [rowSize, setRowSize] = useState<RowSizeType>("normal");
-
   return (
     <>
       <div className={styles.root}>
-        <header className={styles.header}>
-          <Header
-            isIgnoreHeaderRow={isIgnoreHeaderRow}
-            onUpdateIgnoreHeaderRow={setIsIgnoreHeaderRow}
-            rowSize={rowSize}
-            onUpdateRowSize={setRowSize}
-            onClickApply={handleApply}
-          />
-          <VscodeDivider className={styles.divider} />
-        </header>
         <main className={styles.main}>
-          <EditableTable
-            csvArray={csvArray}
-            isIgnoreHeaderRow={isIgnoreHeaderRow}
-            rowSize={rowSize}
-            setCSVArray={updateCSVArray}></EditableTable>
+          <EditableTable csvArray={csvArray} setCSVArray={updateCSVArray} onApply={handleApply} />
         </main>
       </div>
     </>
