@@ -39,7 +39,8 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   const headerTextRef = useRef<HTMLSpanElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const WAIT_DOUBLE_CLICK_TH_MS = 200;
+  const WAIT_DOUBLE_CLICK_TH_MS = 500;
+  const setTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [{}, drag] = useDrag({
     type: "COL_DRAG",
@@ -85,7 +86,6 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
     [column, onHeaderCellContextMenu]
   );
 
-  const setTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleClick = useCallback(
     (e: MouseEvent) => {
       if (e.target !== headerTextRef.current) {
