@@ -57,6 +57,3 @@ jobs:
           ps aux | grep Xvfb --color=always | grep -v grep
           DISPLAY=:99.0 npm run test
           killall Xvfb
-
-      # - name: Run VSCode extension tests
-      #   run: npm run test
