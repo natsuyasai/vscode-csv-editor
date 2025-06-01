@@ -1,0 +1,59 @@
+name: PR Build, Lint, and Test
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - "**"
+
+jobs:
+  build-lint-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Install webview-ui dependencies
+        run: |
+          cd webview-ui
+          npm ci
+
+      - name: Build webview-ui
+        run: |
+          cd webview-ui
+          npm run build
+
+      - name: Lint root
+        run: npm run lint
+
+      - name: Lint webview-ui
+        run: |
+          cd webview-ui
+          npm run lint
+
+      - name: Run unit tests (webview-ui)
+        run: |
+          cd webview-ui
+          npm run test
+
+      - name: VSCode extension tests
+        run: |
+          /usr/bin/Xvfb :99 -screen 0 1024x768x24 & sleep 1
+          ps aux | grep Xvfb --color=always | grep -v grep
+          DISPLAY=:99.0 npm run test
+          killall Xvfb
