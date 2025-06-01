@@ -65,6 +65,8 @@ export const EditableTable: FC<Props> = ({ csvArray, setCSVArray, onApply }) => 
     moveRows: swapRows,
     undo,
     redo,
+    isEnabledUndo,
+    isEnabledRedo,
   } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
 
   const gridRef = useRef<DataGridHandle>(null);
@@ -278,6 +280,11 @@ export const EditableTable: FC<Props> = ({ csvArray, setCSVArray, onApply }) => 
           isIgnoreHeaderRow={isIgnoreHeaderRow}
           onUpdateIgnoreHeaderRow={setIsIgnoreHeaderRow}
           rowSize={rowSize}
+          isEnabledUndo={isEnabledUndo}
+          isEnabledRedo={isEnabledRedo}
+          onUndo={undo}
+          onRedo={redo}
+          onSearch={() => setIsShowSearch(true)}
           onUpdateRowSize={setRowSize}
           onClickApply={onApply}
         />

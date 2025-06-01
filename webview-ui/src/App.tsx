@@ -1,12 +1,9 @@
 import { Message, UpdateMessage } from "@message/messageTypeToWebview";
-import { VscodeDivider } from "@vscode-elements/react-elements";
 import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { useCallback, useEffect, useState } from "react";
 import styles from "./App.module.scss";
 import { EditableTable } from "./components/EditableTable";
-import { Header } from "./components/Header";
-import { RowSizeType } from "./types";
 import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
 
