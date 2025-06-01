@@ -61,8 +61,8 @@ export const EditableTable: FC<Props> = ({ csvArray, setCSVArray, onApply }) => 
     deleteCol,
     updateCol,
     updateCell,
-    moveColumns: swapColumns,
-    moveRows: swapRows,
+    moveColumns,
+    moveRows,
     undo,
     redo,
     isEnabledUndo,
@@ -254,17 +254,17 @@ export const EditableTable: FC<Props> = ({ csvArray, setCSVArray, onApply }) => 
     if (sourceIdx === -1 || targetIdx === -1 || sourceIdx === targetIdx) {
       return;
     }
-    swapColumns(sourceIdx, targetIdx);
+    moveColumns(sourceIdx, targetIdx);
   }
 
   const renderRow = useCallback(
     (props: CustomRowProps) => {
       function onRowReorder(fromIndex: number, toIndex: number) {
-        swapRows(fromIndex, toIndex);
+        moveRows(fromIndex, toIndex);
       }
       return <CustomRow key={props.rowKey} {...props} onRowReorder={onRowReorder} />;
     },
-    [swapRows]
+    [moveRows]
   );
 
   const renderCell = useCallback((props: CustomCellProps) => {
