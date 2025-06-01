@@ -1,12 +1,24 @@
 .searchRoot {
   position: absolute;
   top: 0;
-  left: 70%;
+  left: 60%;
   display: flex;
-  width: 15rem;
+  width: 20rem;
   height: 2rem;
-  padding: 8px;
+  padding: 4px;
   gap: 8px;
+  border-radius: 4px;
   align-items: center;
   background-color: var(--vscode-settings-textInputBackground, #313131);
+}
+
+.searchInput {
+  height: 100%;
+  border-color: var(--vscode-focusBorder, #007acc);
+  background-color: var(--vscode-settings-textInputBackground, #313131);
+}
+
+.searchStatus {
+  text-align: right;
+  min-width: fit-content;
 }

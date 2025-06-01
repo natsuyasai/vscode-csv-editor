@@ -8,6 +8,8 @@ const meta = {
   component: Search,
   args: {
     isMatching: false,
+    machedCount: 0,
+    searchedSelectedItemIdx: 0,
     onSearch: fn(),
     onNext: fn(),
     onPrevious: fn(),
@@ -26,6 +28,8 @@ export const Default: Story = {};
 export const Matching: Story = {
   args: {
     isMatching: true,
+    machedCount: 3,
+    searchedSelectedItemIdx: 1,
   },
   play: async ({ canvasElement }) => {
     const textbox = canvasElement.querySelector("vscode-textfield");
