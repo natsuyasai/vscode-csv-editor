@@ -1,4 +1,4 @@
-import { VscodeButton, VscodeTextfield } from "@vscode-elements/react-elements";
+import { VscodeButton, VscodeIcon, VscodeTextfield } from "@vscode-elements/react-elements";
 import { FC, useEffect, useRef, useState } from "react";
 import styles from "./Search.module.scss";
 
@@ -55,16 +55,16 @@ export const Search: FC<Props> = ({ isMatching, onSearch, onNext, onPrevious, on
           onInput={(e) => setSearchText((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => handleKeyDown(e)}></VscodeTextfield>
         <VscodeButton onClick={() => onPrevious()} disabled={!searchText || !isMatching}>
-          ↑
+          <VscodeIcon name="arrow-up" action-icon />
         </VscodeButton>
         <VscodeButton
           ref={nextButtonRef as never}
           onClick={() => onNext()}
           disabled={!searchText || !isMatching}>
-          ↓
+          <VscodeIcon name="arrow-down" action-icon />
         </VscodeButton>
         <VscodeButton onClick={() => onClose()} secondary>
-          ×
+          <VscodeIcon name="close" action-icon />
         </VscodeButton>
       </div>
     </>
