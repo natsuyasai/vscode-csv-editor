@@ -12,7 +12,8 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "postinstall": "node scripts/copyicon.cjs"
   },
   "dependencies": {
     "@vscode-elements/react-elements": "^1.15.0",
