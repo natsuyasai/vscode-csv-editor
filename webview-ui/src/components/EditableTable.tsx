@@ -42,6 +42,9 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
   const { isIgnoreHeaderRow, rowSize, setIsIgnoreHeaderRow, setRowSize } = useHeaderAction();
   const { rows, sortedRows, sortColumns, setSortColumns } = useRows(csvArray, isIgnoreHeaderRow);
   const { columns } = useColumns(csvArray, isIgnoreHeaderRow);
+  const [selectedRows, setSelectedRows] = useState<ReadonlySet<string> | undefined>(
+    (): ReadonlySet<string> => new Set()
+  );
   const {
     contextMenuProps: rowContextMenuProps,
     setContextMenuProps: setRowContextMenuProps,
@@ -270,7 +273,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
   );
 
   const renderCell = useCallback((props: CustomCellProps) => {
-    return <CustomCell key={props.rowKey} {...props} onUpdateRowHeight={() => {}} />;
+    return <CustomCell key={props.cellKey} {...props} onUpdateRowHeight={() => {}} />;
   }, []);
 
   const renderHeaderCell = useCallback((props: CustomHeaderCellProps) => {
@@ -305,6 +308,8 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           rowKeyGetter={(row) => row[ROW_ID_KEY]}
           onRowsChange={updateRow}
           sortColumns={sortColumns}
+          selectedRows={selectedRows}
+          onSelectedRowsChange={() => {}}
           onSortColumnsChange={(sortColumns) => {
             // ヘッダの編集用のダブルクリックの判定を待つ必要があるため、保持だけして何もしない
             setSortColumnsForWaitingDoubleClick(sortColumns);
@@ -325,10 +330,17 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
             renderCell: (key, props) =>
               renderCell({
                 ...props,
-                rowKey: key,
+                cellKey: key,
                 isSearchTarget:
                   currentCell?.rowIdx === props.rowIdx && currentCell?.colIdx === props.column.idx,
                 onUpdateRowHeight: () => {},
+                onClickRow: (rowKey) => {
+                  if (rowKey) {
+                    setSelectedRows(new Set([rowKey]));
+                  } else {
+                    setSelectedRows(undefined);
+                  }
+                },
               }),
           }}
           defaultColumnOptions={{
