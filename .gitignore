@@ -3,3 +3,5 @@ dist
 node_modules
 .vscode-test/
 *.vsix
+webview-ui/src/icons/codicon.css
+webview-ui/src/icons/codicon.ttf
