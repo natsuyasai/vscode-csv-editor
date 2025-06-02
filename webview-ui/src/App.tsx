@@ -6,30 +6,44 @@ import styles from "./App.module.scss";
 import { EditableTable } from "./components/EditableTable";
 import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
+import { InitMessage } from "@message/messageTypeToExtention";
 
 export default function App() {
   const [rawText, setRawText] = useState("");
   const [csvArray, setCSVArray] = useState<Array<Array<string>>>([]);
   const [theme, setTheme] = useState<ThemeKind>("light");
 
-  const handleMessagesFromExtension = useCallback((event: MessageEvent<Message>) => {
-    if (event.data.type === "update") {
-      const message = event.data as UpdateMessage;
-      updateCSVFromExtension(message.payload);
-    }
-    if (event.data.type === "updateTheme") {
-      const theme = event.data.payload as ThemeKind;
-      setTheme(theme);
-    }
-  }, []);
-
   useEffect(() => {
+    const handleMessagesFromExtension = (event: MessageEvent<Message>) => {
+      const message = event.data satisfies Message;
+      // console.log("Received message from extension:", message);
+      switch (message.type) {
+        case "init":
+        case "update":
+          const updateMessage = message as UpdateMessage;
+          debounce(() => {
+            updateCSVFromExtension(updateMessage.payload);
+          })();
+          break;
+        case "updateTheme":
+          const theme = event.data.payload as ThemeKind;
+          setTheme(theme);
+          break;
+        default:
+          console.log("Unknown command: " + message.type);
+          break;
+      }
+    };
     window.addEventListener("message", handleMessagesFromExtension);
+
+    vscode.postMessage({
+      type: "init",
+    } satisfies InitMessage);
 
     return () => {
       window.removeEventListener("message", handleMessagesFromExtension);
     };
-  }, [handleMessagesFromExtension]);
+  }, []);
 
   const handleApply = useCallback(() => {
     vscode.postMessage({
@@ -60,29 +74,6 @@ export default function App() {
       payload: rawText,
     });
   };
-
-  window.addEventListener("message", (event) => {
-    debouncedOnReceiveMessage(event);
-  });
-
-  function onReceiveMessage(event: MessageEvent) {
-    const message = event.data; // The JSON data that the extension sent
-    console.log("Received message from extension:", message);
-
-    switch (message.type) {
-      case "init":
-      case "update":
-        const updateMessage = message as UpdateMessage;
-        debounce(() => {
-          updateCSVFromExtension(updateMessage.payload);
-        })();
-        break;
-      default:
-        console.log("Unknown command: " + message.command);
-        break;
-    }
-  }
-  const debouncedOnReceiveMessage = debounce(onReceiveMessage);
 
   function updateCSVFromExtension(text: string) {
     setRawText(text);

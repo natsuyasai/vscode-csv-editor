@@ -68,7 +68,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
         payload: CSVEditorProvider.getThemeKind(),
       } satisfies UpdateTheameMessage);
     }
-    updateTheme();
+
     vscode.window.onDidChangeActiveColorTheme(() => {
       updateTheme();
     });
@@ -86,18 +86,15 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       }
     });
 
-    const changeViewStateSubscription = webviewPanel.onDidChangeViewState((e) => {
-      if (e.webviewPanel.visible) {
-        // The webview is visible, so we can update it with the current document content.
-        updateWebview();
-      }
-    });
-
     // Receive message from the webview.
     const webviewReceiveMessageSubscription = webviewPanel.webview.onDidReceiveMessage(
       (e: Message) => {
         // console.log(`${e.type}:${e.payload}`);
         switch (e.type) {
+          case "init":
+            updateTheme();
+            updateWebview();
+            return;
           case "update":
             if (e.payload !== undefined) {
               this.updateTextDocument(document, e.payload);
@@ -118,11 +115,8 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     // Make sure we get rid of the listener when our editor is closed.
     webviewPanel.onDidDispose(() => {
       changeDocumentSubscription.dispose();
-      changeViewStateSubscription.dispose();
       webviewReceiveMessageSubscription.dispose();
     });
-
-    updateWebview();
   }
 
   private static getThemeKind(): ThemeKind {
