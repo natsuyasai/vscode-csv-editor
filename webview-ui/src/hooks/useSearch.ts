@@ -38,7 +38,7 @@ export function useSearch({ sortedRows, gridRef }: Parameters) {
     const lowerText = text.toLowerCase();
     const matchedRows = sortedRows.filter((row) =>
       Object.values(row).some((value, index) => {
-        if (index === 0) {
+        if (index === 0 || index === 1) {
           // 固定列は検索対象外
           return false;
         }
@@ -57,12 +57,12 @@ export function useSearch({ sortedRows, gridRef }: Parameters) {
       // 一致するセルを探す
       const matchedColumns: number[] = [];
       Object.values(row).forEach((value, index) => {
-        if (index === 0) {
+        if (index === 0 || index === 1) {
           // 固定列は検索対象外
           return;
         }
         if (value.toLowerCase().includes(lowerText)) {
-          matchedColumns.push(index);
+          matchedColumns.push(index - 1); // 非表示のIDを除外するために1を引く
         }
       });
       matchedColumns.forEach((colIdx) => {
