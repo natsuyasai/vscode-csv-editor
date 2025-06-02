@@ -20,17 +20,21 @@ export default function App() {
       switch (message.type) {
         case "init":
         case "update":
-          const updateMessage = message as UpdateMessage;
-          debounce(() => {
-            updateCSVFromExtension(updateMessage.payload);
-          })();
+          {
+            const updateMessage = message as UpdateMessage;
+            debounce(() => {
+              updateCSVFromExtension(updateMessage.payload);
+            })();
+          }
           break;
         case "updateTheme":
-          const theme = event.data.payload as ThemeKind;
-          setTheme(theme);
+          {
+            const theme = event.data.payload as ThemeKind;
+            setTheme(theme);
+          }
           break;
         default:
-          console.log("Unknown command: " + message.type);
+          console.log(`Unknown command: ${message.type as string}`);
           break;
       }
     };
@@ -77,7 +81,9 @@ export default function App() {
 
   function updateCSVFromExtension(text: string) {
     setRawText(text);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const records = csvParseSync(text);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     setCSVArray(records);
   }
 

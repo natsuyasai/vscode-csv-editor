@@ -46,9 +46,9 @@ export const OpenSlectRow: Story = {
   play: async ({ canvas }) => {
     const listbox = canvas.getByRole("listbox");
     const listItem = listbox.shadowRoot?.querySelector("div[class*='select-face']");
-    expect(listItem).toBeVisible();
+    await expect(listItem).toBeVisible();
     await userEvent.click(listItem!);
     const option = listbox.shadowRoot?.querySelector("div[class*=' dropdown ']");
-    expect(option).toBeVisible();
+    await expect(option).toBeVisible();
   },
 };
