@@ -6,6 +6,7 @@ import styles from "./App.module.scss";
 import { EditableTable } from "./components/EditableTable";
 import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
+import { InitMessage } from "@message/messageTypeToExtention";
 
 export default function App() {
   const [rawText, setRawText] = useState("");
@@ -15,6 +16,7 @@ export default function App() {
   useEffect(() => {
     const handleMessagesFromExtension = (event: MessageEvent<Message>) => {
       const message = event.data satisfies Message;
+      console.log("Received message from extension:", message);
       switch (message.type) {
         case "init":
         case "update":
@@ -33,6 +35,10 @@ export default function App() {
       }
     };
     window.addEventListener("message", handleMessagesFromExtension);
+
+    vscode.postMessage({
+      type: "init",
+    } satisfies InitMessage);
 
     return () => {
       window.removeEventListener("message", handleMessagesFromExtension);
