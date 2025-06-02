@@ -16,7 +16,7 @@ export default function App() {
   useEffect(() => {
     const handleMessagesFromExtension = (event: MessageEvent<Message>) => {
       const message = event.data satisfies Message;
-      console.log("Received message from extension:", message);
+      // console.log("Received message from extension:", message);
       switch (message.type) {
         case "init":
         case "update":
