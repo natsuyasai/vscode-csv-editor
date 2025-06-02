@@ -1,4 +1,4 @@
-export type MessageType = "update" | "reload" | "save";
+export type MessageType = "init" | "update" | "reload" | "save";
 
 export interface Message {
   type: MessageType;
@@ -18,4 +18,8 @@ export interface ReloadMessage extends Message {
 export interface SaveMessage extends Message {
   type: "save";
   payload: string;
+}
+
+export interface InitMessage extends Message {
+  type: "init";
 }
