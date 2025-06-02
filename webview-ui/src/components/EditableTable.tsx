@@ -150,7 +150,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
   function handleFill(event: FillEvent<NoInfer<Record<string, string>>>) {
     return {
       ...event.targetRow,
-      [event.columnKey]: event.sourceRow[event.columnKey as keyof Record<string, string>],
+      [event.columnKey]: event.sourceRow[event.columnKey],
     };
   }
 

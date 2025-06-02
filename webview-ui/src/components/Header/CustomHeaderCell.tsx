@@ -42,7 +42,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   const WAIT_DOUBLE_CLICK_TH_MS = 500;
   const setTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [{}, drag] = useDrag({
+  const [, drag] = useDrag({
     type: "COL_DRAG",
     item: { index: column.idx },
     collect: (monitor) => ({
@@ -50,7 +50,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
     }),
   });
 
-  const [{}, drop] = useDrop({
+  const [, drop] = useDrop({
     accept: "COL_DRAG",
     drop({ index: _index }: { index: number }) {},
     collect: (monitor) => ({
@@ -81,7 +81,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
 
   const handleContextMenu = useCallback(
     (e: MouseEvent) => {
-      onHeaderCellContextMenu(column, e as MouseEvent);
+      onHeaderCellContextMenu(column, e);
     },
     [column, onHeaderCellContextMenu]
   );
