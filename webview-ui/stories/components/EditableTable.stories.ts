@@ -4,6 +4,7 @@ import { fn, expect, userEvent } from "@storybook/test";
 import { EditableTable } from "@/components/EditableTable";
 import { Canvas } from "storybook/internal/types";
 import { RowSizeType } from "@/types";
+import { use } from "react";
 
 const meta = {
   title: "components/EditableTable",
@@ -90,6 +91,16 @@ export const RowSize_large: Story = {
 
 export const RowSize_extra_large: Story = {
   play: async ({ canvas }) => setRowSize(canvas, "extra large"),
+};
+
+export const SelectedRow: Story = {
+  play: async ({ canvas }) => {
+    const cells = canvas.getAllByRole("gridcell");
+    const indexCells = cells.filter((cell) => cell.getAttribute("aria-colindex") === "1");
+    await userEvent.click(indexCells[1]);
+    const rows = canvas.getAllByRole("row");
+    expect(rows[2]).toHaveAttribute("aria-selected", "true");
+  },
 };
 
 export const Empty: Story = {
