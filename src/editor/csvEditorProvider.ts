@@ -149,9 +149,8 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     const scriptUri = getUri(webview, extensionUri, ["webview-ui", "build", "assets", "index.js"]);
     const codiconsUri = getUri(webview, extensionUri, [
       "webview-ui",
-      "node_modules",
-      "@vscode/codicons",
-      "dist",
+      "build",
+      "assets",
       "codicon.css",
     ]);
 
