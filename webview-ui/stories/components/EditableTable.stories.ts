@@ -4,7 +4,6 @@ import { fn, expect, userEvent } from "@storybook/test";
 import { EditableTable } from "@/components/EditableTable";
 import { Canvas } from "storybook/internal/types";
 import { RowSizeType } from "@/types";
-import { use } from "react";
 
 const meta = {
   title: "components/EditableTable",
