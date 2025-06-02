@@ -29,6 +29,7 @@ import { CustomCell, CustomCellProps } from "./Row/CustomCell";
 import { CustomRow, CustomRowProps } from "./Row/CustomRow";
 import { RowContextMenu } from "./Row/RowContextMenu";
 import { Search } from "./Search";
+import { ROW_ID_KEY } from "@/types";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -301,7 +302,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           columns={columns}
           rows={sortedRows}
           rowHeight={rowHeight}
-          rowKeyGetter={(row) => rows.indexOf(row).toString()}
+          rowKeyGetter={(row) => row[ROW_ID_KEY]}
           onRowsChange={updateRow}
           sortColumns={sortColumns}
           onSortColumnsChange={(sortColumns) => {
