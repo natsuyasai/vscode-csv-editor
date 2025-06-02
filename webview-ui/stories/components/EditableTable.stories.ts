@@ -32,48 +32,48 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   play: async ({ canvas }) => {
     const headercell = canvas.getAllByRole("columnheader");
-    expect(headercell.length).toBe(6);
+    await expect(headercell.length).toBe(6);
     const cell = canvas.getAllByRole("cell");
-    expect(cell.length).toBe(6);
-    expect(cell[0]).toHaveTextContent("");
-    expect(cell[1]).toHaveTextContent("A");
-    expect(cell[2]).toHaveTextContent("B");
-    expect(cell[3]).toHaveTextContent("CCCCCCCCCCCCCCCCC");
-    expect(cell[4]).toHaveTextContent("D");
-    expect(cell[5]).toHaveTextContent("E");
+    await expect(cell.length).toBe(6);
+    await expect(cell[0]).toHaveTextContent("");
+    await expect(cell[1]).toHaveTextContent("A");
+    await expect(cell[2]).toHaveTextContent("B");
+    await expect(cell[3]).toHaveTextContent("CCCCCCCCCCCCCCCCC");
+    await expect(cell[4]).toHaveTextContent("D");
+    await expect(cell[5]).toHaveTextContent("E");
   },
 };
 
 export const IgnoreHeaderRow: Story = {
   play: async ({ canvas }) => {
     const checkbox = canvas.getByLabelText("Ignore Header Row");
-    expect(checkbox).toBeVisible();
-    await userEvent.click(checkbox!.shadowRoot!.querySelector("label")!);
+    await expect(checkbox).toBeVisible();
+    await userEvent.click(checkbox.shadowRoot!.querySelector("label")!);
     const headercell = canvas.getAllByRole("columnheader");
-    expect(headercell.length).toBe(6);
+    await expect(headercell.length).toBe(6);
     const cell = canvas.getAllByRole("cell");
-    expect(cell.length).toBe(6);
-    expect(cell[0]).toHaveTextContent("");
-    expect(cell[1]).toHaveTextContent("");
-    expect(cell[2]).toHaveTextContent("");
-    expect(cell[3]).toHaveTextContent("");
-    expect(cell[4]).toHaveTextContent("");
-    expect(cell[5]).toHaveTextContent("");
+    await expect(cell.length).toBe(6);
+    await expect(cell[0]).toHaveTextContent("");
+    await expect(cell[1]).toHaveTextContent("");
+    await expect(cell[2]).toHaveTextContent("");
+    await expect(cell[3]).toHaveTextContent("");
+    await expect(cell[4]).toHaveTextContent("");
+    await expect(cell[5]).toHaveTextContent("");
   },
 };
 
 async function setRowSize(canvas: Canvas, rowSize: RowSizeType) {
   const listbox = canvas.getByRole("listbox");
   const listItem = listbox.shadowRoot?.querySelector("div[class*='select-face']");
-  expect(listItem).toBeVisible();
+  await expect(listItem).toBeVisible();
   await userEvent.click(listItem!);
   const dropdown = listbox.shadowRoot?.querySelector("div[class*=' dropdown ']");
-  expect(dropdown).toBeVisible();
+  await expect(dropdown).toBeVisible();
   const option = dropdown!.querySelector("ul[class*='options']");
   const item = [...(option?.querySelectorAll("li") ?? [])].filter(
     (li) => (li.textContent?.indexOf(rowSize) ?? -1) >= 0
   )[0];
-  await userEvent.click(item!);
+  await userEvent.click(item);
 }
 
 export const RowSize_small: Story = {
@@ -98,7 +98,7 @@ export const SelectedRow: Story = {
     const indexCells = cells.filter((cell) => cell.getAttribute("aria-colindex") === "1");
     await userEvent.click(indexCells[1]);
     const rows = canvas.getAllByRole("row");
-    expect(rows[2]).toHaveAttribute("aria-selected", "true");
+    await expect(rows[2]).toHaveAttribute("aria-selected", "true");
   },
 };
 
