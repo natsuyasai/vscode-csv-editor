@@ -1,9 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { useRows } from "@/hooks/useRows";
-import { ROW_IDX_KEY } from "@/types";
 
 describe("useRows", () => {
+  const mockedUuid = "mocked-uuid";
+  beforeEach(() => {
+    vi.stubGlobal("crypto", {
+      randomUUID: vi.fn(() => mockedUuid),
+    });
+  });
+
   it("データが空なら空の行が生成されること", () => {
     const { result } = renderHook(() => useRows([], false));
     expect(result.current.rows).toEqual([]);
@@ -23,8 +29,8 @@ describe("useRows", () => {
     ];
     const { result } = renderHook(() => useRows(csvArray, false));
     expect(result.current.rows).toEqual([
-      { _csv_row_index: "1", col0: "A1", col1: "A2", col2: "A3" },
-      { _csv_row_index: "2", col0: "B1", col1: "B2", col2: "B3" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "1", col0: "A1", col1: "A2", col2: "A3" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "2", col0: "B1", col1: "B2", col2: "B3" },
     ]);
   });
 
@@ -32,8 +38,8 @@ describe("useRows", () => {
     const csvArray = [["Header1", "Header2", "Header3"], ["A1", "A2"], ["B1"]];
     const { result } = renderHook(() => useRows(csvArray, false));
     expect(result.current.rows).toEqual([
-      { _csv_row_index: "1", col0: "A1", col1: "A2" },
-      { _csv_row_index: "2", col0: "B1" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "1", col0: "A1", col1: "A2" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "2", col0: "B1" },
     ]);
   });
 
@@ -45,9 +51,15 @@ describe("useRows", () => {
     ];
     const { result } = renderHook(() => useRows(csvArray, true));
     expect(result.current.rows).toEqual([
-      { _csv_row_index: "1", col0: "Header1", col1: "Header2", col2: "Header3" },
-      { _csv_row_index: "2", col0: "A1", col1: "A2", col2: "A3" },
-      { _csv_row_index: "3", col0: "B1", col1: "B2", col2: "B3" },
+      {
+        _csv_row_id_key: mockedUuid,
+        _csv_row_index: "1",
+        col0: "Header1",
+        col1: "Header2",
+        col2: "Header3",
+      },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "2", col0: "A1", col1: "A2", col2: "A3" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "3", col0: "B1", col1: "B2", col2: "B3" },
     ]);
   });
 
@@ -64,11 +76,13 @@ describe("useRows", () => {
     const { result, rerender } = renderHook(({ csv }) => useRows(csv, false), {
       initialProps: { csv: initial },
     });
-    expect(result.current.rows).toEqual([{ _csv_row_index: "1", col0: "A1", col1: "A2" }]);
+    expect(result.current.rows).toEqual([
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "1", col0: "A1", col1: "A2" },
+    ]);
     rerender({ csv: updated });
     expect(result.current.rows).toEqual([
-      { _csv_row_index: "1", col0: "B1", col1: "B2" },
-      { _csv_row_index: "2", col0: "C1", col1: "C2" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "1", col0: "B1", col1: "B2" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "2", col0: "C1", col1: "C2" },
     ]);
   });
 
@@ -82,18 +96,18 @@ describe("useRows", () => {
     const { result } = renderHook(() => useRows(csvArray, false));
     // 初期状態はソートなし
     expect(result.current.sortedRows).toEqual([
-      { _csv_row_index: "1", col0: "B", col1: "2" },
-      { _csv_row_index: "2", col0: "A", col1: "1" },
-      { _csv_row_index: "3", col0: "C", col1: "3" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "1", col0: "B", col1: "2" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "2", col0: "A", col1: "1" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "3", col0: "C", col1: "3" },
     ]);
     // col0で昇順ソート
     act(() => {
       result.current.setSortColumns([{ columnKey: "col0", direction: "ASC" }]);
     });
     expect(result.current.sortedRows).toEqual([
-      { _csv_row_index: "1", col0: "A", col1: "1" },
-      { _csv_row_index: "2", col0: "B", col1: "2" },
-      { _csv_row_index: "3", col0: "C", col1: "3" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "1", col0: "A", col1: "1" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "2", col0: "B", col1: "2" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "3", col0: "C", col1: "3" },
     ]);
   });
 
@@ -110,9 +124,9 @@ describe("useRows", () => {
       result.current.setSortColumns([{ columnKey: "col1", direction: "DESC" }]);
     });
     expect(result.current.sortedRows).toEqual([
-      { _csv_row_index: "1", col0: "C", col1: "3" },
-      { _csv_row_index: "2", col0: "B", col1: "2" },
-      { _csv_row_index: "3", col0: "A", col1: "1" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "1", col0: "C", col1: "3" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "2", col0: "B", col1: "2" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "3", col0: "A", col1: "1" },
     ]);
   });
 
@@ -132,9 +146,9 @@ describe("useRows", () => {
       ]);
     });
     expect(result.current.sortedRows).toEqual([
-      { _csv_row_index: "1", col0: "A", col1: "1" },
-      { _csv_row_index: "2", col0: "A", col1: "2" },
-      { _csv_row_index: "3", col0: "B", col1: "1" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "1", col0: "A", col1: "1" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "2", col0: "A", col1: "2" },
+      { _csv_row_id_key: mockedUuid, _csv_row_index: "3", col0: "B", col1: "1" },
     ]);
   });
 });

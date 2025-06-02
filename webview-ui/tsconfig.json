@@ -32,9 +32,15 @@
     ]
   },
   "include": [
-    "./src",
-    "./test",
-    "./stories",
-    "./scripts"
+    ".storybook/**/*",
+    "./src/**/*",
+    "./test/**/*",
+    "./stories/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
   ]
 }
