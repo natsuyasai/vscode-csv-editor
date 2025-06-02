@@ -17,7 +17,7 @@ export function useCellCopy() {
     }
 
     setCopiedCell({ row, column });
-    event.clipboardData.setData("text/plain", row[column.key as string] || "");
+    event.clipboardData.setData("text/plain", row[column.key] || "");
     event.preventDefault();
   }
 

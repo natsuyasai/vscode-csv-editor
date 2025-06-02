@@ -45,6 +45,7 @@ class VSCodeAPIWrapper {
    *
    * @return The current state or `undefined` if no state has been set.
    */
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   public getState(): unknown | undefined {
     if (this.vsCodeApi) {
       return this.vsCodeApi.getState();
@@ -65,6 +66,7 @@ class VSCodeAPIWrapper {
    *
    * @return The new state.
    */
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   public setState<T extends unknown | undefined>(newState: T): T {
     if (this.vsCodeApi) {
       return this.vsCodeApi.setState(newState);

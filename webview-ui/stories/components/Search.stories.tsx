@@ -34,7 +34,7 @@ export const Matching: Story = {
   play: async ({ canvasElement }) => {
     const textbox = canvasElement.querySelector("vscode-textfield");
     const input = textbox?.shadowRoot?.querySelector("input");
-    expect(input).toBeVisible();
-    userEvent.type(input!, "test");
+    await expect(input).toBeVisible();
+    await userEvent.type(input!, "test");
   },
 };
