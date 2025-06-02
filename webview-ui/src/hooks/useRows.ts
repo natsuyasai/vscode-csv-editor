@@ -1,4 +1,4 @@
-import { ROW_IDX_KEY } from "@/types";
+import { ROW_ID_KEY, ROW_IDX_KEY } from "@/types";
 import { useCallback, useMemo, useState } from "react";
 import { SortColumn } from "react-data-grid";
 
@@ -19,6 +19,7 @@ export function useRows(csvArray: Array<Array<string>>, isIgnoreHeaderRow: boole
             },
             {
               [ROW_IDX_KEY]: (index + 1).toString(),
+              [ROW_ID_KEY]: crypto.randomUUID(),
             } as Record<string, string>
           )
         ) || empty
