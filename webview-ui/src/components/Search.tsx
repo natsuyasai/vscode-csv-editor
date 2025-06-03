@@ -63,6 +63,9 @@ export const Search: FC<Props> = ({
           ref={inputRef as never}
           className={styles.searchInput}
           value={searchText}
+          aria-label="Search text input"
+          role="searchbox"
+          tabIndex={0}
           onInput={(e) => setSearchText((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => handleKeyDown(e)}></VscodeTextfield>
         {isMatching && (
@@ -70,16 +73,22 @@ export const Search: FC<Props> = ({
             {isMatching ? `${searchedSelectedItemIdx + 1} of ${machedCount}` : ""}
           </div>
         )}
-        <VscodeButton onClick={() => onPrevious()} disabled={!searchText || !isMatching}>
+        <VscodeButton
+          aria-label="Previous search result"
+          tabIndex={1}
+          onClick={() => onPrevious()}
+          disabled={!searchText || !isMatching}>
           <VscodeIcon name="arrow-up" action-icon />
         </VscodeButton>
         <VscodeButton
+          aria-label="Next search result"
+          tabIndex={2}
           ref={nextButtonRef as never}
           onClick={() => onNext()}
           disabled={!searchText || !isMatching}>
           <VscodeIcon name="arrow-down" action-icon />
         </VscodeButton>
-        <VscodeButton onClick={() => onClose()} secondary>
+        <VscodeButton onClick={() => onClose()} secondary aria-label="Close search" tabIndex={3}>
           <VscodeIcon name="close" action-icon />
         </VscodeButton>
       </div>
