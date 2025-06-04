@@ -41,6 +41,21 @@ export const Search: FC<Props> = ({
     };
   }, [inputRef]);
 
+  useEffect(() => {
+    function handleKeyDownForRoot(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+    }
+
+    document.body.addEventListener("keydown", handleKeyDownForRoot);
+
+    return () => {
+      document.body.removeEventListener("keydown", handleKeyDownForRoot);
+    };
+  }, [onClose]);
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") {
       onSearch(searchText);
@@ -49,16 +64,9 @@ export const Search: FC<Props> = ({
     }
   }
 
-  function handleKeyDownForRoot(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      onClose();
-      return;
-    }
-  }
-
   return (
     <>
-      <div className={styles.searchRoot} onKeyDown={(e) => handleKeyDownForRoot(e)}>
+      <div role="search" className={styles.searchRoot}>
         <VscodeTextfield
           ref={inputRef as never}
           className={styles.searchInput}
@@ -75,20 +83,20 @@ export const Search: FC<Props> = ({
         )}
         <VscodeButton
           aria-label="Previous search result"
-          tabIndex={1}
+          tabIndex={0}
           onClick={() => onPrevious()}
           disabled={!searchText || !isMatching}>
           <VscodeIcon name="arrow-up" action-icon />
         </VscodeButton>
         <VscodeButton
           aria-label="Next search result"
-          tabIndex={2}
+          tabIndex={0}
           ref={nextButtonRef as never}
           onClick={() => onNext()}
           disabled={!searchText || !isMatching}>
           <VscodeIcon name="arrow-down" action-icon />
         </VscodeButton>
-        <VscodeButton onClick={() => onClose()} secondary aria-label="Close search" tabIndex={3}>
+        <VscodeButton onClick={() => onClose()} secondary aria-label="Close search" tabIndex={0}>
           <VscodeIcon name="close" action-icon />
         </VscodeButton>
       </div>
