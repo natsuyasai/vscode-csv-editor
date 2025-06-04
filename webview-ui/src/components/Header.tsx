@@ -52,7 +52,7 @@ export const Header: FC<Props> = ({
         <div className={styles.rowSize}>
           <VscodeLabel>Row size :</VscodeLabel>
           <VscodeSingleSelect
-            tabIndex={1}
+            tabIndex={0}
             aria-label="Row size"
             className={styles.rowSizeSelect}
             onChange={(e) => {
@@ -80,7 +80,7 @@ export const Header: FC<Props> = ({
         </div>
         <div className={styles.buttons}>
           <VscodeButton
-            tabIndex={2}
+            tabIndex={0}
             aria-label="undo"
             secondary
             disabled={!isEnabledUndo}
@@ -88,7 +88,7 @@ export const Header: FC<Props> = ({
             <VscodeIcon name="discard" action-icon />
           </VscodeButton>
           <VscodeButton
-            tabIndex={3}
+            tabIndex={0}
             aria-label="redo"
             secondary
             disabled={!isEnabledRedo}
@@ -96,7 +96,7 @@ export const Header: FC<Props> = ({
             <VscodeIcon name="redo" action-icon />
           </VscodeButton>
           <VscodeButton
-            tabIndex={4}
+            tabIndex={0}
             aria-label="search"
             aria-description="Search text"
             secondary
@@ -106,7 +106,7 @@ export const Header: FC<Props> = ({
         </div>
         <div className={styles.apply}>
           <VscodeButton
-            tabIndex={5}
+            tabIndex={0}
             aria-label="save"
             className={styles.applyButton}
             onClick={(_e) => onClickApply()}>
