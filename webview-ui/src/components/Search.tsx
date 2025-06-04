@@ -41,6 +41,21 @@ export const Search: FC<Props> = ({
     };
   }, [inputRef]);
 
+  useEffect(() => {
+    function handleKeyDownForRoot(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+    }
+
+    document.body.addEventListener("keydown", handleKeyDownForRoot);
+
+    return () => {
+      document.body.removeEventListener("keydown", handleKeyDownForRoot);
+    };
+  }, [onClose]);
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") {
       onSearch(searchText);
@@ -49,20 +64,16 @@ export const Search: FC<Props> = ({
     }
   }
 
-  function handleKeyDownForRoot(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      onClose();
-      return;
-    }
-  }
-
   return (
     <>
-      <div className={styles.searchRoot} onKeyDown={(e) => handleKeyDownForRoot(e)}>
+      <div role="search" className={styles.searchRoot}>
         <VscodeTextfield
           ref={inputRef as never}
           className={styles.searchInput}
           value={searchText}
+          aria-label="Search text input"
+          role="searchbox"
+          tabIndex={0}
           onInput={(e) => setSearchText((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => handleKeyDown(e)}></VscodeTextfield>
         {isMatching && (
@@ -70,16 +81,22 @@ export const Search: FC<Props> = ({
             {isMatching ? `${searchedSelectedItemIdx + 1} of ${machedCount}` : ""}
           </div>
         )}
-        <VscodeButton onClick={() => onPrevious()} disabled={!searchText || !isMatching}>
+        <VscodeButton
+          aria-label="Previous search result"
+          tabIndex={0}
+          onClick={() => onPrevious()}
+          disabled={!searchText || !isMatching}>
           <VscodeIcon name="arrow-up" action-icon />
         </VscodeButton>
         <VscodeButton
+          aria-label="Next search result"
+          tabIndex={0}
           ref={nextButtonRef as never}
           onClick={() => onNext()}
           disabled={!searchText || !isMatching}>
           <VscodeIcon name="arrow-down" action-icon />
         </VscodeButton>
-        <VscodeButton onClick={() => onClose()} secondary>
+        <VscodeButton onClick={() => onClose()} secondary aria-label="Close search" tabIndex={0}>
           <VscodeIcon name="close" action-icon />
         </VscodeButton>
       </div>

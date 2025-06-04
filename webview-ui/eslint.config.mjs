@@ -1,12 +1,13 @@
 // @ts-check
+import eslint from "@eslint/js";
 import pluginTypeScript from "@typescript-eslint/eslint-plugin";
 import typescriptParser from "@typescript-eslint/parser";
 import pluginPrettier from "eslint-config-prettier";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 import pluginReact from "eslint-plugin-react";
-import reactConfigRecommended from "eslint-plugin-react/configs/recommended.js";
 import pluginReactHooks from "eslint-plugin-react-hooks";
+import reactConfigRecommended from "eslint-plugin-react/configs/recommended.js";
 import storybook from "eslint-plugin-storybook";
-import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 const ignores = {
@@ -101,4 +102,5 @@ export default [
   },
   typescriptConfig,
   reactConfig,
+  jsxA11y.flatConfigs.strict,
 ];
