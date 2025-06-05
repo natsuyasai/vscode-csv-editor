@@ -86,6 +86,31 @@ const storybookConfig = {
   },
 };
 
+const a11yConfig = {
+  name: "jsx_a11y_config",
+  files: ['**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}'],
+  settings: {
+    react: {
+      version: "detect",
+    },
+    components: {
+      VscodeButton: "button",
+      VscodeTextarea: "textarea",
+      VscodeCheckbox: "input[type='checkbox']",
+      VscodeSelect: "select",
+      VscodeTextfield: "input[type='text'], input[type='email'], input[type='password'], input[type='number'], input[type='search']",
+      VscodeRadio: "input[type='radio']",
+    },
+  },
+  languageOptions: {
+    parserOptions: {
+      ecmaFeatures: {
+        jsx: true,
+      },
+    },
+  },
+}
+
 export default [
   ignores,
   ...storybook.configs["flat/recommended"],
@@ -103,4 +128,5 @@ export default [
   typescriptConfig,
   reactConfig,
   jsxA11y.flatConfigs.strict,
+  a11yConfig
 ];
