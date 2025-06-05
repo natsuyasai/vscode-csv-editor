@@ -199,7 +199,8 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
                 e.key === "End" ||
                 e.key === "Home" ||
                 e.key === "PageDown" ||
-                e.key === "PageUp"
+                e.key === "PageUp" ||
+                e.code === "Space"
               ) {
                 // DataGridの移動処理を止める
                 e.stopPropagation();
