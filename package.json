@@ -33,7 +33,16 @@
         "command": "csv-editor.openEditor",
         "title": "Open CSV Editor"
       }
-    ]
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "csv-editor.openEditor",
+          "when": "resourceExtname == .csv && editorLangId == plaintext",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "install:all": "npm install && cd webview-ui && npm install",
