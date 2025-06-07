@@ -198,6 +198,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
                 onHeaderEdit(column.idx, (e.target as HTMLTextAreaElement).value);
               } else if (e.key === "Enter" || e.key === "Tab" || e.key === "Escape") {
                 setIsEditing(false);
+                rootRef.current?.parentElement?.focus();
               } else if (
                 e.key === "ArrowDown" ||
                 e.key === "ArrowLeft" ||
