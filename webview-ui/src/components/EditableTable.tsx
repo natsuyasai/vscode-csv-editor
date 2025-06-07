@@ -5,6 +5,9 @@ import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useRows } from "@/hooks/useRows";
 import { useSearch } from "@/hooks/useSearch";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
+import { useCellEditStore } from "@/stores/useCellEditStore";
+import { ROW_ID_KEY } from "@/types";
+import { canEdit } from "@/utilities/keyboard";
 import { VscodeDivider } from "@vscode-elements/react-elements";
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -29,7 +32,6 @@ import { CustomCell, CustomCellProps } from "./Row/CustomCell";
 import { CustomRow, CustomRowProps } from "./Row/CustomRow";
 import { RowContextMenu } from "./Row/RowContextMenu";
 import { Search } from "./Search";
-import { ROW_ID_KEY } from "@/types";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -89,6 +91,8 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     sortedRows,
     gridRef,
   });
+
+  const setInitialCellKey = useCellEditStore((state) => state.setInitialCellKey);
 
   function handleSelectRowContextMenu(value: string) {
     if (rowContextMenuProps === null) {
@@ -175,7 +179,21 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
       return;
     }
     if (e.key === "Delete") {
+      e.preventGridDefault();
       updateCell(args.rowIdx, args.column.idx, "");
+      return;
+    }
+    if (args.mode === "SELECT" && canEdit(e as unknown as KeyboardEvent)) {
+      e.preventGridDefault();
+      e.preventDefault();
+      setInitialCellKey(e.key);
+      args.selectCell(
+        {
+          idx: args.column.idx,
+          rowIdx: args.rowIdx,
+        },
+        true
+      );
     }
   }
 
