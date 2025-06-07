@@ -35,7 +35,7 @@ const nonInputKeys = new Set([
   "PrintScreen",
   // Function keys
   "F1",
-  // 'F2', /!\ specifically allowed, do not edit
+  "F2",
   "F3",
   "F4",
   "F5",
@@ -46,6 +46,7 @@ const nonInputKeys = new Set([
   "F10",
   "F11",
   "F12",
+  "Enter",
 ]);
 
 export function canEdit(e: KeyboardEvent) {
