@@ -11,27 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Cache root node_modules
-        id: cache-root-node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-
-      - name: Cache ui node_modules
-        id: cache-ui-node_modules
-        uses: actions/cache@v4
-        with:
-          path: webview-ui/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('webview-ui/package-lock.json') }}
+      - uses: ./.github/workflows/setup-node.yml
 
       - name: Install root dependencies
         run: npm ci
@@ -49,26 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: setup
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: restore root node modules
-        id: cache-root-node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - name: restore ui node modules
-        id: cache-ui-node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-${{ hashFiles('webview-ui/package-lock.json') }}
+      - uses: ./.github/workflows/setup-node.yml
       - name: Build webview-ui
         run: |
           cd webview-ui
@@ -79,26 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: setup
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: ./.github/workflows/setup-node.yml
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: restore root node modules
-        id: cache-root-node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - name: restore ui node modules
-        id: cache-ui-node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-${{ hashFiles('webview-ui/package-lock.json') }}
       - name: Build webview-ui
         run: |
           cd webview-ui
@@ -117,26 +60,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: setup
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: ./.github/workflows/setup-node.yml
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: restore root node modules
-        id: cache-root-node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - name: restore ui node modules
-        id: cache-ui-node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-${{ hashFiles('webview-ui/package-lock.json') }}
       - name: Run unit tests (webview-ui)
         run: |
           cd webview-ui
