@@ -2,6 +2,7 @@ import { FC, useCallback, useEffect, useRef, useState } from "react";
 import { CalculatedColumn, RenderHeaderCellProps, SortColumn } from "react-data-grid";
 import { useDrag, useDrop } from "react-dnd";
 import styles from "./CustomHeaderCell.module.scss";
+import { canEdit } from "@/utilities/keyboard";
 
 interface Props {
   isIgnoreHeaderRow: boolean;
@@ -73,10 +74,16 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
         setIsEditing(true);
       } else if (e.key === "Delete") {
         onHeaderEdit(column.idx, "");
+      } else if (!isEditing && canEdit(e)) {
+        // 編集モードに移行することで、onHeaderEdit分と通常入力分の2回入力が発生してしまうため止める
+        e.preventDefault();
+        onHeaderEdit(column.idx, e.key);
+        setIsEditing(true);
+        return;
       }
       onKeyDown(column, e);
     },
-    [column, onHeaderEdit, onKeyDown]
+    [column, isEditing, onHeaderEdit, onKeyDown]
   );
 
   const handleContextMenu = useCallback(
@@ -191,6 +198,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
                 onHeaderEdit(column.idx, (e.target as HTMLTextAreaElement).value);
               } else if (e.key === "Enter" || e.key === "Tab" || e.key === "Escape") {
                 setIsEditing(false);
+                rootRef.current?.parentElement?.focus();
               } else if (
                 e.key === "ArrowDown" ||
                 e.key === "ArrowLeft" ||
