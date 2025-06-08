@@ -51,7 +51,10 @@ const nonInputKeys = new Set([
 
 export function canEdit(e: KeyboardEvent) {
   if (e.shiftKey && e.key === "Shift") {
-    return;
+    return false;
+  }
+  if (e.shiftKey && (e.code === "Space" || nonInputKeys.has(e.key))) {
+    return false;
   }
   if (e.ctrlKey || e.altKey || e.metaKey || e.repeat) {
     return false;
