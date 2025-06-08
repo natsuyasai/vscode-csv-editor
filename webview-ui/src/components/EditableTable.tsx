@@ -163,11 +163,11 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     args: CellKeyDownArgs<NoInfer<Record<string, string>>, unknown>,
     e: CellKeyboardEvent
   ) {
+    setEditCellPosition({
+      idx: args.column.idx,
+      rowIdx: args.rowIdx,
+    });
     if (args.mode === "EDIT") {
-      setEditCellPosition({
-        idx: args.column.idx,
-        rowIdx: args.rowIdx,
-      });
       return;
     }
     // ショートカットキー定義
@@ -192,10 +192,6 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
       e.preventGridDefault();
       e.preventDefault();
       setInitialCellKey(e.key);
-      setEditCellPosition({
-        idx: args.column.idx,
-        rowIdx: args.rowIdx,
-      });
       args.selectCell(
         {
           idx: args.column.idx,
@@ -209,10 +205,6 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
       e.preventGridDefault();
       e.preventDefault();
       setInitialCellKey(e.key);
-      setEditCellPosition({
-        idx: args.column.idx,
-        rowIdx: args.rowIdx,
-      });
       args.selectCell(
         {
           idx: args.column.idx,
