@@ -19,12 +19,15 @@ export default function TextAreaEditor({
 
   useEffect(() => {
     ref.current?.focus();
+    const textLen = ref.current?.value.length ?? 0;
+    ref.current?.setSelectionRange(textLen, textLen);
+  }, []);
+
+  useEffect(() => {
     if (ref.current && initialCellKey) {
       onRowChange({ ...row, [column.key]: initialCellKey });
     }
     clearInitialCellKey();
-    const textLen = ref.current?.value.length ?? 0;
-    ref.current?.setSelectionRange(textLen, textLen);
   }, [initialCellKey, clearInitialCellKey, row, column, onRowChange]);
 
   useEffect(() => {
