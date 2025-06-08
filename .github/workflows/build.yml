@@ -29,7 +29,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: setup
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - uses: ./.github/workflows/setup-node.yml
+
       - name: Build webview-ui
         run: |
           cd webview-ui
@@ -40,6 +44,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: setup
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - uses: ./.github/workflows/setup-node.yml
 
       - name: Build webview-ui
@@ -60,6 +67,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: setup
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - uses: ./.github/workflows/setup-node.yml
 
       - name: Run unit tests (webview-ui)
