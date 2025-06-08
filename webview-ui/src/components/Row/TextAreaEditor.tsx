@@ -24,11 +24,14 @@ export default function TextAreaEditor({
   }, []);
 
   useEffect(() => {
-    if (ref.current && initialCellKey) {
+    if (initialCellKey === "Delete") {
+      onRowChange({ ...row, [column.key]: "" }, true);
+      onClose(true, true);
+    } else if (initialCellKey !== null) {
       onRowChange({ ...row, [column.key]: initialCellKey });
     }
     clearInitialCellKey();
-  }, [initialCellKey, clearInitialCellKey, row, column, onRowChange]);
+  }, [initialCellKey, clearInitialCellKey, row, column, onRowChange, onClose]);
 
   useEffect(() => {
     return () => {
