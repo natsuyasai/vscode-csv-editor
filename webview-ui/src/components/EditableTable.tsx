@@ -68,7 +68,6 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     insertCol,
     deleteCol,
     updateCol,
-    updateCell,
     moveColumns,
     moveRows,
     undo,
@@ -164,6 +163,13 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     args: CellKeyDownArgs<NoInfer<Record<string, string>>, unknown>,
     e: CellKeyboardEvent
   ) {
+    if (args.mode === "EDIT") {
+      setEditCellPosition({
+        idx: args.column.idx,
+        rowIdx: args.rowIdx,
+      });
+      return;
+    }
     // ショートカットキー定義
     const key = e.key.toUpperCase();
     if (key === "D" && e.ctrlKey && e.shiftKey) {
@@ -184,10 +190,22 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     // セル編集開始、変更判定
     if (e.key === "Delete") {
       e.preventGridDefault();
-      updateCell(args.rowIdx, args.column.idx, "");
+      e.preventDefault();
+      setInitialCellKey(e.key);
+      setEditCellPosition({
+        idx: args.column.idx,
+        rowIdx: args.rowIdx,
+      });
+      args.selectCell(
+        {
+          idx: args.column.idx,
+          rowIdx: args.rowIdx,
+        },
+        true
+      );
       return;
     }
-    if (args.mode === "SELECT" && canEdit(e as unknown as KeyboardEvent)) {
+    if (canEdit(e as unknown as KeyboardEvent)) {
       e.preventGridDefault();
       e.preventDefault();
       setInitialCellKey(e.key);
@@ -204,7 +222,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
       );
       return;
     }
-    if (args.mode === "SELECT" && e.key === "Enter") {
+    if (e.key === "Enter") {
       e.preventGridDefault();
       e.preventDefault();
       // 行のサイズを超えたら移動は起こらないため、チェックせずに+1
@@ -215,12 +233,6 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
         },
         false
       );
-    }
-    if (args.mode === "EDIT") {
-      setEditCellPosition({
-        idx: args.column.idx,
-        rowIdx: args.rowIdx,
-      });
     }
   }
 
