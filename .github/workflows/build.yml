@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - uses: ./.github/action/setup
+      - uses: ./.github/actions/setup
 
       - name: Install root dependencies
         run: npm ci
@@ -35,7 +35,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - uses: ./.github/action/setup
+      - uses: ./.github/actions/setup
 
       - name: Build webview-ui
         run: |
@@ -50,7 +50,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - uses: ./.github/action/setup
+      - uses: ./.github/actions/setup
 
       - name: Build webview-ui
         run: |
@@ -73,7 +73,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - uses: ./.github/action/setup
+      - uses: ./.github/actions/setup
 
       - name: Run unit tests (webview-ui)
         run: |
