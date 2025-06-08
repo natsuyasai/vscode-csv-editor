@@ -191,6 +191,10 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
       e.preventGridDefault();
       e.preventDefault();
       setInitialCellKey(e.key);
+      setEditCellPosition({
+        idx: args.column.idx,
+        rowIdx: args.rowIdx,
+      });
       args.selectCell(
         {
           idx: args.column.idx,
