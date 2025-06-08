@@ -1,12 +1,13 @@
 // @ts-check
+import eslint from "@eslint/js";
 import pluginTypeScript from "@typescript-eslint/eslint-plugin";
 import typescriptParser from "@typescript-eslint/parser";
 import pluginPrettier from "eslint-config-prettier";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 import pluginReact from "eslint-plugin-react";
-import reactConfigRecommended from "eslint-plugin-react/configs/recommended.js";
 import pluginReactHooks from "eslint-plugin-react-hooks";
+import reactConfigRecommended from "eslint-plugin-react/configs/recommended.js";
 import storybook from "eslint-plugin-storybook";
-import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 const ignores = {
@@ -85,6 +86,31 @@ const storybookConfig = {
   },
 };
 
+const a11yConfig = {
+  name: "jsx_a11y_config",
+  files: ['**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}'],
+  settings: {
+    react: {
+      version: "detect",
+    },
+    components: {
+      VscodeButton: "button",
+      VscodeTextarea: "textarea",
+      VscodeCheckbox: "input[type='checkbox']",
+      VscodeSelect: "select",
+      VscodeTextfield: "input[type='text'], input[type='email'], input[type='password'], input[type='number'], input[type='search']",
+      VscodeRadio: "input[type='radio']",
+    },
+  },
+  languageOptions: {
+    parserOptions: {
+      ecmaFeatures: {
+        jsx: true,
+      },
+    },
+  },
+}
+
 export default [
   ignores,
   ...storybook.configs["flat/recommended"],
@@ -101,4 +127,6 @@ export default [
   },
   typescriptConfig,
   reactConfig,
+  jsxA11y.flatConfigs.strict,
+  a11yConfig
 ];

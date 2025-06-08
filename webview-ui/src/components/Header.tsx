@@ -40,6 +40,8 @@ export const Header: FC<Props> = ({
       <div className={styles.headerRoot}>
         <VscodeCheckbox
           label="Ignore Header Row"
+          tabIndex={0}
+          aria-label="Ignore Header Row"
           checked={isIgnoreHeaderRow}
           onChange={(e) => {
             if (e.target instanceof HTMLElement) {
@@ -50,6 +52,8 @@ export const Header: FC<Props> = ({
         <div className={styles.rowSize}>
           <VscodeLabel>Row size :</VscodeLabel>
           <VscodeSingleSelect
+            tabIndex={0}
+            aria-label="Row size"
             className={styles.rowSizeSelect}
             onChange={(e) => {
               if (e.target instanceof HTMLElement) {
@@ -57,33 +61,55 @@ export const Header: FC<Props> = ({
                 onUpdateRowSize(target.value as RowSizeType);
               }
             }}>
-            <VscodeOption value="small" selected={rowSize === "small"}>
+            <VscodeOption aria-label="small" value="small" selected={rowSize === "small"}>
               small
             </VscodeOption>
-            <VscodeOption value="normal" selected={rowSize === "normal"}>
+            <VscodeOption aria-label="normal" value="normal" selected={rowSize === "normal"}>
               normal
             </VscodeOption>
-            <VscodeOption value="large" selected={rowSize === "large"}>
+            <VscodeOption aria-label="large" value="large" selected={rowSize === "large"}>
               large
             </VscodeOption>
-            <VscodeOption value="extra large" selected={rowSize === "extra large"}>
+            <VscodeOption
+              aria-label="extra large"
+              value="extra large"
+              selected={rowSize === "extra large"}>
               extra large
             </VscodeOption>
           </VscodeSingleSelect>
         </div>
         <div className={styles.buttons}>
-          <VscodeButton secondary disabled={!isEnabledUndo} onClick={() => onUndo()}>
+          <VscodeButton
+            tabIndex={0}
+            aria-label="undo"
+            secondary
+            disabled={!isEnabledUndo}
+            onClick={() => onUndo()}>
             <VscodeIcon name="discard" action-icon />
           </VscodeButton>
-          <VscodeButton secondary disabled={!isEnabledRedo} onClick={() => onRedo()}>
+          <VscodeButton
+            tabIndex={0}
+            aria-label="redo"
+            secondary
+            disabled={!isEnabledRedo}
+            onClick={() => onRedo()}>
             <VscodeIcon name="redo" action-icon />
           </VscodeButton>
-          <VscodeButton secondary onClick={() => onSearch()}>
+          <VscodeButton
+            tabIndex={0}
+            aria-label="search"
+            aria-description="Search text"
+            secondary
+            onClick={() => onSearch()}>
             <VscodeIcon name="search" action-icon />
           </VscodeButton>
         </div>
         <div className={styles.apply}>
-          <VscodeButton className={styles.applyButton} onClick={(_e) => onClickApply()}>
+          <VscodeButton
+            tabIndex={0}
+            aria-label="save"
+            className={styles.applyButton}
+            onClick={(_e) => onClickApply()}>
             <VscodeIcon name="save" action-icon />
             Save
           </VscodeButton>

@@ -29,13 +29,17 @@
     },
     "types": [
       "vitest/globals",
+    ],
+    "typeRoots": [
+      "./node_modules"
     ]
   },
   "include": [
     ".storybook/**/*",
     "./src/**/*",
     "./test/**/*",
-    "./stories/**/*"
+    "./stories/**/*",
+    "__mocks__"
   ],
   "exclude": [
     "node_modules",

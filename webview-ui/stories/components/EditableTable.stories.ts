@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { fn, expect, userEvent } from "@storybook/test";
+import { fn, expect, userEvent, within } from "@storybook/test";
 
 import { EditableTable } from "@/components/EditableTable";
 import { Canvas } from "storybook/internal/types";
@@ -99,6 +99,29 @@ export const SelectedRow: Story = {
     await userEvent.click(indexCells[1]);
     const rows = canvas.getAllByRole("row");
     await expect(rows[2]).toHaveAttribute("aria-selected", "true");
+  },
+};
+
+export const SearchText: Story = {
+  play: async () => {
+    // 検索フォームを表示して検索実施
+    const body = within(document.body);
+    const searchButton = body.getByRole("button", { name: "search" });
+    await userEvent.click(searchButton);
+    const input = body.getByRole("searchbox");
+    await userEvent.type(input, "1");
+    await userEvent.keyboard("{Enter}");
+
+    // 意図した件数ヒットすること
+    const searchStatus = body.getByText("1 of 5");
+    await expect(searchStatus).toBeVisible();
+
+    // 次の結果に移動できること
+    const nextButton = body.getByRole("button", { name: "Next search result" });
+    await expect(nextButton).toBeEnabled();
+    await userEvent.click(nextButton);
+    const nextSearchStatus = body.getByText("2 of 5");
+    await expect(nextSearchStatus).toBeVisible();
   },
 };
 
