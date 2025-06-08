@@ -29,6 +29,9 @@
     },
     "types": [
       "vitest/globals",
+    ],
+    "typeRoots": [
+      "./node_modules"
     ]
   },
   "include": [
