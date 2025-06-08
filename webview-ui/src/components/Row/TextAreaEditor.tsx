@@ -29,7 +29,7 @@ export default function TextAreaEditor({
       className={styles.textArea}
       value={row[column.key]}
       onChange={(e) => onRowChange({ ...row, [column.key]: e.target.value })}
-      onBlur={() => onClose(true, false)}
+      onBlur={() => onClose(true, true)}
       onKeyDown={(e) => {
         if (e.key === "Enter" && e.shiftKey) {
           // DataGrid側でEnter入力時に編集モードを抜けてしまうのでイベントを止める
