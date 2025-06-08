@@ -32,6 +32,7 @@ import { CustomCell, CustomCellProps } from "./Row/CustomCell";
 import { CustomRow, CustomRowProps } from "./Row/CustomRow";
 import { RowContextMenu } from "./Row/RowContextMenu";
 import { Search } from "./Search";
+import { DataGridContext } from "@/contexts/dataGridContext";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -93,6 +94,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
   });
 
   const setInitialCellKey = useCellEditStore((state) => state.setInitialCellKey);
+  const setEditCellPosition = useCellEditStore((state) => state.setPosition);
 
   function handleSelectRowContextMenu(value: string) {
     if (rowContextMenuProps === null) {
@@ -162,6 +164,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     args: CellKeyDownArgs<NoInfer<Record<string, string>>, unknown>,
     e: CellKeyboardEvent
   ) {
+    // ショートカットキー定義
     const key = e.key.toUpperCase();
     if (key === "D" && e.ctrlKey && e.shiftKey) {
       e.stopPropagation();
@@ -178,6 +181,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
       insertRow(args.rowIdx + 1);
       return;
     }
+    // セル編集開始、変更判定
     if (e.key === "Delete") {
       e.preventGridDefault();
       updateCell(args.rowIdx, args.column.idx, "");
@@ -194,6 +198,25 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
         },
         true
       );
+      return;
+    }
+    if (args.mode === "SELECT" && e.key === "Enter") {
+      e.preventGridDefault();
+      e.preventDefault();
+      // 行のサイズを超えたら移動は起こらないため、チェックせずに+1
+      args.selectCell(
+        {
+          idx: args.column.idx,
+          rowIdx: args.rowIdx + 1,
+        },
+        false
+      );
+    }
+    if (args.mode === "EDIT") {
+      setEditCellPosition({
+        idx: args.column.idx,
+        rowIdx: args.rowIdx,
+      });
     }
   }
 
@@ -316,112 +339,117 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
         <VscodeDivider className={styles.divider} />
       </div>
       <DndProvider backend={HTML5Backend}>
-        <DataGrid
-          ref={gridRef}
-          className={[styles.dataGrid, `${theme === "light" ? "rdg-light" : "rdg-dark"}`].join(" ")}
-          enableVirtualization={true}
-          columns={columns}
-          rows={sortedRows}
-          rowHeight={rowHeight}
-          rowKeyGetter={(row) => row[ROW_ID_KEY]}
-          onRowsChange={updateRow}
-          sortColumns={sortColumns}
-          selectedRows={selectedRows}
-          onSelectedRowsChange={() => {}}
-          onSortColumnsChange={(sortColumns) => {
-            // ヘッダの編集用のダブルクリックの判定を待つ必要があるため、保持だけして何もしない
-            setSortColumnsForWaitingDoubleClick(sortColumns);
-          }}
-          onFill={handleFill}
-          onCellCopy={handleCellCopy}
-          onCellContextMenu={handleCellContextMenu}
-          onCellKeyDown={handleKeyDown}
-          onColumnsReorder={handleColumnsReorder}
-          renderers={{
-            renderRow: (key, props) =>
-              renderRow({
-                ...props,
-                rowKey: key,
-                onUpdateRowHeight: () => {},
-                onRowReorder: () => {},
-              }),
-            renderCell: (key, props) =>
-              renderCell({
-                ...props,
-                cellKey: key,
-                isSearchTarget:
-                  currentCell?.rowIdx === props.rowIdx && currentCell?.colIdx === props.column.idx,
-                onUpdateRowHeight: () => {},
-                onClickRow: (rowKey) => {
-                  if (rowKey) {
-                    setSelectedRows(new Set([rowKey]));
-                  } else {
-                    setSelectedRows(undefined);
-                  }
-                },
-              }),
-          }}
-          defaultColumnOptions={{
-            renderHeaderCell: (props) =>
-              renderHeaderCell({
-                ...props,
-                isIgnoreHeaderRow,
-                sortColumnsForWaitingDoubleClick: sortColumnsForWaitingDoubleClick,
-                onHeaderCellContextMenu: handleHeaderCellContextMenu,
-                onHeaderEdit: handleHeaderEdit,
-                onKeyDown: handleKeyDownHeaderCell,
-                onCanSortColumnsChange: (sortColumns) => {
-                  setSortColumns(sortColumns);
-                },
-                onDoubleClick: () => {
-                  setSortColumnsForWaitingDoubleClick([]);
-                },
-              }),
-            sortable: true,
-            draggable: true,
-            resizable: true,
-          }}
-        />
-        {isShowSearch &&
-          createPortal(
-            <Search
-              isMatching={isMatched}
-              machedCount={machedCount}
-              searchedSelectedItemIdx={searchedSelectedItemIdx}
-              onSearch={(text) => handleSearch(text)}
-              onClose={() => {
-                setIsShowSearch(false);
-                handleClose();
-              }}
-              onNext={() => handleNextSearch()}
-              onPrevious={() => handlePreviousSearch()}
-            />,
-            document.body
-          )}
-        {isRowContextMenuOpen &&
-          createPortal(
-            <RowContextMenu
-              isContextMenuOpen={isRowContextMenuOpen}
-              menuRef={rowMenuRef}
-              contextMenuProps={rowContextMenuProps}
-              className={styles.contextMenu}
-              onSelect={handleSelectRowContextMenu}
-              onClose={() => setRowContextMenuProps(null)}
-            />,
-            document.body
-          )}
-        {isHeaderContextMenuOpen &&
-          createPortal(
-            <HeaderCelContextMenu
-              isContextMenuOpen={isHeaderContextMenuOpen}
-              menuRef={headerMenuRef}
-              contextMenuProps={headerContextMenuProps}
-              className={styles.contextMenu}
-              onSelect={handleSelectHeaderContextMenu}
-              onClose={() => setHeaderContextMenuProps(null)}
-            />,
-            document.body
-          )}
+        <DataGridContext.Provider value={gridRef.current}>
+          <DataGrid
+            ref={gridRef}
+            className={[styles.dataGrid, `${theme === "light" ? "rdg-light" : "rdg-dark"}`].join(
+              " "
+            )}
+            enableVirtualization={true}
+            columns={columns}
+            rows={sortedRows}
+            rowHeight={rowHeight}
+            rowKeyGetter={(row) => row[ROW_ID_KEY]}
+            onRowsChange={updateRow}
+            sortColumns={sortColumns}
+            selectedRows={selectedRows}
+            onSelectedRowsChange={() => {}}
+            onSortColumnsChange={(sortColumns) => {
+              // ヘッダの編集用のダブルクリックの判定を待つ必要があるため、保持だけして何もしない
+              setSortColumnsForWaitingDoubleClick(sortColumns);
+            }}
+            onFill={handleFill}
+            onCellCopy={handleCellCopy}
+            onCellContextMenu={handleCellContextMenu}
+            onCellKeyDown={handleKeyDown}
+            onColumnsReorder={handleColumnsReorder}
+            renderers={{
+              renderRow: (key, props) =>
+                renderRow({
+                  ...props,
+                  rowKey: key,
+                  onUpdateRowHeight: () => {},
+                  onRowReorder: () => {},
+                }),
+              renderCell: (key, props) =>
+                renderCell({
+                  ...props,
+                  cellKey: key,
+                  isSearchTarget:
+                    currentCell?.rowIdx === props.rowIdx &&
+                    currentCell?.colIdx === props.column.idx,
+                  onUpdateRowHeight: () => {},
+                  onClickRow: (rowKey) => {
+                    if (rowKey) {
+                      setSelectedRows(new Set([rowKey]));
+                    } else {
+                      setSelectedRows(undefined);
+                    }
+                  },
+                }),
+            }}
+            defaultColumnOptions={{
+              renderHeaderCell: (props) =>
+                renderHeaderCell({
+                  ...props,
+                  isIgnoreHeaderRow,
+                  sortColumnsForWaitingDoubleClick: sortColumnsForWaitingDoubleClick,
+                  onHeaderCellContextMenu: handleHeaderCellContextMenu,
+                  onHeaderEdit: handleHeaderEdit,
+                  onKeyDown: handleKeyDownHeaderCell,
+                  onCanSortColumnsChange: (sortColumns) => {
+                    setSortColumns(sortColumns);
+                  },
+                  onDoubleClick: () => {
+                    setSortColumnsForWaitingDoubleClick([]);
+                  },
+                }),
+              sortable: true,
+              draggable: true,
+              resizable: true,
+            }}
+          />
+          {isShowSearch &&
+            createPortal(
+              <Search
+                isMatching={isMatched}
+                machedCount={machedCount}
+                searchedSelectedItemIdx={searchedSelectedItemIdx}
+                onSearch={(text) => handleSearch(text)}
+                onClose={() => {
+                  setIsShowSearch(false);
+                  handleClose();
+                }}
+                onNext={() => handleNextSearch()}
+                onPrevious={() => handlePreviousSearch()}
+              />,
+              document.body
+            )}
+          {isRowContextMenuOpen &&
+            createPortal(
+              <RowContextMenu
+                isContextMenuOpen={isRowContextMenuOpen}
+                menuRef={rowMenuRef}
+                contextMenuProps={rowContextMenuProps}
+                className={styles.contextMenu}
+                onSelect={handleSelectRowContextMenu}
+                onClose={() => setRowContextMenuProps(null)}
+              />,
+              document.body
+            )}
+          {isHeaderContextMenuOpen &&
+            createPortal(
+              <HeaderCelContextMenu
+                isContextMenuOpen={isHeaderContextMenuOpen}
+                menuRef={headerMenuRef}
+                contextMenuProps={headerContextMenuProps}
+                className={styles.contextMenu}
+                onSelect={handleSelectHeaderContextMenu}
+                onClose={() => setHeaderContextMenuProps(null)}
+              />,
+              document.body
+            )}
+        </DataGridContext.Provider>
       </DndProvider>
     </>
   );

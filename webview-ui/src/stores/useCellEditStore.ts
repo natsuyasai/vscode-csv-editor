@@ -3,6 +3,9 @@ import { create } from "zustand";
 export interface CellEditState {
   initialCellKey: string | null;
   setInitialCellKey: (key: string) => void;
+  position: { idx: number; rowIdx: number } | null;
+  setPosition: (pos: { idx: number; rowIdx: number }) => void;
+  clearInitialCellKey: () => void;
   clear: () => void;
 }
 
@@ -14,5 +17,11 @@ export const useCellEditStore = create<CellEditState>((set) => ({
     set(() => ({
       initialCellKey: key,
     })),
-  clear: () => set({ initialCellKey: null }),
+  position: null,
+  setPosition: (pos) =>
+    set(() => ({
+      position: pos,
+    })),
+  clearInitialCellKey: () => set({ initialCellKey: null }),
+  clear: () => set({ initialCellKey: null, position: null }),
 }));
