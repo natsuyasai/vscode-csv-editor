@@ -7,28 +7,47 @@ on:
       - develop
 
 jobs:
-  build-lint-test:
+  setup:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+      - uses: ./.github/actions/setup
 
       - name: Install root dependencies
         run: npm ci
-
-      - name: Install playwright
-        run: npx playwright install --with-deps chromium
 
       - name: Install webview-ui dependencies
         run: |
           cd webview-ui
           npm ci
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+
+      - name: Build webview-ui
+        run: |
+          cd webview-ui
+          npm run build
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
 
       - name: Build webview-ui
         run: |
@@ -42,6 +61,19 @@ jobs:
         run: |
           cd webview-ui
           npm run lint
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+
+      - name: Install playwright
+        run: npx playwright install --with-deps chromium
 
       - name: Run unit tests (webview-ui)
         run: |
