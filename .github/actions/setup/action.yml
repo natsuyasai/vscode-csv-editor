@@ -1,4 +1,5 @@
 name: Setup Node and Checkout
+description: Setup Node and Checkout
 
 runs:
   using: composite
