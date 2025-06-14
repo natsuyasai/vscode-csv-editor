@@ -1,0 +1,45 @@
+{
+    "name": "VSCode CSV Editor Dev",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "20"
+        },
+        "git": {
+            "version": "latest"
+        }
+        // "ghcr.io/devcontainers-contrib/features/pnpm:2": {}
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "dbaeumer.vscode-eslint",
+                "ms-vscode.extension-test-runner",
+                "esbenp.prettier-vscode",
+                "ms-vscode.vscode-typescript-next",
+                "ms-vscode.test-adapter-converter",
+                "ms-vscode.js-debug-nightly",
+                "vitest.explorer",
+                "yusukehirao.vscode-markuplint"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "editor.formatOnSave": true
+            }
+        }
+    },
+    "postCreateCommand": "npm run install:all",
+    "remoteUser": "vscode",
+    "updateRemoteUserUID": true,
+    "mounts": [
+        // "source=${localWorkspaceFolder}/.pnpm-store,target=/home/vscode/.pnpm-store,type=bind"
+    ],
+    "overrideCommand": true,
+    "forwardPorts": [
+        5173,
+        6006,
+        6007
+    ]
+}
