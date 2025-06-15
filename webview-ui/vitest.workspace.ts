@@ -33,5 +33,14 @@ export default defineWorkspace([
       },
       setupFiles: [".storybook/vitest.setup.ts"],
     },
+    optimizeDeps: {
+      include: [
+        "react-dom/client",
+        "csv-parse/browser/esm/sync",
+        "csv-stringify/browser/esm/sync",
+        "react",
+        "react-dom",
+      ],
+    },
   },
 ]);
