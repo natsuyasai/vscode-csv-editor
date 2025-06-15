@@ -202,3 +202,68 @@ export const Focused: Story = {
     },
   },
 };
+
+export const AndSearch: Story = {
+  render: () => <InteractiveFilterCell columnKey="andSearch" initialValue="田中 太郎" isActive={true} />,
+  parameters: {
+    docs: {
+      description: {
+        story: "AND検索の例です。スペース区切りまたは「and」キーワードで複数条件の検索ができます。「田中 太郎」や「田中 and 太郎」と入力すると、両方の文字を含む行のみが表示されます。",
+      },
+    },
+  },
+};
+
+export const OrSearch: Story = {
+  render: () => <InteractiveFilterCell columnKey="orSearch" initialValue="Engineering or Marketing" isActive={true} />,
+  parameters: {
+    docs: {
+      description: {
+        story: "OR検索の例です。「or」キーワードで複数条件のいずれかにマッチする検索ができます。「Engineering or Marketing」と入力すると、どちらかの文字を含む行が表示されます。",
+      },
+    },
+  },
+};
+
+export const ZenkakuHankaku: Story = {
+  render: () => <InteractiveFilterCell columnKey="zenkaku" initialValue="Ａｂｃ" isActive={true} />,
+  parameters: {
+    docs: {
+      description: {
+        story: "全角半角同一視の例です。「Ａｂｃ」（全角）と入力しても「Abc」（半角）の行もマッチします。数字や記号も同様に全角半角を区別しません。",
+      },
+    },
+  },
+};
+
+export const ComplexSearch: Story = {
+  render: () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      <div>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: "12px" }}>
+          名前フィルター（OR検索）:
+        </label>
+        <InteractiveFilterCell columnKey="name" initialValue="田中 or 佐藤" isActive={true} />
+      </div>
+      <div>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: "12px" }}>
+          部署フィルター（AND検索）:
+        </label>
+        <InteractiveFilterCell columnKey="department" initialValue="Engineering" isActive={true} />
+      </div>
+      <div>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: "12px" }}>
+          ステータスフィルター（全角半角同一視）:
+        </label>
+        <InteractiveFilterCell columnKey="status" initialValue="Ａｃｔｉｖｅ" isActive={true} />
+      </div>
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story: "複雑な検索条件の組み合わせ例です。複数のフィルターでAND検索、OR検索、全角半角同一視を同時に使用できます。",
+      },
+    },
+  },
+};

@@ -250,3 +250,75 @@ export const FilterKeyboardNavigation: Story = {
     await expect(firstFilterInput).toHaveValue("");
   },
 };
+
+export const FilterAndSearch: Story = {
+  args: {
+    csvArray: [
+      ["名前", "年齢", "部署"],
+      ["田中太郎", "30", "Engineering"],
+      ["田中花子", "25", "Marketing"],
+      ["佐藤太郎", "35", "Sales"],
+      ["山田一郎", "28", "Engineering"],
+    ],
+  },
+  play: async ({ canvas }) => {
+    // フィルターボタンをクリックしてフィルターを表示
+    const filterButton = canvas.getByLabelText("toggle filters");
+    await userEvent.click(filterButton);
+    
+    // 名前列でAND検索
+    const filterInputs = canvas.getAllByPlaceholderText("filter...");
+    const nameFilterInput = filterInputs[1]; // 名前列のフィルター
+    
+    await userEvent.type(nameFilterInput, "田中 太郎");
+    await expect(nameFilterInput).toHaveValue("田中 太郎");
+  },
+};
+
+export const FilterOrSearch: Story = {
+  args: {
+    csvArray: [
+      ["部署", "ステータス"],
+      ["Engineering", "Active"],
+      ["Marketing", "Inactive"],
+      ["Sales", "Active"],
+      ["HR", "Active"],
+    ],
+  },
+  play: async ({ canvas }) => {
+    // フィルターボタンをクリックしてフィルターを表示
+    const filterButton = canvas.getByLabelText("toggle filters");
+    await userEvent.click(filterButton);
+    
+    // 部署列でOR検索
+    const filterInputs = canvas.getAllByPlaceholderText("filter...");
+    const deptFilterInput = filterInputs[1]; // 部署列のフィルター
+    
+    await userEvent.type(deptFilterInput, "Engineering or Marketing");
+    await expect(deptFilterInput).toHaveValue("Engineering or Marketing");
+  },
+};
+
+export const FilterZenkakuHankaku: Story = {
+  args: {
+    csvArray: [
+      ["商品名", "価格"],
+      ["ProductＡ", "１００"],
+      ["ProductA", "100"],
+      ["ProductＢ", "２００"],
+      ["ProductB", "200"],
+    ],
+  },
+  play: async ({ canvas }) => {
+    // フィルターボタンをクリックしてフィルターを表示
+    const filterButton = canvas.getByLabelText("toggle filters");
+    await userEvent.click(filterButton);
+    
+    // 商品名列で全角検索（半角もマッチする）
+    const filterInputs = canvas.getAllByPlaceholderText("filter...");
+    const productFilterInput = filterInputs[1]; // 商品名列のフィルター
+    
+    await userEvent.type(productFilterInput, "ProductＡ");
+    await expect(productFilterInput).toHaveValue("ProductＡ");
+  },
+};
