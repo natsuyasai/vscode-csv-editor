@@ -1,6 +1,7 @@
 import { useCellCopy } from "@/hooks/useCellCopy";
 import { useColumns } from "@/hooks/useColumns";
 import { useContextMenu } from "@/hooks/useContextMenu";
+import { useFilters } from "@/hooks/useFilters";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useRows } from "@/hooks/useRows";
 import { useSearch } from "@/hooks/useSearch";
@@ -45,6 +46,18 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
   const { isIgnoreHeaderRow, rowSize, setIsIgnoreHeaderRow, setRowSize } = useHeaderAction();
   const { rows, sortedRows, sortColumns, setSortColumns } = useRows(csvArray, isIgnoreHeaderRow);
   const { columns } = useColumns(csvArray, isIgnoreHeaderRow);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // フィルター機能を使用（sortedRowsを使ってソート済みのデータをフィルタリング）
+  const {
+    filters,
+    setFilter,
+    clearFilters,
+    clearFilter,
+    isFilterActive,
+    hasActiveFilters,
+    filteredRows,
+  } = useFilters(sortedRows);
   const [selectedRows, setSelectedRows] = useState<ReadonlySet<string> | undefined>(
     (): ReadonlySet<string> => new Set()
   );
@@ -268,6 +281,11 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
         setIsShowSearch((prev) => !prev);
         return;
       }
+      if (key === "H" && e.ctrlKey && e.shiftKey) {
+        e.stopPropagation();
+        setShowFilters((prev) => !prev);
+        return;
+      }
     }
 
     window.addEventListener("keydown", handleKeyDownForDocument);
@@ -325,9 +343,22 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     return <CustomCell key={props.cellKey} {...props} onUpdateRowHeight={() => {}} />;
   }, []);
 
-  const renderHeaderCell = useCallback((props: CustomHeaderCellProps) => {
-    return <CustomHeaderCell {...props} />;
-  }, []);
+  const renderHeaderCell = useCallback(
+    (props: CustomHeaderCellProps) => {
+      const columnKey = props.column.key;
+      return (
+        <CustomHeaderCell
+          {...props}
+          showFilters={showFilters}
+          filterValue={filters[columnKey] || ""}
+          onFilterChange={setFilter}
+          onFilterClear={clearFilter}
+          isFilterActive={isFilterActive(columnKey)}
+        />
+      );
+    },
+    [showFilters, filters, setFilter, clearFilter, isFilterActive]
+  );
 
   return (
     <>
@@ -343,6 +374,10 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           onSearch={() => setIsShowSearch(true)}
           onUpdateRowSize={setRowSize}
           onClickApply={onApply}
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters(!showFilters)}
+          onClearFilters={clearFilters}
+          hasActiveFilters={hasActiveFilters}
         />
         <VscodeDivider className={styles.divider} />
       </div>
@@ -355,7 +390,8 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
             )}
             enableVirtualization={true}
             columns={columns}
-            rows={sortedRows}
+            rows={filteredRows}
+            headerRowHeight={showFilters ? 60 : 35}
             rowHeight={rowHeight}
             rowKeyGetter={(row) => row[ROW_ID_KEY]}
             onRowsChange={updateRow}

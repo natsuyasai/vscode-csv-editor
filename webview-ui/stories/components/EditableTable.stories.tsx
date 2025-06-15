@@ -130,3 +130,123 @@ export const Empty: Story = {
     csvArray: [],
   },
 };
+
+export const Light: Story = {
+  args: {
+    theme: "light",
+  },
+};
+
+export const Dark: Story = {
+  args: {
+    theme: "dark",
+  },
+};
+
+export const EmptyData: Story = {
+  args: {
+    csvArray: [["Column 1", "Column 2", "Column 3"]],
+  },
+};
+
+export const LargeDataset: Story = {
+  args: {
+    csvArray: [
+      ["ID", "Name", "Email", "Department", "Salary", "StartDate", "Status"],
+      ...Array.from({ length: 100 }, (_, i) => [
+        String(i + 1),
+        `Employee ${i + 1}`,
+        `employee${i + 1}@company.com`,
+        ["Engineering", "Marketing", "Sales", "HR"][i % 4],
+        String(50000 + i * 1000),
+        `2023-0${(i % 12) + 1}-01`,
+        ["Active", "Inactive"][i % 2],
+      ]),
+    ],
+  },
+};
+
+export const JapaneseData: Story = {
+  args: {
+    csvArray: [
+      ["名前", "年齢", "都市", "国"],
+      ["田中太郎", "30", "東京", "日本"],
+      ["佐藤花子", "25", "大阪", "日本"],
+      ["鈴木一郎", "35", "名古屋", "日本"],
+      ["高橋美子", "28", "福岡", "日本"],
+      ["渡辺健太", "32", "札幌", "日本"],
+    ],
+  },
+};
+
+export const FilterToggle: Story = {
+  play: async ({ canvas }) => {
+    // フィルターボタンをクリックしてフィルターを表示
+    const filterButton = canvas.getByLabelText("toggle filters");
+    await expect(filterButton).toBeVisible();
+    await userEvent.click(filterButton);
+    
+    // フィルター入力フィールドが表示されること
+    const filterInputs = canvas.queryAllByPlaceholderText("filter...");
+    await expect(filterInputs.length).toBeGreaterThan(0);
+  },
+};
+
+export const FilterInput: Story = {
+  play: async ({ canvas }) => {
+    // フィルターボタンをクリックしてフィルターを表示
+    const filterButton = canvas.getByLabelText("toggle filters");
+    await userEvent.click(filterButton);
+    
+    // フィルター入力フィールドに値を入力
+    const filterInputs = canvas.getAllByPlaceholderText("filter...");
+    const firstFilterInput = filterInputs[1]; // 最初の列（行番号以外）のフィルター
+    
+    await userEvent.type(firstFilterInput, "1");
+    await expect(firstFilterInput).toHaveValue("1");
+    
+    // クリアボタンが表示されること
+    const clearButton = canvas.getByTitle("Clear Filter");
+    await expect(clearButton).toBeVisible();
+  },
+};
+
+export const FilterClear: Story = {
+  play: async ({ canvas }) => {
+    // フィルターボタンをクリックしてフィルターを表示
+    const filterButton = canvas.getByLabelText("toggle filters");
+    await userEvent.click(filterButton);
+    
+    // フィルター入力フィールドに値を入力
+    const filterInputs = canvas.getAllByPlaceholderText("filter...");
+    const firstFilterInput = filterInputs[1];
+    
+    await userEvent.type(firstFilterInput, "test");
+    
+    // クリアボタンをクリック
+    const clearButton = canvas.getByTitle("Clear Filter");
+    await userEvent.click(clearButton);
+    
+    // 入力値がクリアされること
+    await expect(firstFilterInput).toHaveValue("");
+  },
+};
+
+export const FilterKeyboardNavigation: Story = {
+  play: async ({ canvas }) => {
+    // フィルターボタンをクリックしてフィルターを表示
+    const filterButton = canvas.getByLabelText("toggle filters");
+    await userEvent.click(filterButton);
+    
+    // フィルター入力フィールドにフォーカス
+    const filterInputs = canvas.getAllByPlaceholderText("filter...");
+    const firstFilterInput = filterInputs[1];
+    
+    await userEvent.click(firstFilterInput);
+    await userEvent.type(firstFilterInput, "test");
+    
+    // Escapeキーでクリア
+    await userEvent.keyboard("{Escape}");
+    await expect(firstFilterInput).toHaveValue("");
+  },
+};

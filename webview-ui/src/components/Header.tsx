@@ -21,6 +21,10 @@ interface Props {
   isEnabledUndo: boolean;
   isEnabledRedo: boolean;
   onClickApply: () => void;
+  showFilters?: boolean;
+  onToggleFilters?: () => void;
+  onClearFilters?: () => void;
+  hasActiveFilters?: boolean;
 }
 
 export const Header: FC<Props> = ({
@@ -34,6 +38,10 @@ export const Header: FC<Props> = ({
   isEnabledUndo,
   isEnabledRedo,
   onClickApply,
+  showFilters = false,
+  onToggleFilters,
+  onClearFilters,
+  hasActiveFilters = false,
 }) => {
   return (
     <>
@@ -103,6 +111,26 @@ export const Header: FC<Props> = ({
             onClick={() => onSearch()}>
             <VscodeIcon name="search" action-icon />
           </VscodeButton>
+          {onToggleFilters && (
+            <VscodeButton
+              tabIndex={0}
+              aria-label="toggle filters"
+              aria-description="Toggle column filters"
+              secondary
+              onClick={() => onToggleFilters()}>
+              <VscodeIcon name={showFilters ? "filter-filled" : "filter"} action-icon />
+            </VscodeButton>
+          )}
+          {onClearFilters && hasActiveFilters && (
+            <VscodeButton
+              tabIndex={0}
+              aria-label="clear filters"
+              aria-description="Clear all filters"
+              secondary
+              onClick={() => onClearFilters()}>
+              <VscodeIcon name="clear-all" action-icon />
+            </VscodeButton>
+          )}
         </div>
         <div className={styles.apply}>
           <VscodeButton
