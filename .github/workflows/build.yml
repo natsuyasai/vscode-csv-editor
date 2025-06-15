@@ -80,8 +80,6 @@ jobs:
       - name: Run unit tests (webview-ui)
         run: |
           cd webview-ui
-          if [ -d "node_modules/.vite" ]; then rm -r node_modules/.vite; fi
-          npm run build
           npm run test
 
       - name: VSCode extension tests
