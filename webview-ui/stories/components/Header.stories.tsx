@@ -19,10 +19,27 @@ const meta = {
     rowSize: "normal",
     onUpdateRowSize: fn(),
     onClickApply: fn(),
+    showFilters: false,
+    onToggleFilters: fn(),
+    onClearFilters: fn(),
+    hasActiveFilters: false,
   },
   render: function Render(args) {
     const [rowSize, setRowSize] = useState<RowSizeType>("normal");
-    return <Header {...args} rowSize={rowSize} onUpdateRowSize={setRowSize}></Header>;
+    const [showFilters, setShowFilters] = useState(false);
+    const [hasActiveFilters, setHasActiveFilters] = useState(false);
+    
+    return (
+      <Header 
+        {...args} 
+        rowSize={rowSize} 
+        onUpdateRowSize={setRowSize}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters(!showFilters)}
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={() => setHasActiveFilters(false)}
+      />
+    );
   },
 } satisfies Meta<typeof Header>;
 
@@ -50,5 +67,27 @@ export const OpenSlectRow: Story = {
     await userEvent.click(listItem!);
     const option = listbox.shadowRoot?.querySelector("div[class*=' dropdown ']");
     await expect(option).toBeVisible();
+  },
+};
+
+export const WithFilters: Story = {
+  args: {
+    showFilters: true,
+    hasActiveFilters: false,
+  },
+};
+
+export const WithActiveFilters: Story = {
+  args: {
+    showFilters: true,
+    hasActiveFilters: true,
+  },
+};
+
+export const FilterToggleInteraction: Story = {
+  play: async ({ canvas }) => {
+    const filterButton = canvas.getByLabelText("toggle filters");
+    await expect(filterButton).toBeVisible();
+    await userEvent.click(filterButton);
   },
 };
