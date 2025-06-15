@@ -38,7 +38,8 @@ export default defineWorkspace([
         "react-dom/client",
         "csv-parse/browser/esm/sync",
         "csv-stringify/browser/esm/sync",
-        "react-18-EFOB4VSV.js", // Add this missing module
+        "react",
+        "react-dom",
       ],
     },
   },
