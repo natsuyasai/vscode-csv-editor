@@ -30,7 +30,7 @@ function normalizeText(text: string): string {
 // フィルター条件を解析する関数
 function parseFilterExpression(expression: string): { terms: string[][]; operator: "and" | "or" } {
   const trimmedExpression = expression.trim();
-  
+
   // OR検索の判定は正規化前に行う（大文字小文字は区別しない）
   if (trimmedExpression.toLowerCase().includes(" or ")) {
     // OR検索：「term1 or term2」の形式
