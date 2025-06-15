@@ -322,3 +322,27 @@ export const FilterZenkakuHankaku: Story = {
     await expect(productFilterInput).toHaveValue("ProductＡ");
   },
 };
+
+export const FilterExactMatch: Story = {
+  args: {
+    csvArray: [
+      ["ステータス", "コメント"],
+      ["Active", "User is active"],
+      ["Inactive", "User is inactive"],
+      ["act", "Short action"],
+      ["Active User", "Extended status"],
+    ],
+  },
+  play: async ({ canvas }) => {
+    // フィルターボタンをクリックしてフィルターを表示
+    const filterButton = canvas.getByLabelText("toggle filters");
+    await userEvent.click(filterButton);
+    
+    // ステータス列でダブルクオート完全一致検索
+    const filterInputs = canvas.getAllByPlaceholderText("filter...");
+    const statusFilterInput = filterInputs[1]; // ステータス列のフィルター
+    
+    await userEvent.type(statusFilterInput, '"Active"');
+    await expect(statusFilterInput).toHaveValue('"Active"');
+  },
+};

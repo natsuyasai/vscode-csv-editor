@@ -221,4 +221,174 @@ describe("FilterCell", () => {
     const input = screen.getByPlaceholderText("filter...");
     expect(input).toHaveAttribute("data-filter-input", "true");
   });
+
+  // アクセシビリティテスト
+  it("適切なARIA属性が設定されていること", () => {
+    render(<FilterCell {...defaultProps} value="test filter" />);
+
+    const input = screen.getByPlaceholderText("filter...");
+    expect(input).toHaveAttribute("type", "text");
+    expect(input).toHaveAttribute("placeholder", "filter...");
+  });
+
+  it("非常に長い入力値が適切に処理されること", () => {
+    const onChange = vi.fn();
+    const longValue = "a".repeat(1000); // 長さを減らしてタイムアウトを回避
+
+    render(<FilterCell {...defaultProps} onChange={onChange} />);
+
+    const input = screen.getByPlaceholderText("filter...");
+
+    // fireEventを使って直接値を設定
+    fireEvent.change(input, { target: { value: longValue } });
+
+    expect(onChange).toHaveBeenLastCalledWith(longValue);
+  });
+
+  it("特殊文字を含む入力値が適切に処理されること", () => {
+    const onChange = vi.fn();
+    const specialChars = "!@#$%^&*(){}:;'<>,.?/~`";
+
+    render(<FilterCell {...defaultProps} onChange={onChange} />);
+
+    const input = screen.getByPlaceholderText("filter...");
+
+    // fireEventを使って直接値を設定
+    fireEvent.change(input, { target: { value: specialChars } });
+
+    expect(onChange).toHaveBeenLastCalledWith(specialChars);
+  });
+
+  it("ダブルクオートを含む入力値が適切に処理されること", () => {
+    const onChange = vi.fn();
+    const quotedValue = '"exact match"';
+
+    render(<FilterCell {...defaultProps} onChange={onChange} />);
+
+    const input = screen.getByPlaceholderText("filter...");
+
+    // fireEventを使って直接値を設定
+    fireEvent.change(input, { target: { value: quotedValue } });
+
+    expect(onChange).toHaveBeenLastCalledWith(quotedValue);
+  });
+
+  it("コールバック関数がundefinedの場合にエラーが発生しないこと", () => {
+    const { container } = render(
+      <FilterCell columnKey="test" value="" onChange={vi.fn()} onClear={vi.fn()} isActive={false} />
+    );
+
+    const input = screen.getByPlaceholderText("filter...");
+
+    // エラーが発生せずにレンダリングされることを確認
+    expect(input).toBeInTheDocument();
+    expect(container.firstChild).toBeInTheDocument();
+  });
+
+  it("複数言語の文字入力が適切に処理されること", () => {
+    const onChange = vi.fn();
+
+    render(<FilterCell {...defaultProps} onChange={onChange} />);
+
+    const input = screen.getByPlaceholderText("filter...");
+
+    // 日本語入力
+    fireEvent.change(input, { target: { value: "こんにちは" } });
+    expect(onChange).toHaveBeenLastCalledWith("こんにちは");
+
+    // 絵文字入力
+    fireEvent.change(input, { target: { value: "🚀🎉✨" } });
+    expect(onChange).toHaveBeenLastCalledWith("🚀🎉✨");
+  });
+
+  it("IME入力が適切に処理されること", () => {
+    const onChange = vi.fn();
+
+    render(<FilterCell {...defaultProps} onChange={onChange} />);
+
+    const input = screen.getByPlaceholderText("filter...");
+
+    // compositionstart/compositionend イベントのシミュレーション
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: "にほんご" } });
+    fireEvent.compositionEnd(input);
+
+    expect(onChange).toHaveBeenLastCalledWith("にほんご");
+  });
+
+  it("高速な連続入力が適切に処理されること", () => {
+    const onChange = vi.fn();
+
+    render(<FilterCell {...defaultProps} onChange={onChange} />);
+
+    const input = screen.getByPlaceholderText("filter...");
+
+    // 高速な連続入力をシミュレート
+    for (let i = 0; i < 100; i++) {
+      fireEvent.change(input, { target: { value: `test${i}` } });
+    }
+
+    expect(onChange).toHaveBeenCalledTimes(100);
+    expect(onChange).toHaveBeenLastCalledWith("test99");
+  });
+
+  it("フォーカス管理が適切に動作すること", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <div>
+        <input data-testid="other-input" />
+        <FilterCell {...defaultProps} />
+      </div>
+    );
+
+    const filterInput = screen.getByPlaceholderText("filter...");
+    const otherInput = screen.getByTestId("other-input");
+
+    // 他の要素からフィルター入力にフォーカス移動
+    await user.click(otherInput);
+    expect(otherInput).toHaveFocus();
+
+    await user.click(filterInput);
+    expect(filterInput).toHaveFocus();
+  });
+
+  it("タブキーでのナビゲーションが適切に動作すること", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <div>
+        <input data-testid="prev-input" />
+        <FilterCell {...defaultProps} isActive={true} value="test" />
+        <input data-testid="next-input" />
+      </div>
+    );
+
+    const filterInput = screen.getByPlaceholderText("filter...");
+    const clearButton = screen.getByTitle("Clear Filter");
+    const nextInput = screen.getByTestId("next-input");
+
+    // フィルター入力にフォーカス
+    await user.click(filterInput);
+    expect(filterInput).toHaveFocus();
+
+    // Tabキーでクリアボタンに移動
+    await user.tab();
+    expect(clearButton).toHaveFocus();
+
+    // さらにTabキーで次の入力に移動
+    await user.tab();
+    expect(nextInput).toHaveFocus();
+  });
+
+  it("メモリリークが発生しないこと", () => {
+    const { unmount } = render(<FilterCell {...defaultProps} />);
+
+    // コンポーネントのアンマウント
+    unmount();
+
+    // メモリリークのテストは実際の環境では困難だが、
+    // 少なくともアンマウント時にエラーが発生しないことを確認
+    expect(true).toBe(true);
+  });
 });

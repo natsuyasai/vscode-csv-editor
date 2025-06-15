@@ -24,7 +24,9 @@ export const FilterCell: FC<Props> = ({ columnKey: _, value, onChange, onClear, 
   };
 
   return (
-    <div className={`${styles.filterCell} ${isActive ? styles.active : ""}`} data-filter-cell="true">
+    <div
+      className={`${styles.filterCell} ${isActive ? styles.active : ""}`}
+      data-filter-cell="true">
       <input
         type="text"
         value={value}
