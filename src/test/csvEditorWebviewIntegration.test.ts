@@ -5,10 +5,15 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { CSVEditorProvider } from "../editor/csvEditorProvider";
-import { Message, UpdateMessage, SaveMessage, ReloadMessage } from "../message/messageTypeToExtention";
+import {
+  Message,
+  UpdateMessage,
+  SaveMessage,
+  ReloadMessage,
+} from "../message/messageTypeToExtention";
 
-suite("CSV Editor Webview Integration Tests", () => {
-  vscode.window.showInformationMessage("Start CSV Editor Webview Integration tests.");
+suite("CSVエディター Webview統合テスト", () => {
+  vscode.window.showInformationMessage("CSVエディター Webview統合テストを開始します。");
 
   let tempDir: string;
   let testCsvFile: vscode.Uri;
@@ -18,7 +23,7 @@ suite("CSV Editor Webview Integration Tests", () => {
   beforeEach(() => {
     // テスト用一時ディレクトリを作成
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "csv-editor-webview-test-"));
-    
+
     // テスト用CSVファイルを作成
     const csvContent =
       "Name,Age,Department,Status\n" +
@@ -27,7 +32,7 @@ suite("CSV Editor Webview Integration Tests", () => {
       "鈴木一郎,35,Sales,Active\n" +
       "高橋美子,28,HR,Active\n" +
       "山田次郎,32,Engineering,Inactive";
-    
+
     const csvPath = path.join(tempDir, "test.csv");
     fs.writeFileSync(csvPath, csvContent, "utf8");
     testCsvFile = vscode.Uri.file(csvPath);
@@ -48,7 +53,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     }
   });
 
-  test("should simulate CSV table data loading and display", async () => {
+  test("CSVテーブルデータの読み込みと表示をシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     const receivedMessages: { type: string; payload?: string }[] = [];
     let messageHandler: ((message: { type: string; payload?: string }) => void) | undefined;
@@ -86,17 +91,17 @@ suite("CSV Editor Webview Integration Tests", () => {
     }
 
     // CSVデータがwebviewに送信されているか確認
-    const updateMessage = receivedMessages.find(msg => msg.type === "update");
+    const updateMessage = receivedMessages.find((msg) => msg.type === "update");
     assert.ok(updateMessage, "CSV data should be sent to webview");
     assert.ok(updateMessage.payload?.includes("田中太郎"), "Should contain Japanese names");
     assert.ok(updateMessage.payload?.includes("Engineering"), "Should contain department data");
 
     // データの行数確認（ヘッダー + 5行のデータ）
-    const lines = updateMessage.payload?.split('\n') || [];
+    const lines = updateMessage.payload?.split("\n") || [];
     assert.strictEqual(lines.length, 6, "Should have 6 lines (header + 5 data rows)");
   });
 
-  test("should simulate table cell editing operations", async () => {
+  test("テーブルセル編集操作をシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: Message) => void) | undefined;
     let appliedEdit: vscode.WorkspaceEdit | undefined;
@@ -157,7 +162,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     vscode.workspace.applyEdit = originalApplyEdit;
   });
 
-  test("should simulate table row operations (add/delete)", async () => {
+  test("テーブル行操作（追加/削除）をシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: Message) => void) | undefined;
     let appliedEdit: vscode.WorkspaceEdit | undefined;
@@ -236,7 +241,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     vscode.workspace.applyEdit = originalApplyEdit;
   });
 
-  test("should simulate filter operations with user interactions", async () => {
+  test("ユーザーインタラクションを伴うフィルター操作をシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: Message) => void) | undefined;
     const sentMessages: { type: string; payload?: string }[] = [];
@@ -311,7 +316,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     assert.ok(sentMessages.length > 0, "Filter clear should trigger message updates");
   });
 
-  test("should simulate search operations with text input", async () => {
+  test("テキスト入力による検索操作をシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: Message) => void) | undefined;
     const sentMessages: { type: string; payload?: string }[] = [];
@@ -349,9 +354,7 @@ suite("CSV Editor Webview Integration Tests", () => {
 
     // 検索操作をシミュレート（"田中"を検索）
     // 検索結果を反映したデータ送信をシミュレート
-    const searchResultData =
-      "Name,Age,Department,Status\n" +
-      "田中太郎,30,Engineering,Active";
+    const searchResultData = "Name,Age,Department,Status\n" + "田中太郎,30,Engineering,Active";
 
     const searchMessage: UpdateMessage = {
       type: "update",
@@ -385,7 +388,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     assert.ok(sentMessages.length > 0, "Search clear should restore full data display");
   });
 
-  test("should simulate column operations (sort, resize)", async () => {
+  test("列操作（ソート、リサイズ）をシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: Message) => void) | undefined;
     let appliedEdit: vscode.WorkspaceEdit | undefined;
@@ -464,7 +467,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     vscode.workspace.applyEdit = originalApplyEdit;
   });
 
-  test("should simulate keyboard shortcuts and navigation", async () => {
+  test("キーボードショートカットとナビゲーションをシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: Message) => void) | undefined;
     const sentMessages: { type: string; payload?: string }[] = [];
@@ -511,9 +514,9 @@ suite("CSV Editor Webview Integration Tests", () => {
     }
 
     // データ再読み込み（Ctrl+R相当）をシミュレート
-    const reloadMessage: ReloadMessage = { 
+    const reloadMessage: ReloadMessage = {
       type: "reload",
-      payload: "Name,Age,Department,Status\n田中太郎,30,Engineering,Active"
+      payload: "Name,Age,Department,Status\n田中太郎,30,Engineering,Active",
     };
 
     if (messageHandler) {
@@ -523,7 +526,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     assert.ok(sentMessages.length > 0, "Keyboard shortcuts should trigger appropriate operations");
   });
 
-  test("should simulate error handling in webview interactions", async () => {
+  test("webviewインタラクションでのエラーハンドリングをシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: Message) => void) | undefined;
 
@@ -573,7 +576,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     vscode.workspace.applyEdit = originalApplyEdit;
   });
 
-  test("should simulate theme switching interactions", async () => {
+  test("テーマ切り替えインタラクションをシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: { type: string; payload?: string }) => void) | undefined;
     const sentMessages: { type: string; payload?: string }[] = [];
@@ -611,7 +614,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     }
 
     // テーマ変更メッセージが送信されているか確認
-    const themeMessage = sentMessages.find(msg => msg.type === "updateTheme");
+    const themeMessage = sentMessages.find((msg) => msg.type === "updateTheme");
     assert.ok(themeMessage, "Theme message should be sent on initialization");
     assert.ok(
       themeMessage.payload === "light" || themeMessage.payload === "dark",
@@ -622,7 +625,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     assert.ok(sentMessages.length > 0, "Theme updates should be communicated to webview");
   });
 
-  test("should simulate large dataset operations and performance", async () => {
+  test("大規模データセット操作とパフォーマンスをシミュレート", async () => {
     // 大きなCSVファイルを作成（10,000行）
     let largeCsvContent = "ID,FirstName,LastName,Email,Department,Salary,JoinDate,Status\n";
     for (let i = 1; i <= 10000; i++) {
@@ -678,7 +681,8 @@ suite("CSV Editor Webview Integration Tests", () => {
     assert.ok(endTime - startTime < 5000, "Large dataset should load within 5 seconds");
 
     // 大きなデータセットのフィルタリング操作をシミュレート
-    const filteredLargeData = "ID,FirstName,LastName,Email,Department,Salary,JoinDate,Status\n" +
+    const filteredLargeData =
+      "ID,FirstName,LastName,Email,Department,Salary,JoinDate,Status\n" +
       "1,User1,Family1,user1@company.com,Engineering,50000,2020-02-01,Active\n" +
       "6,User6,Family6,user6@company.com,Engineering,50500,2020-07-01,Active";
 
@@ -694,7 +698,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     assert.ok(receivedMessages.length > 0, "Large dataset filtering should work efficiently");
   });
 
-  test("should simulate CSV validation and format error handling", async () => {
+  test("CSV検証とフォーマットエラーハンドリングをシミュレート", async () => {
     // 不正なフォーマットのCSVファイルを作成
     const invalidCsvContent =
       "Name,Age,Department\n" +
@@ -767,16 +771,16 @@ suite("CSV Editor Webview Integration Tests", () => {
     assert.ok(receivedMessages.length > 0, "CSV correction should be processed");
   });
 
-  test("should simulate multiple webview panels and concurrent operations", async () => {
+  test("複数webviewパネルと同時操作をシミュレート", async () => {
     const document1 = await vscode.workspace.openTextDocument(testCsvFile);
-    
+
     // 2つ目のCSVファイルを作成
     const csvContent2 =
       "Product,Price,Category,InStock\n" +
       "ノートPC,80000,Electronics,true\n" +
       "マウス,2000,Electronics,true\n" +
       "キーボード,5000,Electronics,false";
-    
+
     const csvPath2 = path.join(tempDir, "products.csv");
     fs.writeFileSync(csvPath2, csvContent2, "utf8");
     const csvFile2 = vscode.Uri.file(csvPath2);
@@ -876,7 +880,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     assert.notStrictEqual(receivedMessages1, receivedMessages2, "Panels should be independent");
   });
 
-  test("should simulate webview disposal and cleanup", async () => {
+  test("webview破棄とクリーンアップをシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: Message) => void) | undefined;
     let disposeHandler: (() => void) | undefined;
@@ -889,10 +893,10 @@ suite("CSV Editor Webview Integration Tests", () => {
       postMessage: () => Promise.resolve(true),
       onDidReceiveMessage: (handler: (message: Message) => void) => {
         messageHandler = handler;
-        return { 
+        return {
           dispose: () => {
             messageHandler = undefined;
-          }
+          },
         };
       },
     } as unknown as vscode.Webview;
@@ -929,7 +933,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     assert.ok(disposeHandler, "Dispose handler should be registered");
   });
 
-  test("should simulate document change events and synchronization", async () => {
+  test("ドキュメント変更イベントと同期をシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: Message) => void) | undefined;
     const receivedMessages: { type: string; payload?: string }[] = [];
@@ -968,17 +972,21 @@ suite("CSV Editor Webview Integration Tests", () => {
     const initialMessageCount = receivedMessages.length;
 
     // 外部からのドキュメント変更をシミュレート（他のエディタからの編集など）
-    const newContent = "Name,Age,Department,Status\n田中太郎,30,Engineering,Active\n新規社員,25,Development,Active";
-    
+    const newContent =
+      "Name,Age,Department,Status\n田中太郎,30,Engineering,Active\n新規社員,25,Development,Active";
+
     // ファイルに直接書き込んで変更をシミュレート
     fs.writeFileSync(testCsvFile.fsPath, newContent, "utf8");
-    
+
     // onDidChangeTextDocumentイベントをシミュレート
     // 実際の実装では、vscode.workspace.onDidChangeTextDocumentが発火する
-    
+
     // ドキュメント変更後のメッセージ送信を確認
-    assert.ok(receivedMessages.length >= initialMessageCount, "Document changes should trigger webview updates");
-    
+    assert.ok(
+      receivedMessages.length >= initialMessageCount,
+      "Document changes should trigger webview updates"
+    );
+
     // webview側からの同期確認
     const reloadMessage: ReloadMessage = {
       type: "reload",
@@ -989,10 +997,13 @@ suite("CSV Editor Webview Integration Tests", () => {
       messageHandler(reloadMessage);
     }
 
-    assert.ok(receivedMessages.length > initialMessageCount, "Reload should trigger message updates");
+    assert.ok(
+      receivedMessages.length > initialMessageCount,
+      "Reload should trigger message updates"
+    );
   });
 
-  test("should simulate copy/paste operations with clipboard data", async () => {
+  test("クリップボードデータを使ったコピー/ペースト操作をシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: Message) => void) | undefined;
     let appliedEdit: vscode.WorkspaceEdit | undefined;
@@ -1070,7 +1081,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     vscode.workspace.applyEdit = originalApplyEdit;
   });
 
-  test("should simulate undo/redo operations", async () => {
+  test("アンドゥ/リドゥ操作をシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: Message) => void) | undefined;
     const editHistory: vscode.WorkspaceEdit[] = [];
@@ -1185,7 +1196,7 @@ suite("CSV Editor Webview Integration Tests", () => {
     vscode.workspace.applyEdit = originalApplyEdit;
   });
 
-  test("should simulate accessibility features and keyboard navigation", async () => {
+  test("アクセシビリティ機能とキーボードナビゲーションをシミュレート", async () => {
     const document = await vscode.workspace.openTextDocument(testCsvFile);
     let messageHandler: ((message: Message) => void) | undefined;
     const receivedMessages: { type: string; payload?: string }[] = [];
@@ -1223,7 +1234,7 @@ suite("CSV Editor Webview Integration Tests", () => {
 
     // キーボードナビゲーション操作をシミュレート
     // Tab/Enter/Arrow keysでのセル移動、Escapeでの編集キャンセルなど
-    
+
     // セル編集開始（Enterキー）をシミュレート
     const startEditData =
       "Name,Age,Department,Status\n" +
@@ -1246,11 +1257,10 @@ suite("CSV Editor Webview Integration Tests", () => {
     assert.ok(receivedMessages.length > 0, "Accessibility operations should trigger updates");
 
     // ハイコントラストテーマでの表示確認
-    const themeUpdateMessage = receivedMessages.find(msg => msg.type === "updateTheme");
+    const themeUpdateMessage = receivedMessages.find((msg) => msg.type === "updateTheme");
     if (themeUpdateMessage) {
       assert.ok(
-        themeUpdateMessage.payload === "light" || 
-        themeUpdateMessage.payload === "dark",
+        themeUpdateMessage.payload === "light" || themeUpdateMessage.payload === "dark",
         "Theme should support accessibility requirements"
       );
     }
