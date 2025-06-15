@@ -54,6 +54,11 @@ const meta = {
     onCanSortColumnsChange: fn(),
     onDoubleClick: fn(),
     tabIndex: 0,
+    showFilters: false,
+    filterValue: "",
+    onFilterChange: fn(),
+    onFilterClear: fn(),
+    isFilterActive: false,
   },
 } satisfies Meta<typeof CustomHeaderCell>;
 
@@ -80,4 +85,76 @@ export const IgnoreHeaderRow: Story = {
   args: {
     isIgnoreHeaderRow: true,
   },
+};
+
+export const WithFilter: Story = {
+  args: {
+    showFilters: true,
+  },
+  decorators: [
+    (Story) => (
+      <DndProvider backend={HTML5Backend}>
+        <div
+          style={{
+            display: "grid",
+            margin: "8px",
+            width: "200px",
+            height: "60px",
+            border: "1px solid #ccc",
+          }}>
+          <Story />
+        </div>
+      </DndProvider>
+    ),
+  ],
+};
+
+export const WithActiveFilter: Story = {
+  args: {
+    showFilters: true,
+    filterValue: "フィルター値",
+    isFilterActive: true,
+  },
+  decorators: [
+    (Story) => (
+      <DndProvider backend={HTML5Backend}>
+        <div
+          style={{
+            display: "grid",
+            margin: "8px",
+            width: "200px",
+            height: "60px",
+            border: "1px solid #ccc",
+          }}>
+          <Story />
+        </div>
+      </DndProvider>
+    ),
+  ],
+};
+
+export const SortedWithFilter: Story = {
+  args: {
+    sortDirection: "ASC",
+    priority: 1,
+    showFilters: true,
+    filterValue: "テスト",
+    isFilterActive: true,
+  },
+  decorators: [
+    (Story) => (
+      <DndProvider backend={HTML5Backend}>
+        <div
+          style={{
+            display: "grid",
+            margin: "8px",
+            width: "200px",
+            height: "60px",
+            border: "1px solid #ccc",
+          }}>
+          <Story />
+        </div>
+      </DndProvider>
+    ),
+  ],
 };
