@@ -267,3 +267,175 @@ export const ComplexSearch: Story = {
     },
   },
 };
+
+export const AccessibilityTest: Story = {
+  render: () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "20px" }}>
+      <h3>アクセシビリティテスト</h3>
+      <div>
+        <label htmlFor="filter-1" style={{ display: "block", marginBottom: "5px" }}>
+          基本フィルター:
+        </label>
+        <FilterCell
+          columnKey="basic"
+          value=""
+          onChange={() => {}}
+          onClear={() => {}}
+          isActive={false}
+        />
+      </div>
+      <div>
+        <label htmlFor="filter-2" style={{ display: "block", marginBottom: "5px" }}>
+          アクティブフィルター:
+        </label>
+        <FilterCell
+          columnKey="active"
+          value="アクティブな検索条件"
+          onChange={() => {}}
+          onClear={() => {}}
+          isActive={true}
+        />
+      </div>
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story: "アクセシビリティテスト用のストーリーです。スクリーンリーダーでの読み上げ、キーボードナビゲーション、ハイコントラストモードでの表示を確認できます。",
+      },
+    },
+  },
+};
+
+export const SpecialCharacters: Story = {
+  render: () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "20px" }}>
+      <h3>特殊文字テスト</h3>
+      <InteractiveFilterCell 
+        columnKey="special" 
+        initialValue="!@#$%^&*()[]{}|\\:;&quot;&apos;&lt;&gt;,.?/~`" 
+        isActive={true} 
+      />
+      <InteractiveFilterCell 
+        columnKey="regex" 
+        initialValue=".*+?^${}()|[]" 
+        isActive={true} 
+      />
+      <InteractiveFilterCell 
+        columnKey="html" 
+        initialValue="&lt;script&gt;alert(&apos;test&apos;)&lt;/script&gt;" 
+        isActive={true} 
+      />
+      <InteractiveFilterCell 
+        columnKey="emoji" 
+        initialValue="🚀🎉✨🌟⭐" 
+        isActive={true} 
+      />
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story: "特殊文字、正規表現メタ文字、HTMLタグ、絵文字などの入力テストです。これらの文字が適切に表示・処理されることを確認できます。",
+      },
+    },
+  },
+};
+
+export const LongText: Story = {
+  render: () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "20px" }}>
+      <h3>長文テスト</h3>
+      <InteractiveFilterCell 
+        columnKey="long" 
+        initialValue={"これは非常に長いテキストの例です。".repeat(20)} 
+        isActive={true} 
+      />
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story: "長いテキスト入力時の表示・動作テストです。テキストが適切に表示され、パフォーマンスに問題がないことを確認できます。",
+      },
+    },
+  },
+};
+
+export const MultiLanguage: Story = {
+  render: () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "20px" }}>
+      <h3>多言語テスト</h3>
+      <div>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: "12px" }}>
+          日本語:
+        </label>
+        <InteractiveFilterCell columnKey="japanese" initialValue="こんにちは世界" isActive={true} />
+      </div>
+      <div>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: "12px" }}>
+          中国語:
+        </label>
+        <InteractiveFilterCell columnKey="chinese" initialValue="你好世界" isActive={true} />
+      </div>
+      <div>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: "12px" }}>
+          韓国語:
+        </label>
+        <InteractiveFilterCell columnKey="korean" initialValue="안녕하세요 세계" isActive={true} />
+      </div>
+      <div>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: "12px" }}>
+          アラビア語:
+        </label>
+        <InteractiveFilterCell columnKey="arabic" initialValue="مرحبا بالعالم" isActive={true} />
+      </div>
+      <div>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: "12px" }}>
+          ロシア語:
+        </label>
+        <InteractiveFilterCell columnKey="russian" initialValue="Здравствуй мир" isActive={true} />
+      </div>
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story: "多言語文字セットでの表示・入力テストです。各言語の文字が適切に表示され、フィルタリングが動作することを確認できます。",
+      },
+    },
+  },
+};
+
+export const ErrorCases: Story = {
+  render: () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "20px" }}>
+      <h3>エラーケーステスト</h3>
+      <div>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: "12px" }}>
+          不正なダブルクオート:
+        </label>
+        <InteractiveFilterCell columnKey="malformed" initialValue="&quot;incomplete quote" isActive={true} />
+      </div>
+      <div>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: "12px" }}>
+          空のダブルクオート:
+        </label>
+        <InteractiveFilterCell columnKey="empty" initialValue="&quot;&quot;" isActive={true} />
+      </div>
+      <div>
+        <label style={{ display: "block", marginBottom: "5px", fontSize: "12px" }}>
+          複数のダブルクオート:
+        </label>
+        <InteractiveFilterCell columnKey="multiple" initialValue="&quot;&quot;text&quot;&quot;" isActive={true} />
+      </div>
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story: "エラーケースのテストです。不正な形式のダブルクオートや特殊なケースでも適切に動作することを確認できます。",
+      },
+    },
+  },
+};

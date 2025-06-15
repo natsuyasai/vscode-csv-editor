@@ -339,4 +339,200 @@ describe("useFilters", () => {
       )
     ).toBe(true);
   });
+
+  // エッジケース：特殊文字と制御文字
+  it("特殊文字や制御文字を含むデータでフィルタリングが動作すること", () => {
+    const testRows = [
+      { data: "normal text" },
+      { data: "text\nwith\nnewlines" },
+      { data: "text\twith\ttabs" },
+      { data: "text with 改行\n and スペース　" },
+      { data: ".*+?^${}()|[]" }, // 正規表現メタ文字
+      { data: "<script>alert('xss')</script>" }, // XSS的な文字列
+      { data: "🚀🎉✨" }, // 絵文字
+    ];
+
+    const { result } = renderHook(() => useFilters(testRows));
+
+    // 改行文字を含む検索
+    act(() => {
+      result.current.setFilter("data", "newlines");
+    });
+    expect(result.current.filteredRows).toHaveLength(1);
+
+    // 正規表現メタ文字の検索
+    act(() => {
+      result.current.setFilter("data", ".*+");
+    });
+    expect(result.current.filteredRows).toHaveLength(1);
+
+    // HTMLタグの検索
+    act(() => {
+      result.current.setFilter("data", "script");
+    });
+    expect(result.current.filteredRows).toHaveLength(1);
+
+    // 絵文字の検索
+    act(() => {
+      result.current.setFilter("data", "🚀");
+    });
+    expect(result.current.filteredRows).toHaveLength(1);
+  });
+
+  it("不正な形式のダブルクオートが適切に処理されること", () => {
+    const testRows = [
+      { text: 'incomplete"quote' },
+      { text: '"mismatched quote' },
+      { text: 'quote"in middle' },
+      { text: '""empty quotes""' },
+    ];
+
+    const { result } = renderHook(() => useFilters(testRows));
+
+    // 不完全なクオートは通常の部分一致として扱われる
+    act(() => {
+      result.current.setFilter("text", 'incomplete"');
+    });
+    expect(result.current.filteredRows).toHaveLength(1);
+
+    // 開始クオートのみは通常の部分一致として扱われる
+    act(() => {
+      result.current.setFilter("text", '"mismatched');
+    });
+    expect(result.current.filteredRows).toHaveLength(1);
+  });
+
+  it("空のデータセットでエラーが発生しないこと", () => {
+    const emptyRows: Array<Record<string, string>> = [];
+    const { result } = renderHook(() => useFilters(emptyRows));
+
+    act(() => {
+      result.current.setFilter("nonexistent", "test");
+    });
+
+    expect(result.current.filteredRows).toEqual([]);
+    expect(result.current.hasActiveFilters).toBe(true);
+  });
+
+  it("非常に長い文字列でのフィルタリングが動作すること", () => {
+    const longString = "a".repeat(10000);
+    const testRows = [
+      { content: longString },
+      { content: "short" },
+      { content: longString + "extra" },
+    ];
+
+    const { result } = renderHook(() => useFilters(testRows));
+
+    act(() => {
+      result.current.setFilter("content", "a".repeat(5000));
+    });
+
+    expect(result.current.filteredRows).toHaveLength(2);
+  });
+
+  it("nullやundefinedの値が適切に処理されること", () => {
+    const testRows = [
+      { value: "normal" },
+      { value: "" },
+      { differentKey: "test" }, // valueキーが存在しない
+    ] as Array<Record<string, string>>;
+
+    const { result } = renderHook(() => useFilters(testRows));
+
+    act(() => {
+      result.current.setFilter("value", "normal");
+    });
+
+    // valueキーが存在しない行は除外される
+    expect(result.current.filteredRows).toHaveLength(1);
+  });
+
+  it("大量データでのパフォーマンステスト", () => {
+    const largeDataset = Array.from({ length: 1000 }, (_, i) => ({
+      id: String(i),
+      name: `User ${i}`,
+      category: i % 5 === 0 ? "Premium" : "Standard",
+    }));
+
+    const { result } = renderHook(() => useFilters(largeDataset));
+
+    const startTime = performance.now();
+
+    act(() => {
+      result.current.setFilter("category", "Premium");
+    });
+
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+
+    // 1000件のデータで100ms以内に処理が完了することを確認
+    expect(duration).toBeLessThan(100);
+    expect(result.current.filteredRows).toHaveLength(200); // 5で割り切れる数
+  });
+
+  it("複数言語文字セットでのフィルタリングが動作すること", () => {
+    const testRows = [
+      { text: "Hello World" }, // 英語
+      { text: "こんにちは世界" }, // 日本語
+      { text: "你好世界" }, // 中国語
+      { text: "안녕하세요 세계" }, // 韓国語
+      { text: "مرحبا بالعالم" }, // アラビア語
+      { text: "Здравствуй мир" }, // ロシア語
+    ];
+
+    const { result } = renderHook(() => useFilters(testRows));
+
+    // 日本語検索
+    act(() => {
+      result.current.setFilter("text", "こんにちは");
+    });
+    expect(result.current.filteredRows).toHaveLength(1);
+
+    // 中国語検索
+    act(() => {
+      result.current.setFilter("text", "你好");
+    });
+    expect(result.current.filteredRows).toHaveLength(1);
+
+    // アラビア語検索
+    act(() => {
+      result.current.setFilter("text", "مرحبا");
+    });
+    expect(result.current.filteredRows).toHaveLength(1);
+  });
+
+  it("フィルター条件のリアルタイム変更で結果の整合性が保たれること", () => {
+    const testRows = [
+      { name: "Alice", age: "25", department: "Engineering" },
+      { name: "Bob", age: "30", department: "Marketing" },
+      { name: "Charlie", age: "35", department: "Engineering" },
+    ];
+
+    const { result } = renderHook(() => useFilters(testRows));
+
+    // 最初のフィルター
+    act(() => {
+      result.current.setFilter("department", "Engineering");
+    });
+    expect(result.current.filteredRows).toHaveLength(2);
+
+    // 追加フィルター
+    act(() => {
+      result.current.setFilter("age", "25");
+    });
+    expect(result.current.filteredRows).toHaveLength(1);
+
+    // フィルター変更
+    act(() => {
+      result.current.setFilter("age", "30 or 35");
+    });
+    expect(result.current.filteredRows).toHaveLength(1); // Charlieのみ
+
+    // フィルタークリア
+    act(() => {
+      result.current.clearFilter("age");
+    });
+    expect(result.current.filteredRows).toHaveLength(2); // Alice, Charlie
+  });
 });
