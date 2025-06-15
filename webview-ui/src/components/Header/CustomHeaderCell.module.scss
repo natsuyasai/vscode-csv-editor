@@ -1,3 +1,10 @@
+.headerContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
 .textArea {
   flex-grow: 1;
   width: 100%;
@@ -11,18 +18,26 @@
     outline: none;
   }
 }
+
 .headerText {
   flex-grow: 1;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .cellRoot {
   display: flex;
   align-items: center;
   width: 100%;
-  height: 100%;
+  flex: 1;
 }
 
 .sortDirection {
   padding: 0 4px;
+}
+
+.filterContainer {
+  width: 100%;
+  padding: 2px 0;
+  border-top: 1px solid var(--vscode-widget-border);
 }

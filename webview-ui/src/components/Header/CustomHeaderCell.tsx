@@ -3,6 +3,8 @@ import { CalculatedColumn, RenderHeaderCellProps, SortColumn } from "react-data-
 import { useDrag, useDrop } from "react-dnd";
 import styles from "./CustomHeaderCell.module.scss";
 import { canEdit } from "@/utilities/keyboard";
+import { FilterCell } from "./FilterCell";
+import { ROW_IDX_KEY } from "@/types";
 
 interface Props {
   isIgnoreHeaderRow: boolean;
@@ -18,6 +20,11 @@ interface Props {
   ) => void;
   onCanSortColumnsChange: (sortColumns: SortColumn[]) => void;
   onDoubleClick: () => void;
+  filterValue?: string;
+  onFilterChange?: (columnKey: string, value: string) => void;
+  onFilterClear?: (columnKey: string) => void;
+  isFilterActive?: boolean;
+  showFilters?: boolean;
 }
 
 export type CustomHeaderCellProps = Props &
@@ -34,6 +41,11 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   onCanSortColumnsChange,
   onDoubleClick,
   sortColumnsForWaitingDoubleClick,
+  filterValue = "",
+  onFilterChange,
+  onFilterClear,
+  isFilterActive = false,
+  showFilters = false,
   ..._props
 }) => {
   const rootRef = useRef<HTMLSpanElement>(null);
@@ -68,6 +80,14 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      // FilterCellからのイベントは無視する
+      if (e.target instanceof HTMLElement && 
+          (e.target.hasAttribute('data-filter-input') || 
+           e.target.hasAttribute('data-filter-button') ||
+           e.target.closest('[data-filter-cell]'))) {
+        return;
+      }
+      
       if (e.key === "F2") {
         setIsEditing(true);
       } else if (e.key === "Backspace") {
@@ -173,59 +193,73 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
 
   return (
     <>
-      <span
-        ref={(ref) => {
-          rootRef.current = ref;
-          if (ref) {
-            drag(ref.firstElementChild);
-          }
-          drop(ref);
-        }}
-        className={styles.cellRoot}>
-        {!isIgnoreHeaderRow && isEditing && (
-          <textarea
-            ref={textAreaRef}
-            className={styles.textArea}
-            value={column.name as string}
-            onChange={(e) => {
-              onHeaderEdit(column.idx, e.target.value);
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && e.shiftKey) {
-                onHeaderEdit(column.idx, (e.target as HTMLTextAreaElement).value);
-              } else if (e.key === "Enter" || e.key === "Tab" || e.key === "Escape") {
-                setIsEditing(false);
-                rootRef.current?.parentElement?.focus();
-              } else if (
-                e.key === "ArrowDown" ||
-                e.key === "ArrowLeft" ||
-                e.key === "ArrowRight" ||
-                e.key === "ArrowUp" ||
-                e.key === "End" ||
-                e.key === "Home" ||
-                e.key === "PageDown" ||
-                e.key === "PageUp" ||
-                e.code === "Space"
-              ) {
-                // DataGridの移動処理を止める
+      <div className={styles.headerContainer}>
+        <span
+          ref={(ref) => {
+            rootRef.current = ref;
+            if (ref) {
+              drag(ref.firstElementChild);
+            }
+            drop(ref);
+          }}
+          className={styles.cellRoot}>
+          {!isIgnoreHeaderRow && isEditing && (
+            <textarea
+              ref={textAreaRef}
+              className={styles.textArea}
+              value={column.name as string}
+              onChange={(e) => {
+                onHeaderEdit(column.idx, e.target.value);
+              }}
+              onClick={(e) => {
                 e.stopPropagation();
-              }
-            }}></textarea>
-        )}
-        {!isEditing && (
-          <span ref={headerTextRef} className={styles.headerText} role="cell">
-            {column.name}
-          </span>
-        )}
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.shiftKey) {
+                  onHeaderEdit(column.idx, (e.target as HTMLTextAreaElement).value);
+                } else if (e.key === "Enter" || e.key === "Tab" || e.key === "Escape") {
+                  setIsEditing(false);
+                  rootRef.current?.parentElement?.focus();
+                } else if (
+                  e.key === "ArrowDown" ||
+                  e.key === "ArrowLeft" ||
+                  e.key === "ArrowRight" ||
+                  e.key === "ArrowUp" ||
+                  e.key === "End" ||
+                  e.key === "Home" ||
+                  e.key === "PageDown" ||
+                  e.key === "PageUp" ||
+                  e.code === "Space"
+                ) {
+                  // DataGridの移動処理を止める
+                  e.stopPropagation();
+                }
+              }}></textarea>
+          )}
+          {!isEditing && (
+            <span ref={headerTextRef} className={styles.headerText} role="cell">
+              {column.name}
+            </span>
+          )}
 
-        <span className={styles.sortDirection}>
-          {sortDirection !== undefined ? (sortDirection === "ASC" ? "\u2B9D" : "\u2B9F") : null}
+          <span className={styles.sortDirection}>
+            {sortDirection !== undefined ? (sortDirection === "ASC" ? "\u2B9D" : "\u2B9F") : null}
+          </span>
+          <span>{priority}</span>
         </span>
-        <span>{priority}</span>
-      </span>
+        
+        {showFilters && column.key !== ROW_IDX_KEY && onFilterChange && onFilterClear && (
+          <div className={styles.filterContainer}>
+            <FilterCell
+              columnKey={column.key}
+              value={filterValue}
+              onChange={(value) => onFilterChange(column.key, value)}
+              onClear={() => onFilterClear(column.key)}
+              isActive={isFilterActive}
+            />
+          </div>
+        )}
+      </div>
     </>
   );
 };
