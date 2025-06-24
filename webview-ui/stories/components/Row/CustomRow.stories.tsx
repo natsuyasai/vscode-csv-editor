@@ -93,7 +93,6 @@ const meta = {
     setDraggedOverRowIdx: undefined,
     isRowSelectionDisabled: false,
     gridRowStart: 1,
-    onUpdateRowHeight: fn(),
     onRowReorder: fn(),
   },
   render: (args) => {
@@ -112,13 +111,7 @@ const meta = {
             rowKeyGetter={(row) => row[ROW_ID_KEY]}
             renderers={{
               renderRow: (key, props) => (
-                <CustomRow
-                  key={key}
-                  {...props}
-                  rowKey={key}
-                  onUpdateRowHeight={fn()}
-                  onRowReorder={fn()}
-                />
+                <CustomRow key={key} {...props} rowKey={key} onRowReorder={fn()} />
               ),
             }}
           />
