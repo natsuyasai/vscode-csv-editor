@@ -15,15 +15,15 @@ export const CellAlignmentControls: FC<Props> = ({
   onAlignmentChange,
 }) => {
   const verticalOptions: { label: string; value: VerticalAlignment }[] = [
-    { label: "上", value: "top" },
-    { label: "中", value: "center" },
-    { label: "下", value: "bottom" },
+    { label: "Top", value: "top" },
+    { label: "Center", value: "center" },
+    { label: "Bottom", value: "bottom" },
   ];
 
   const horizontalOptions: { label: string; value: HorizontalAlignment }[] = [
-    { label: "左", value: "left" },
-    { label: "中", value: "center" },
-    { label: "右", value: "right" },
+    { label: "Left", value: "left" },
+    { label: "Center", value: "center" },
+    { label: "Right", value: "right" },
   ];
 
   const handleVerticalChange = (vertical: VerticalAlignment) => {
@@ -43,7 +43,7 @@ export const CellAlignmentControls: FC<Props> = ({
   if (!selectedColumnKey) {
     return (
       <div className={styles.container}>
-        <span className={styles.placeholder}>列ヘッダーを選択してください</span>
+        <span className={styles.placeholder}>Please select a column header</span>
       </div>
     );
   }
@@ -51,7 +51,7 @@ export const CellAlignmentControls: FC<Props> = ({
   return (
     <div className={styles.container}>
       <div className={styles.section}>
-        <span className={styles.label}>垂直配置:</span>
+        <span className={styles.label}>Vertical:</span>
         <div className={styles.buttonGroup}>
           {verticalOptions.map((option) => (
             <VscodeButton
@@ -67,7 +67,7 @@ export const CellAlignmentControls: FC<Props> = ({
       </div>
       
       <div className={styles.section}>
-        <span className={styles.label}>水平配置:</span>
+        <span className={styles.label}>Horizontal:</span>
         <div className={styles.buttonGroup}>
           {horizontalOptions.map((option) => (
             <VscodeButton
