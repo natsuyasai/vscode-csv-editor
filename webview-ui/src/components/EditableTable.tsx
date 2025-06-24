@@ -7,7 +7,7 @@ import { useRows } from "@/hooks/useRows";
 import { useSearch } from "@/hooks/useSearch";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { useCellEditStore } from "@/stores/useCellEditStore";
-import { ROW_ID_KEY } from "@/types";
+import { ROW_ID_KEY, RowSizeType } from "@/types";
 import { canEdit } from "@/utilities/keyboard";
 import { VscodeDivider } from "@vscode-elements/react-elements";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
@@ -295,20 +295,26 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     };
   }, [undo, redo]);
 
-  // const rowHeight = useMemo(() => {
-  //   switch (rowSize) {
-  //     case "small":
-  //       return 24;
-  //     case "normal":
-  //       return 40;
-  //     case "large":
-  //       return 80;
-  //     case "extra large":
-  //       return 120;
-  //     default:
-  //       return 40;
-  //   }
-  // }, [rowSize]);
+  function setRowSizeFromHeader(size: RowSizeType) {
+    switch (size) {
+      case "small":
+        setRowHeight(24);
+        break;
+      case "normal":
+        setRowHeight(40);
+        break;
+      case "large":
+        setRowHeight(80);
+        break;
+      case "extra large":
+        setRowHeight(120);
+        break;
+      default:
+        setRowHeight(40);
+        break;
+    }
+    setRowSize(size);
+  }
 
   const [rowHeight, setRowHeight] = useState(40);
 
@@ -377,7 +383,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           onUndo={undo}
           onRedo={redo}
           onSearch={() => setIsShowSearch(true)}
-          onUpdateRowSize={setRowSize}
+          onUpdateRowSize={setRowSizeFromHeader}
           onClickApply={onApply}
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters(!showFilters)}
