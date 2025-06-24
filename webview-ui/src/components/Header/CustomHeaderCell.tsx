@@ -83,13 +83,15 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       // FilterCellからのイベントは無視する
-      if (e.target instanceof HTMLElement && 
-          (e.target.hasAttribute('data-filter-input') || 
-           e.target.hasAttribute('data-filter-button') ||
-           e.target.closest('[data-filter-cell]'))) {
+      if (
+        e.target instanceof HTMLElement &&
+        (e.target.hasAttribute("data-filter-input") ||
+          e.target.hasAttribute("data-filter-button") ||
+          e.target.closest("[data-filter-cell]"))
+      ) {
         return;
       }
-      
+
       if (e.key === "F2") {
         setIsEditing(true);
       } else if (e.key === "Backspace") {
@@ -117,18 +119,21 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
-      // ヘッダーセル選択機能
-      if (onHeaderCellClick && column.key !== ROW_IDX_KEY) {
-        onHeaderCellClick(column.key);
+      if (onHeaderCellClick && column.key === ROW_IDX_KEY) {
+        onHeaderCellClick("");
       }
-      
       if (e.target !== headerTextRef.current) {
         return;
       }
       if (setTimeoutRef.current !== null) {
         return;
       }
-      if (rootRef.current?.parentElement?.getAttribute("aria-selected") === "false") {
+      if (
+        rootRef.current?.parentElement?.parentElement?.getAttribute("aria-selected") === "false"
+      ) {
+        if (onHeaderCellClick) {
+          onHeaderCellClick(column.key);
+        }
         return;
       }
       setTimeoutRef.current = setTimeout(() => {
@@ -254,7 +259,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
           </span>
           <span>{priority}</span>
         </span>
-        
+
         {showFilters && column.key !== ROW_IDX_KEY && onFilterChange && onFilterClear && (
           <div className={styles.filterContainer}>
             <FilterCell
