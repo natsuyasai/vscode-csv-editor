@@ -14,6 +14,8 @@ export type CustomCellProps = Props & CellRendererProps<NoInfer<Record<string, s
 
 export const CustomCell: FC<CustomCellProps> = (props) => {
   const refCell = useRef<HTMLDivElement>(null);
+  // const startY = useRef(0);
+  // const [isResizing, setIsResizing] = useState(false);
 
   function handleClick() {
     if (props.column.key === ROW_IDX_KEY) {
@@ -23,12 +25,37 @@ export const CustomCell: FC<CustomCellProps> = (props) => {
     }
   }
 
+  // function handleMouseDown(e: React.MouseEvent) {
+  //   setIsResizing(true);
+  //   startY.current = e.clientY - (refCell.current?.getBoundingClientRect()?.height ?? 0);
+  // }
+
+  // function handleMouseMove(e: React.MouseEvent) {
+  //   if (!isResizing) {
+  //     return;
+  //   }
+  //   const height = e.clientY - startY.current;
+  //   const minHeight = 24;
+  //   if (height < minHeight) {
+  //     return;
+  //   }
+  //   props.onUpdateRowHeight(props.rowIdx, height);
+  // }
+
+  // function handleMouseUp(e: React.MouseEvent) {
+  //   setIsResizing(false);
+  // }
+
   return (
     <Cell
       ref={refCell}
       key={props.cellKey}
       className={[`${styles.cell}`, `${props.isSearchTarget ? styles.searchTarget : ""}`].join(" ")}
       {...(({ cellKey: _rowKey, onUpdateRowHeight: _onUpdateRowHeight, ...rest }) => rest)(props)}
-      onClick={handleClick}></Cell>
+      onClick={handleClick}
+      // onMouseDown={handleMouseDown}
+      // onMouseMove={handleMouseMove}
+      // onMouseUp={handleMouseUp}
+    ></Cell>
   );
 };

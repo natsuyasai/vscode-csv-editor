@@ -4,17 +4,12 @@ import { useDrag, useDrop } from "react-dnd";
 import styles from "./CustomRow.module.scss";
 export interface Props {
   rowKey: React.Key;
-  onUpdateRowHeight: (rowIdx: number, height: number) => void;
   onRowReorder: (sourceIndex: number, targetIndex: number) => void;
 }
 
 export type CustomRowProps = Props & RenderRowProps<NoInfer<Record<string, string>>, unknown>;
 
 export const CustomRow: FC<CustomRowProps> = (props) => {
-  // const refRow = useRef<HTMLDivElement>(null);
-  // const startY = useRef(0);
-  // const [isResizing, setIsResizing] = useState(false);
-
   const [{ isDragging }, drag] = useDrag({
     type: "ROW_DRAG",
     item: { index: props.rowIdx },
@@ -34,51 +29,17 @@ export const CustomRow: FC<CustomRowProps> = (props) => {
     }),
   });
 
-  // function handleMouseDown(e: MouseEvent) {
-  //   setIsResizing(true);
-  //   startY.current = e.clientY - (refRow.current?.getBoundingClientRect()?.height ?? 0);
-  // }
-
-  // function handleMouseMove(e: MouseEvent) {
-  //   if (!isResizing) {
-  //     return;
-  //   }
-  //   const height = e.clientY - startY.current;
-  //   const minHeight = 24;
-  //   if (height < minHeight) {
-  //     return;
-  //   }
-  //   props.onUpdateRowHeight(props.rowIdx, height);
-  // }
-
-  // function handleMouseUp(e: MouseEvent) {
-  //   setIsResizing(false);
-  // }
-
   return (
     <Row
       ref={(ref) => {
-        // refRow.current = ref;
         if (ref) {
           drag(ref.firstElementChild);
         }
         drop(ref);
       }}
       key={props.rowKey}
-      className={[
-        styles.row,
-        isDragging ? styles.rowDragging : "",
-        isOver ? styles.rowOver : "",
-      ].join(" ")}
-      {...(({
-        rowKey: _rowKey,
-        onUpdateRowHeight: _onUpdateRowHeight,
-        onRowReorder: _onRowReorder,
-        ...rest
-      }) => rest)(props)}
-      // onMouseDown={(e) => handleMouseDown}
-      // onMouseMove={(e) => handleMouseMove}
-      // onMouseUp={(e) => handleMouseUp}
+      className={[isDragging ? styles.rowDragging : "", isOver ? styles.rowOver : ""].join(" ")}
+      {...(({ rowKey: _rowKey, onRowReorder: _onRowReorder, ...rest }) => rest)(props)}
     />
   );
 };
