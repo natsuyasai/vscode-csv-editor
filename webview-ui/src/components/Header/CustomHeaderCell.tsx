@@ -4,7 +4,7 @@ import { useDrag, useDrop } from "react-dnd";
 import styles from "./CustomHeaderCell.module.scss";
 import { canEdit } from "@/utilities/keyboard";
 import { FilterCell } from "./FilterCell";
-import { ROW_IDX_KEY } from "@/types";
+import { CELL_ALIGNMENT_CLASS, ROW_IDX_KEY } from "@/types";
 
 interface Props {
   isIgnoreHeaderRow: boolean;
@@ -20,7 +20,8 @@ interface Props {
   ) => void;
   onCanSortColumnsChange: (sortColumns: SortColumn[]) => void;
   onDoubleClick: () => void;
-  onHeaderCellClick?: (columnKey: string) => void;
+  onHeaderCellClick?: (columnKey: string | null) => void;
+  onClickOutside?: () => void;
   filterValue?: string;
   onFilterChange?: (columnKey: string, value: string) => void;
   onFilterClear?: (columnKey: string) => void;
@@ -42,6 +43,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   onCanSortColumnsChange,
   onDoubleClick,
   onHeaderCellClick,
+  onClickOutside,
   sortColumnsForWaitingDoubleClick,
   filterValue = "",
   onFilterChange,
@@ -119,21 +121,27 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
+      // 行インデックス列の場合は選択をクリア
       if (onHeaderCellClick && column.key === ROW_IDX_KEY) {
-        onHeaderCellClick("");
+        onHeaderCellClick(null);
+        return;
       }
+
       if (e.target !== headerTextRef.current) {
         return;
       }
       if (setTimeoutRef.current !== null) {
         return;
       }
+
+      // 通常のヘッダーセルがクリックされた場合は選択状態にする
+      if (onHeaderCellClick) {
+        onHeaderCellClick(column.key);
+      }
+
       if (
         rootRef.current?.parentElement?.parentElement?.getAttribute("aria-selected") === "false"
       ) {
-        if (onHeaderCellClick) {
-          onHeaderCellClick(column.key);
-        }
         return;
       }
       setTimeoutRef.current = setTimeout(() => {
@@ -159,11 +167,37 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
     [onDoubleClick]
   );
 
-  function handleWindowClick(e: MouseEvent) {
-    if (e.target !== textAreaRef.current) {
-      setIsEditing(false);
-    }
-  }
+  const handleClickOutsideInternal = useCallback(
+    (e: MouseEvent) => {
+      // テキストエリア（編集中）でない場合の処理
+      if (e.target !== textAreaRef.current) {
+        setIsEditing(false);
+      }
+
+      // ヘッダーセル以外をクリックした場合、親コンポーネントに通知
+      if (rootRef.current?.parentElement && e.target) {
+        const headerCell = rootRef.current.parentElement;
+
+        // 除外対象をチェック
+        const isClickInsideHeaderCell = headerCell.contains(e.target as Node);
+        const alignmentControls = document.querySelector(`[class*="${CELL_ALIGNMENT_CLASS}"]`);
+        const isClickInsideAlignmentControls =
+          alignmentControls && alignmentControls.contains(e.target as Node);
+        const target = e.target as HTMLElement;
+        const isClickInsideHeader =
+          target.classList.contains(styles.headerContainer) ||
+          target.classList.contains(styles.cellRoot) ||
+          target.classList.contains(styles.headerText) ||
+          target.classList.contains(styles.sortDirection);
+
+        // ヘッダーセル、CellAlignmentControls、Headerのいずれでもない場合のみonClickOutsideを呼び出し
+        if (!isClickInsideHeaderCell && !isClickInsideAlignmentControls && !isClickInsideHeader) {
+          onClickOutside?.();
+        }
+      }
+    },
+    [onClickOutside]
+  );
 
   useEffect(() => {
     if (isIgnoreHeaderRow) {
@@ -173,7 +207,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
     rootRef.current?.parentElement?.addEventListener("contextmenu", handleContextMenu);
     rootRef.current?.parentElement?.addEventListener("dblclick", handleDoubleClick);
     rootRef.current?.parentElement?.addEventListener("click", handleClick);
-    window.addEventListener("click", handleWindowClick);
+    window.addEventListener("click", handleClickOutsideInternal);
     if (setTimeoutRef.current) {
       // クリック判定待ちタイマーが起動していた場合は再度最新の情報でタイマーをセットしなおす
       setTimeoutRef.current = setTimeout(() => {
@@ -187,7 +221,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
       rootRef.current?.parentElement?.removeEventListener("contextmenu", handleContextMenu);
       rootRef.current?.parentElement?.removeEventListener("dblclick", handleDoubleClick);
       rootRef.current?.parentElement?.removeEventListener("click", handleClick);
-      window.removeEventListener("click", handleWindowClick);
+      window.removeEventListener("click", handleClickOutsideInternal);
       if (setTimeoutRef.current) {
         clearTimeout(setTimeoutRef.current);
       }
@@ -201,6 +235,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
     handleContextMenu,
     handleDoubleClick,
     handleClick,
+    handleClickOutsideInternal,
   ]);
 
   return (
