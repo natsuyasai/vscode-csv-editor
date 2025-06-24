@@ -10,7 +10,7 @@ import { useCellEditStore } from "@/stores/useCellEditStore";
 import { ROW_ID_KEY } from "@/types";
 import { canEdit } from "@/utilities/keyboard";
 import { VscodeDivider } from "@vscode-elements/react-elements";
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FC, useCallback, useEffect, useRef, useState } from "react";
 import {
   CalculatedColumn,
   CellClickArgs,
@@ -295,26 +295,31 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     };
   }, [undo, redo]);
 
-  const rowHeight = useMemo(() => {
-    switch (rowSize) {
-      case "small":
-        return 24;
-      case "normal":
-        return 40;
-      case "large":
-        return 80;
-      case "extra large":
-        return 120;
-      default:
-        return 40;
+  // const rowHeight = useMemo(() => {
+  //   switch (rowSize) {
+  //     case "small":
+  //       return 24;
+  //     case "normal":
+  //       return 40;
+  //     case "large":
+  //       return 80;
+  //     case "extra large":
+  //       return 120;
+  //     default:
+  //       return 40;
+  //   }
+  // }, [rowSize]);
+
+  const [rowHeight, setRowHeight] = useState(40);
+
+  function handleUpdateRowHeight(_rowIdx: number, height: number) {
+    const MAX_ROW_HEIGHT = 500;
+    if (height > MAX_ROW_HEIGHT) {
+      setRowHeight(MAX_ROW_HEIGHT);
+    } else {
+      setRowHeight(height);
     }
-  }, [rowSize]);
-
-  // const [rowHeight, setRowHeight] = useState(40);
-
-  // function handleUpdateRowHeight(rowIdx: number, height: number) {
-  //   setRowHeight(height);
-  // }
+  }
 
   const [sortColumnsForWaitingDoubleClick, setSortColumnsForWaitingDoubleClick] = useState<
     SortColumn[]
@@ -340,7 +345,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
   );
 
   const renderCell = useCallback((props: CustomCellProps) => {
-    return <CustomCell key={props.cellKey} {...props} onUpdateRowHeight={() => {}} />;
+    return <CustomCell key={props.cellKey} {...props} onUpdateRowHeight={handleUpdateRowHeight} />;
   }, []);
 
   const renderHeaderCell = useCallback(
