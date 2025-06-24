@@ -24,7 +24,7 @@ describe("CellAlignmentControls", () => {
         />
       );
 
-      expect(screen.getByText("列ヘッダーを選択してください")).toBeInTheDocument();
+      expect(screen.getByText("Please select a column header")).toBeInTheDocument();
     });
 
     it("配置ボタンを表示しない", () => {
@@ -36,8 +36,8 @@ describe("CellAlignmentControls", () => {
         />
       );
 
-      expect(screen.queryByText("垂直配置:")).not.toBeInTheDocument();
-      expect(screen.queryByText("水平配置:")).not.toBeInTheDocument();
+      expect(screen.queryByText("Vertical:")).not.toBeInTheDocument();
+      expect(screen.queryByText("Horizontal:")).not.toBeInTheDocument();
     });
   });
 
@@ -51,8 +51,8 @@ describe("CellAlignmentControls", () => {
         />
       );
 
-      expect(screen.getByText("垂直配置:")).toBeInTheDocument();
-      expect(screen.getByText("水平配置:")).toBeInTheDocument();
+      expect(screen.getByText("Vertical:")).toBeInTheDocument();
+      expect(screen.getByText("Horizontal:")).toBeInTheDocument();
     });
 
     it("垂直配置の全てのボタンを表示する", () => {
@@ -64,9 +64,9 @@ describe("CellAlignmentControls", () => {
         />
       );
 
-      expect(screen.getByRole("button", { name: "上" })).toBeInTheDocument();
-      expect(screen.getAllByRole("button", { name: "中" })).toHaveLength(2); // 垂直と水平の両方
-      expect(screen.getByRole("button", { name: "下" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Top" })).toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: "Center" })).toHaveLength(2); // 垂直と水平の両方
+      expect(screen.getByRole("button", { name: "Bottom" })).toBeInTheDocument();
     });
 
     it("水平配置の全てのボタンを表示する", () => {
@@ -78,9 +78,9 @@ describe("CellAlignmentControls", () => {
         />
       );
 
-      expect(screen.getAllByRole("button", { name: "左" })).toHaveLength(1);
-      expect(screen.getAllByRole("button", { name: "中" })).toHaveLength(2); // 垂直と水平の両方
-      expect(screen.getByRole("button", { name: "右" })).toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: "Left" })).toHaveLength(1);
+      expect(screen.getAllByRole("button", { name: "Center" })).toHaveLength(2); // 垂直と水平の両方
+      expect(screen.getByRole("button", { name: "Right" })).toBeInTheDocument();
     });
   });
 
@@ -94,9 +94,9 @@ describe("CellAlignmentControls", () => {
         />
       );
 
-      const topButton = screen.getByRole("button", { name: "上" });
-      const centerButton = screen.getAllByRole("button", { name: "中" })[0]; // 垂直配置の「中」
-      const bottomButton = screen.getByRole("button", { name: "下" });
+      const topButton = screen.getByRole("button", { name: "Top" });
+      const centerButton = screen.getAllByRole("button", { name: "Center" })[0]; // 垂直配置の「Center」
+      const bottomButton = screen.getByRole("button", { name: "Bottom" });
 
       // 上ボタンは選択状態（secondaryプロパティがない）
       expect(topButton).not.toHaveAttribute("secondary");
@@ -114,9 +114,9 @@ describe("CellAlignmentControls", () => {
         />
       );
 
-      const leftButton = screen.getByRole("button", { name: "左" });
-      const centerButton = screen.getAllByRole("button", { name: "中" })[1]; // 水平配置の「中」
-      const rightButton = screen.getByRole("button", { name: "右" });
+      const leftButton = screen.getByRole("button", { name: "Left" });
+      const centerButton = screen.getAllByRole("button", { name: "Center" })[1]; // 水平配置の「Center」
+      const rightButton = screen.getByRole("button", { name: "Right" });
 
       // 右ボタンは選択状態
       expect(rightButton).not.toHaveAttribute("secondary");
@@ -136,7 +136,7 @@ describe("CellAlignmentControls", () => {
         />
       );
 
-      fireEvent.click(screen.getByRole("button", { name: "上" }));
+      fireEvent.click(screen.getByRole("button", { name: "Top" }));
 
       expect(mockOnAlignmentChange).toHaveBeenCalledWith({
         vertical: "top",
@@ -153,7 +153,7 @@ describe("CellAlignmentControls", () => {
         />
       );
 
-      fireEvent.click(screen.getByRole("button", { name: "右" }));
+      fireEvent.click(screen.getByRole("button", { name: "Right" }));
 
       expect(mockOnAlignmentChange).toHaveBeenCalledWith({
         vertical: "center", // 現在の垂直配置は維持される
@@ -171,14 +171,14 @@ describe("CellAlignmentControls", () => {
       );
 
       // 垂直配置を変更
-      fireEvent.click(screen.getByRole("button", { name: "下" }));
+      fireEvent.click(screen.getByRole("button", { name: "Bottom" }));
       expect(mockOnAlignmentChange).toHaveBeenLastCalledWith({
         vertical: "bottom",
         horizontal: "left",
       });
 
       // 水平配置を変更
-      fireEvent.click(screen.getAllByRole("button", { name: "中" })[1]); // 水平配置の「中」
+      fireEvent.click(screen.getAllByRole("button", { name: "Center" })[1]); // 水平配置の「Center」
       expect(mockOnAlignmentChange).toHaveBeenLastCalledWith({
         vertical: "center", // デフォルト値が使用される
         horizontal: "center",
@@ -188,15 +188,15 @@ describe("CellAlignmentControls", () => {
 
   describe("すべての配置パターン", () => {
     const verticalOptions = [
-      { label: "上", value: "top" },
-      { label: "中", value: "center" },
-      { label: "下", value: "bottom" },
+      { label: "Top", value: "top" },
+      { label: "Center", value: "center" },
+      { label: "Bottom", value: "bottom" },
     ] as const;
 
     const horizontalOptions = [
-      { label: "左", value: "left" },
-      { label: "中", value: "center" },
-      { label: "右", value: "right" },
+      { label: "Left", value: "left" },
+      { label: "Center", value: "center" },
+      { label: "Right", value: "right" },
     ] as const;
 
     verticalOptions.forEach(({ label: vLabel, value: vValue }) => {
@@ -211,7 +211,7 @@ describe("CellAlignmentControls", () => {
 
         // 垂直配置の「中」ボタンは複数あるので、最初の要素（垂直配置）を選択
         const buttons = screen.getAllByRole("button", { name: vLabel });
-        const verticalButton = vLabel === "中" ? buttons[0] : buttons[0];
+        const verticalButton = vLabel === "Center" ? buttons[0] : buttons[0];
         
         fireEvent.click(verticalButton);
 
@@ -234,7 +234,7 @@ describe("CellAlignmentControls", () => {
 
         // 水平配置の「中」ボタンは2つあるので（垂直と水平）、適切なものを選択
         const buttons = screen.getAllByRole("button", { name: hLabel });
-        const horizontalButton = hLabel === "中" ? buttons[1] : buttons[0];
+        const horizontalButton = hLabel === "Center" ? buttons[1] : buttons[0];
         
         fireEvent.click(horizontalButton);
 
@@ -273,8 +273,8 @@ describe("CellAlignmentControls", () => {
         />
       );
 
-      expect(screen.getByText("垂直配置:")).toBeInTheDocument();
-      expect(screen.getByText("水平配置:")).toBeInTheDocument();
+      expect(screen.getByText("Vertical:")).toBeInTheDocument();
+      expect(screen.getByText("Horizontal:")).toBeInTheDocument();
     });
   });
 
