@@ -7,7 +7,9 @@ import { useRows } from "@/hooks/useRows";
 import { useSearch } from "@/hooks/useSearch";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { useCellEditStore } from "@/stores/useCellEditStore";
-import { ROW_ID_KEY, RowSizeType } from "@/types";
+import { useColumnAlignmentStore } from "@/stores/useColumnAlignmentStore";
+import { useSelectedHeaderStore } from "@/stores/useSelectedHeaderStore";
+import { ROW_ID_KEY, RowSizeType, CellAlignment } from "@/types";
 import { canEdit } from "@/utilities/keyboard";
 import { VscodeDivider } from "@vscode-elements/react-elements";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
@@ -89,6 +91,11 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     isEnabledRedo,
   } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
 
+  const setColumnAlignment = useColumnAlignmentStore((state) => state.setColumnAlignment);
+  const getColumnAlignment = useColumnAlignmentStore((state) => state.getColumnAlignment);
+  const selectedColumnKey = useSelectedHeaderStore((state) => state.selectedColumnKey);
+  const setSelectedColumnKey = useSelectedHeaderStore((state) => state.setSelectedColumnKey);
+
   const gridRef = useRef<DataGridHandle>(null);
   const [isShowSearch, setIsShowSearch] = useState(false);
   const {
@@ -134,6 +141,16 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     } else if (value === "insertHeaderCelRight") {
       insertCol(headerContextMenuProps.itemIdx + 1);
     }
+  }
+
+  function handleHeaderAlignmentChange(alignment: CellAlignment) {
+    if (selectedColumnKey) {
+      setColumnAlignment(selectedColumnKey, alignment);
+    }
+  }
+
+  function handleHeaderCellClick(columnKey: string) {
+    setSelectedColumnKey(columnKey);
   }
 
   function handleCellContextMenu(
@@ -389,6 +406,13 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           onToggleFilters={() => setShowFilters(!showFilters)}
           onClearFilters={clearFilters}
           hasActiveFilters={hasActiveFilters}
+          selectedColumnKey={selectedColumnKey}
+          currentAlignment={
+            selectedColumnKey
+              ? getColumnAlignment(selectedColumnKey)
+              : ({ vertical: "center", horizontal: "left" } as CellAlignment)
+          }
+          onAlignmentChange={handleHeaderAlignmentChange}
         />
         <VscodeDivider className={styles.divider} />
       </div>
@@ -451,6 +475,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
                   onHeaderCellContextMenu: handleHeaderCellContextMenu,
                   onHeaderEdit: handleHeaderEdit,
                   onKeyDown: handleKeyDownHeaderCell,
+                  onHeaderCellClick: handleHeaderCellClick,
                   onCanSortColumnsChange: (sortColumns) => {
                     setSortColumns(sortColumns);
                   },

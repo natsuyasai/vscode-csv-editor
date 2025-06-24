@@ -20,6 +20,7 @@ interface Props {
   ) => void;
   onCanSortColumnsChange: (sortColumns: SortColumn[]) => void;
   onDoubleClick: () => void;
+  onHeaderCellClick?: (columnKey: string) => void;
   filterValue?: string;
   onFilterChange?: (columnKey: string, value: string) => void;
   onFilterClear?: (columnKey: string) => void;
@@ -40,6 +41,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   onKeyDown,
   onCanSortColumnsChange,
   onDoubleClick,
+  onHeaderCellClick,
   sortColumnsForWaitingDoubleClick,
   filterValue = "",
   onFilterChange,
@@ -115,6 +117,11 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
+      // ヘッダーセル選択機能
+      if (onHeaderCellClick && column.key !== ROW_IDX_KEY) {
+        onHeaderCellClick(column.key);
+      }
+      
       if (e.target !== headerTextRef.current) {
         return;
       }
@@ -129,7 +136,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
         onCanSortColumnsChange(sortColumnsForWaitingDoubleClick);
       }, WAIT_DOUBLE_CLICK_TH_MS);
     },
-    [sortColumnsForWaitingDoubleClick, onCanSortColumnsChange]
+    [sortColumnsForWaitingDoubleClick, onCanSortColumnsChange, onHeaderCellClick, column.key]
   );
 
   const handleDoubleClick = useCallback(

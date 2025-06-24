@@ -1,4 +1,4 @@
-import { RowSizeType } from "@/types";
+import { RowSizeType, CellAlignment } from "@/types";
 import {
   VscodeButton,
   VscodeCheckbox,
@@ -9,6 +9,7 @@ import {
 } from "@vscode-elements/react-elements";
 import { FC } from "react";
 import styles from "./Header.module.scss";
+import { CellAlignmentControls } from "./Header/CellAlignmentControls";
 
 interface Props {
   isIgnoreHeaderRow: boolean;
@@ -25,6 +26,9 @@ interface Props {
   onToggleFilters?: () => void;
   onClearFilters?: () => void;
   hasActiveFilters?: boolean;
+  selectedColumnKey?: string | null;
+  currentAlignment?: CellAlignment;
+  onAlignmentChange?: (alignment: CellAlignment) => void;
 }
 
 export const Header: FC<Props> = ({
@@ -42,6 +46,9 @@ export const Header: FC<Props> = ({
   onToggleFilters,
   onClearFilters,
   hasActiveFilters = false,
+  selectedColumnKey,
+  currentAlignment,
+  onAlignmentChange,
 }) => {
   return (
     <>
@@ -143,6 +150,13 @@ export const Header: FC<Props> = ({
           </VscodeButton>
         </div>
       </div>
+      {onAlignmentChange && currentAlignment && (
+        <CellAlignmentControls
+          selectedColumnKey={selectedColumnKey ?? null}
+          currentAlignment={currentAlignment}
+          onAlignmentChange={onAlignmentChange}
+        />
+      )}
     </>
   );
 };
