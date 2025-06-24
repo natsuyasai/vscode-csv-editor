@@ -412,8 +412,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
                 renderRow({
                   ...props,
                   rowKey: key,
-                  onUpdateRowHeight: () => {},
-                  onRowReorder: () => {},
+                  onRowReorder: () => {}, // renderRow内で別途定義しているため不要
                 }),
               renderCell: (key, props) =>
                 renderCell({
