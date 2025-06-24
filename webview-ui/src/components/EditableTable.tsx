@@ -7,10 +7,10 @@ import { useRows } from "@/hooks/useRows";
 import { useSearch } from "@/hooks/useSearch";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { useCellEditStore } from "@/stores/useCellEditStore";
-import { ROW_ID_KEY } from "@/types";
+import { ROW_ID_KEY, RowSizeType } from "@/types";
 import { canEdit } from "@/utilities/keyboard";
 import { VscodeDivider } from "@vscode-elements/react-elements";
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FC, useCallback, useEffect, useRef, useState } from "react";
 import {
   CalculatedColumn,
   CellClickArgs,
@@ -295,26 +295,37 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     };
   }, [undo, redo]);
 
-  const rowHeight = useMemo(() => {
-    switch (rowSize) {
+  function setRowSizeFromHeader(size: RowSizeType) {
+    switch (size) {
       case "small":
-        return 24;
+        setRowHeight(24);
+        break;
       case "normal":
-        return 40;
+        setRowHeight(40);
+        break;
       case "large":
-        return 80;
+        setRowHeight(80);
+        break;
       case "extra large":
-        return 120;
+        setRowHeight(120);
+        break;
       default:
-        return 40;
+        setRowHeight(40);
+        break;
     }
-  }, [rowSize]);
+    setRowSize(size);
+  }
 
-  // const [rowHeight, setRowHeight] = useState(40);
+  const [rowHeight, setRowHeight] = useState(40);
 
-  // function handleUpdateRowHeight(rowIdx: number, height: number) {
-  //   setRowHeight(height);
-  // }
+  function handleUpdateRowHeight(_rowIdx: number, height: number) {
+    const MAX_ROW_HEIGHT = 500;
+    if (height > MAX_ROW_HEIGHT) {
+      setRowHeight(MAX_ROW_HEIGHT);
+    } else {
+      setRowHeight(height);
+    }
+  }
 
   const [sortColumnsForWaitingDoubleClick, setSortColumnsForWaitingDoubleClick] = useState<
     SortColumn[]
@@ -340,7 +351,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
   );
 
   const renderCell = useCallback((props: CustomCellProps) => {
-    return <CustomCell key={props.cellKey} {...props} onUpdateRowHeight={() => {}} />;
+    return <CustomCell key={props.cellKey} {...props} onUpdateRowHeight={handleUpdateRowHeight} />;
   }, []);
 
   const renderHeaderCell = useCallback(
@@ -372,7 +383,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           onUndo={undo}
           onRedo={redo}
           onSearch={() => setIsShowSearch(true)}
-          onUpdateRowSize={setRowSize}
+          onUpdateRowSize={setRowSizeFromHeader}
           onClickApply={onApply}
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters(!showFilters)}
@@ -412,8 +423,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
                 renderRow({
                   ...props,
                   rowKey: key,
-                  onUpdateRowHeight: () => {},
-                  onRowReorder: () => {},
+                  onRowReorder: () => {}, // renderRow内で別途定義しているため不要
                 }),
               renderCell: (key, props) =>
                 renderCell({
