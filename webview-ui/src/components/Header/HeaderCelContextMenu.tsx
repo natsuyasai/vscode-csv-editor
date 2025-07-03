@@ -31,7 +31,7 @@ const headerMenuItems: MenuItemProps[] = [
 
 export const HeaderCelContextMenu: FC<HeaderCelContextMenuProps> = ({
   isContextMenuOpen,
-  menuRef,
+  menuRef: _menuRef,
   contextMenuProps,
   onSelect,
   onClose,
@@ -41,7 +41,6 @@ export const HeaderCelContextMenu: FC<HeaderCelContextMenuProps> = ({
 
   return (
     <BaseContextMenu
-      ref={menuRef as never}
       isOpen={isContextMenuOpen}
       position={{ top: contextMenuProps.top, left: contextMenuProps.left }}
       onSelect={onSelect}

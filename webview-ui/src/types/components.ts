@@ -20,7 +20,6 @@ export interface ContextMenuProps extends BaseComponentProps {
 }
 
 export interface BaseContextMenuProps extends ContextMenuProps {
-  menuRef: React.RefObject<HTMLElement>;
   items: MenuItemProps[];
 }
 

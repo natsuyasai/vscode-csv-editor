@@ -1,11 +1,8 @@
-import { FC, forwardRef } from "react";
+import { FC } from "react";
 import { VscodeContextMenu } from "@vscode-elements/react-elements";
 import { BaseContextMenuProps } from "@/types/components";
 
-export const BaseContextMenu: FC<BaseContextMenuProps> = forwardRef<
-  HTMLElement,
-  BaseContextMenuProps
->(({
+export const BaseContextMenu: FC<BaseContextMenuProps> = ({
   isOpen,
   position,
   onClose,
@@ -13,7 +10,7 @@ export const BaseContextMenu: FC<BaseContextMenuProps> = forwardRef<
   items,
   className,
   children,
-}, ref) => {
+}) => {
   if (!isOpen) return null;
 
   const menuData = items.map((item, index) => ({
@@ -26,7 +23,6 @@ export const BaseContextMenu: FC<BaseContextMenuProps> = forwardRef<
 
   return (
     <VscodeContextMenu
-      ref={ref as never}
       show={isOpen}
       className={className}
       data={menuData}
@@ -42,6 +38,4 @@ export const BaseContextMenu: FC<BaseContextMenuProps> = forwardRef<
       {children}
     </VscodeContextMenu>
   );
-});
-
-BaseContextMenu.displayName = "BaseContextMenu";
+};

@@ -31,7 +31,7 @@ const rowMenuItems: MenuItemProps[] = [
 
 export const RowContextMenu: FC<RowContextMenuProps> = ({
   isContextMenuOpen,
-  menuRef,
+  menuRef: _menuRef,
   contextMenuProps,
   onSelect,
   onClose,
@@ -41,7 +41,6 @@ export const RowContextMenu: FC<RowContextMenuProps> = ({
 
   return (
     <BaseContextMenu
-      ref={menuRef as never}
       isOpen={isContextMenuOpen}
       position={{ top: contextMenuProps.top, left: contextMenuProps.left }}
       onSelect={onSelect}

@@ -1,6 +1,7 @@
 import { useCellCopy } from "@/hooks/useCellCopy";
 import { useColumns } from "@/hooks/useColumns";
 import { useContextMenu } from "@/hooks/useContextMenu";
+import { useEditableTableHandlers } from "@/hooks/useEditableTableHandlers";
 import { useFilters } from "@/hooks/useFilters";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useRows } from "@/hooks/useRows";
@@ -11,6 +12,8 @@ import { useColumnAlignmentStore } from "@/stores/useColumnAlignmentStore";
 import { useSelectedHeaderStore } from "@/stores/useSelectedHeaderStore";
 import { ROW_ID_KEY, RowSizeType, CellAlignment } from "@/types";
 import { canEdit } from "@/utilities/keyboard";
+import { createGlobalShortcuts, createDataCellShortcuts, createHeaderCellShortcuts, createKeyboardShortcutHandler } from "@/utilities/keyboardShortcuts";
+import { getRowHeightFromSize, clampRowHeight } from "@/utilities/rowHeight";
 import { VscodeDivider } from "@vscode-elements/react-elements";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -37,14 +40,14 @@ import { RowContextMenu } from "./Row/RowContextMenu";
 import { Search } from "./Search";
 import { DataGridContext } from "@/contexts/dataGridContext";
 
-interface Props {
+interface EditableTableProps {
   csvArray: Array<Array<string>>;
   theme: "light" | "dark";
   setCSVArray: (csv: Array<Array<string>>) => void;
   onApply: () => void;
 }
 
-export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply }) => {
+export const EditableTable: FC<EditableTableProps> = ({ csvArray, theme, setCSVArray, onApply }) => {
   const { isIgnoreHeaderRow, rowSize, setIsIgnoreHeaderRow, setRowSize } = useHeaderAction();
   const { rows, sortedRows, sortColumns, setSortColumns } = useRows(csvArray, isIgnoreHeaderRow);
   const { columns } = useColumns(csvArray, isIgnoreHeaderRow);
@@ -91,13 +94,28 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     isEnabledRedo,
   } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
 
-  const setColumnAlignment = useColumnAlignmentStore((state) => state.setColumnAlignment);
   const getColumnAlignment = useColumnAlignmentStore((state) => state.getColumnAlignment);
   const selectedColumnKey = useSelectedHeaderStore((state) => state.selectedColumnKey);
-  const setSelectedColumnKey = useSelectedHeaderStore((state) => state.setSelectedColumnKey);
+  
+  const {
+    handleSelectRowContextMenu,
+    handleSelectHeaderContextMenu,
+    handleHeaderAlignmentChange,
+    handleHeaderCellClick,
+    handleHeaderClickOutside,
+    handleHeaderEdit,
+  } = useEditableTableHandlers({
+    insertRow,
+    deleteRow,
+    insertCol,
+    deleteCol,
+    updateCol,
+    rows,
+  });
 
   const gridRef = useRef<DataGridHandle>(null);
   const [isShowSearch, setIsShowSearch] = useState(false);
+  const [rowHeight, setRowHeight] = useState(40);
   const {
     isMatched,
     currentCell,
@@ -115,47 +133,15 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
   const setInitialCellKey = useCellEditStore((state) => state.setInitialCellKey);
   const setEditCellPosition = useCellEditStore((state) => state.setPosition);
 
-  function handleSelectRowContextMenu(value: string) {
-    if (rowContextMenuProps === null) {
-      return;
-    }
+  const handleSelectRowContextMenuWrapper = useCallback((value: string) => {
+    if (rowContextMenuProps === null) return;
+    handleSelectRowContextMenu(value, rowContextMenuProps.itemIdx);
+  }, [rowContextMenuProps, handleSelectRowContextMenu]);
 
-    if (value === "deleteRow") {
-      deleteRow(rowContextMenuProps.itemIdx);
-    } else if (value === "insertRowAbove") {
-      insertRow(rowContextMenuProps.itemIdx);
-    } else if (value === "insertRowBelow") {
-      insertRow(rowContextMenuProps.itemIdx + 1);
-    }
-  }
-
-  function handleSelectHeaderContextMenu(value: string) {
-    if (headerContextMenuProps === null) {
-      return;
-    }
-
-    if (value === "deleteHeaderCel") {
-      deleteCol(headerContextMenuProps.itemIdx);
-    } else if (value === "insertHeaderCelLeft") {
-      insertCol(headerContextMenuProps.itemIdx);
-    } else if (value === "insertHeaderCelRight") {
-      insertCol(headerContextMenuProps.itemIdx + 1);
-    }
-  }
-
-  function handleHeaderAlignmentChange(alignment: CellAlignment) {
-    if (selectedColumnKey) {
-      setColumnAlignment(selectedColumnKey, alignment);
-    }
-  }
-
-  function handleHeaderCellClick(columnKey: string | null) {
-    setSelectedColumnKey(columnKey);
-  }
-
-  const handleHeaderClickOutside = useCallback(() => {
-    setSelectedColumnKey(null);
-  }, [setSelectedColumnKey]);
+  const handleSelectHeaderContextMenuWrapper = useCallback((value: string) => {
+    if (headerContextMenuProps === null) return;
+    handleSelectHeaderContextMenu(value, headerContextMenuProps.itemIdx);
+  }, [headerContextMenuProps, handleSelectHeaderContextMenu]);
 
   function handleCellContextMenu(
     args: CellClickArgs<NoInfer<Record<string, string>>, unknown>,
@@ -182,9 +168,6 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     });
   }
 
-  function handleHeaderEdit(cellIdx: number, updateText: string) {
-    updateCol(cellIdx, updateText);
-  }
 
   function handleFill(event: FillEvent<NoInfer<Record<string, string>>>) {
     return {
@@ -192,6 +175,12 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
       [event.columnKey]: event.sourceRow[event.columnKey],
     };
   }
+
+  const dataCellShortcuts = createDataCellShortcuts({
+    deleteRow,
+    insertRowAbove: insertRow,
+    insertRowBelow: (rowIdx) => insertRow(rowIdx + 1),
+  });
 
   function handleKeyDown(
     args: CellKeyDownArgs<NoInfer<Record<string, string>>, unknown>,
@@ -204,28 +193,17 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
 
     // データセルにフォーカスが移動した場合、選択中のヘッダー列をクリア
     // （ヘッダーセルの場合はクリアしない）
-    setSelectedColumnKey(null);
+    handleHeaderCellClick(null);
 
     if (args.mode === "EDIT") {
       return;
     }
-    // ショートカットキー定義
-    const key = e.key.toUpperCase();
-    if (key === "D" && e.ctrlKey && e.shiftKey) {
-      e.stopPropagation();
-      deleteRow(args.rowIdx);
+
+    // ショートカットキー処理
+    if (dataCellShortcuts.handleKeyDown(args.rowIdx, e as unknown as KeyboardEvent)) {
       return;
     }
-    if (key === "I" && e.ctrlKey && e.shiftKey) {
-      e.stopPropagation();
-      insertRow(args.rowIdx);
-      return;
-    }
-    if (key === "B" && e.ctrlKey && e.shiftKey) {
-      e.stopPropagation();
-      insertRow(args.rowIdx + 1);
-      return;
-    }
+
     // セル編集開始、変更判定
     if (e.key === "Delete") {
       e.preventGridDefault();
@@ -267,52 +245,28 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     }
   }
 
+  const headerCellShortcuts = createHeaderCellShortcuts({
+    deleteCol,
+    insertColLeft: insertCol,
+    insertColRight: (colIdx) => insertCol(colIdx + 1),
+  });
+
   function handleKeyDownHeaderCell(
     cell: CalculatedColumn<NoInfer<Record<string, string>>, unknown>,
     e: KeyboardEvent
   ) {
-    const key = e.key.toUpperCase();
-    if (key === "D" && e.ctrlKey && e.shiftKey) {
-      e.stopPropagation();
-      deleteCol(cell.idx);
-      return;
-    }
-    if (key === "L" && e.ctrlKey && e.shiftKey) {
-      e.stopPropagation();
-      insertCol(cell.idx);
-      return;
-    }
-    if (key === "R" && e.ctrlKey && e.shiftKey) {
-      e.stopPropagation();
-      insertCol(cell.idx + 1);
-      return;
-    }
+    headerCellShortcuts.handleKeyDown(cell.idx, e);
   }
 
   useEffect(() => {
-    function handleKeyDownForDocument(e: KeyboardEvent) {
-      const key = e.key.toUpperCase();
-      if (key === "Z" && e.ctrlKey) {
-        e.stopPropagation();
-        undo();
-        return;
-      }
-      if (key === "Y" && e.ctrlKey) {
-        e.stopPropagation();
-        redo();
-        return;
-      }
-      if (key === "F" && e.ctrlKey) {
-        e.stopPropagation();
-        setIsShowSearch((prev) => !prev);
-        return;
-      }
-      if (key === "H" && e.ctrlKey && e.shiftKey) {
-        e.stopPropagation();
-        setShowFilters((prev) => !prev);
-        return;
-      }
-    }
+    const globalShortcuts = createGlobalShortcuts({
+      undo,
+      redo,
+      toggleSearch: () => setIsShowSearch((prev) => !prev),
+      toggleFilters: () => setShowFilters((prev) => !prev),
+    });
+
+    const handleKeyDownForDocument = createKeyboardShortcutHandler(globalShortcuts);
 
     window.addEventListener("keydown", handleKeyDownForDocument);
 
@@ -322,35 +276,13 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
   }, [undo, redo]);
 
   function setRowSizeFromHeader(size: RowSizeType) {
-    switch (size) {
-      case "small":
-        setRowHeight(24);
-        break;
-      case "normal":
-        setRowHeight(40);
-        break;
-      case "large":
-        setRowHeight(80);
-        break;
-      case "extra large":
-        setRowHeight(120);
-        break;
-      default:
-        setRowHeight(40);
-        break;
-    }
+    const height = getRowHeightFromSize(size);
+    setRowHeight(height);
     setRowSize(size);
   }
 
-  const [rowHeight, setRowHeight] = useState(40);
-
   function handleUpdateRowHeight(_rowIdx: number, height: number) {
-    const MAX_ROW_HEIGHT = 500;
-    if (height > MAX_ROW_HEIGHT) {
-      setRowHeight(MAX_ROW_HEIGHT);
-    } else {
-      setRowHeight(height);
-    }
+    setRowHeight(clampRowHeight(height));
   }
 
   const [sortColumnsForWaitingDoubleClick, setSortColumnsForWaitingDoubleClick] = useState<
@@ -469,7 +401,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
                   onUpdateRowHeight: () => {},
                   onClickRow: (rowKey) => {
                     // ヘッダーセル以外がクリックされた場合、選択中の列をクリア
-                    setSelectedColumnKey(null);
+                    handleHeaderCellClick(null);
 
                     if (rowKey) {
                       setSelectedRows(new Set([rowKey]));
@@ -524,7 +456,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
                 menuRef={rowMenuRef}
                 contextMenuProps={rowContextMenuProps}
                 className={styles.contextMenu}
-                onSelect={handleSelectRowContextMenu}
+                onSelect={handleSelectRowContextMenuWrapper}
                 onClose={() => setRowContextMenuProps(null)}
               />,
               document.body
@@ -536,7 +468,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
                 menuRef={headerMenuRef}
                 contextMenuProps={headerContextMenuProps}
                 className={styles.contextMenu}
-                onSelect={handleSelectHeaderContextMenu}
+                onSelect={handleSelectHeaderContextMenuWrapper}
                 onClose={() => setHeaderContextMenuProps(null)}
               />,
               document.body
