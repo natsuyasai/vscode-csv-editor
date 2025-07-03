@@ -7,7 +7,9 @@ import { useRows } from "@/hooks/useRows";
 import { useSearch } from "@/hooks/useSearch";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { useCellEditStore } from "@/stores/useCellEditStore";
-import { ROW_ID_KEY, RowSizeType } from "@/types";
+import { useColumnAlignmentStore } from "@/stores/useColumnAlignmentStore";
+import { useSelectedHeaderStore } from "@/stores/useSelectedHeaderStore";
+import { ROW_ID_KEY, RowSizeType, CellAlignment } from "@/types";
 import { canEdit } from "@/utilities/keyboard";
 import { VscodeDivider } from "@vscode-elements/react-elements";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
@@ -89,6 +91,11 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     isEnabledRedo,
   } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
 
+  const setColumnAlignment = useColumnAlignmentStore((state) => state.setColumnAlignment);
+  const getColumnAlignment = useColumnAlignmentStore((state) => state.getColumnAlignment);
+  const selectedColumnKey = useSelectedHeaderStore((state) => state.selectedColumnKey);
+  const setSelectedColumnKey = useSelectedHeaderStore((state) => state.setSelectedColumnKey);
+
   const gridRef = useRef<DataGridHandle>(null);
   const [isShowSearch, setIsShowSearch] = useState(false);
   const {
@@ -136,6 +143,20 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     }
   }
 
+  function handleHeaderAlignmentChange(alignment: CellAlignment) {
+    if (selectedColumnKey) {
+      setColumnAlignment(selectedColumnKey, alignment);
+    }
+  }
+
+  function handleHeaderCellClick(columnKey: string | null) {
+    setSelectedColumnKey(columnKey);
+  }
+
+  const handleHeaderClickOutside = useCallback(() => {
+    setSelectedColumnKey(null);
+  }, [setSelectedColumnKey]);
+
   function handleCellContextMenu(
     args: CellClickArgs<NoInfer<Record<string, string>>, unknown>,
     event: CellMouseEvent
@@ -180,6 +201,11 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
       idx: args.column.idx,
       rowIdx: args.rowIdx,
     });
+
+    // データセルにフォーカスが移動した場合、選択中のヘッダー列をクリア
+    // （ヘッダーセルの場合はクリアしない）
+    setSelectedColumnKey(null);
+
     if (args.mode === "EDIT") {
       return;
     }
@@ -365,10 +391,11 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           onFilterChange={setFilter}
           onFilterClear={clearFilter}
           isFilterActive={isFilterActive(columnKey)}
+          onClickOutside={handleHeaderClickOutside}
         />
       );
     },
-    [showFilters, filters, setFilter, clearFilter, isFilterActive]
+    [showFilters, filters, setFilter, clearFilter, isFilterActive, handleHeaderClickOutside]
   );
 
   return (
@@ -389,6 +416,13 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           onToggleFilters={() => setShowFilters(!showFilters)}
           onClearFilters={clearFilters}
           hasActiveFilters={hasActiveFilters}
+          selectedColumnKey={selectedColumnKey}
+          currentAlignment={
+            selectedColumnKey
+              ? getColumnAlignment(selectedColumnKey)
+              : ({ vertical: "center", horizontal: "left" } as CellAlignment)
+          }
+          onAlignmentChange={handleHeaderAlignmentChange}
         />
         <VscodeDivider className={styles.divider} />
       </div>
@@ -434,6 +468,9 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
                     currentCell?.colIdx === props.column.idx,
                   onUpdateRowHeight: () => {},
                   onClickRow: (rowKey) => {
+                    // ヘッダーセル以外がクリックされた場合、選択中の列をクリア
+                    setSelectedColumnKey(null);
+
                     if (rowKey) {
                       setSelectedRows(new Set([rowKey]));
                     } else {
@@ -451,6 +488,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
                   onHeaderCellContextMenu: handleHeaderCellContextMenu,
                   onHeaderEdit: handleHeaderEdit,
                   onKeyDown: handleKeyDownHeaderCell,
+                  onHeaderCellClick: handleHeaderCellClick,
                   onCanSortColumnsChange: (sortColumns) => {
                     setSortColumns(sortColumns);
                   },

@@ -1,11 +1,13 @@
 import { useState, useRef, useLayoutEffect } from "react";
 
-export function useContextMenu() {
-  const [contextMenuProps, setContextMenuProps] = useState<{
-    itemIdx: number;
-    top: number;
-    left: number;
-  } | null>(null);
+interface DefaultContextMenuProps {
+  itemIdx: number;
+  top: number;
+  left: number;
+}
+
+export function useContextMenu<T extends DefaultContextMenuProps = DefaultContextMenuProps>() {
+  const [contextMenuProps, setContextMenuProps] = useState<T | null>(null);
   const menuRef = useRef<HTMLElement>(null);
   const isContextMenuOpen = contextMenuProps !== null;
 
