@@ -20,6 +20,8 @@ interface Props {
   ) => void;
   onCanSortColumnsChange: (sortColumns: SortColumn[]) => void;
   onDoubleClick: () => void;
+  onHeaderCellClick?: (columnKey: string | null) => void;
+  onClickOutside?: () => void;
   filterValue?: string;
   onFilterChange?: (columnKey: string, value: string) => void;
   onFilterClear?: (columnKey: string) => void;
@@ -40,6 +42,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   onKeyDown,
   onCanSortColumnsChange,
   onDoubleClick,
+  onHeaderCellClick,
   sortColumnsForWaitingDoubleClick,
   filterValue = "",
   onFilterChange,
@@ -81,13 +84,15 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       // FilterCellからのイベントは無視する
-      if (e.target instanceof HTMLElement && 
-          (e.target.hasAttribute('data-filter-input') || 
-           e.target.hasAttribute('data-filter-button') ||
-           e.target.closest('[data-filter-cell]'))) {
+      if (
+        e.target instanceof HTMLElement &&
+        (e.target.hasAttribute("data-filter-input") ||
+          e.target.hasAttribute("data-filter-button") ||
+          e.target.closest("[data-filter-cell]"))
+      ) {
         return;
       }
-      
+
       if (e.key === "F2") {
         setIsEditing(true);
       } else if (e.key === "Backspace") {
@@ -115,12 +120,24 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
-      if (e.target !== headerTextRef.current) {
+      // 行インデックス列の場合は選択をクリア
+      if (onHeaderCellClick && column.key === ROW_IDX_KEY) {
+        onHeaderCellClick(null);
+        return;
+      }
+
+      if (rootRef.current?.parentElement?.contains(e.target as Node) === false) {
         return;
       }
       if (setTimeoutRef.current !== null) {
         return;
       }
+
+      // 通常のヘッダーセルがクリックされた場合は選択状態にする
+      if (onHeaderCellClick) {
+        onHeaderCellClick(column.key);
+      }
+
       if (rootRef.current?.parentElement?.getAttribute("aria-selected") === "false") {
         return;
       }
@@ -129,7 +146,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
         onCanSortColumnsChange(sortColumnsForWaitingDoubleClick);
       }, WAIT_DOUBLE_CLICK_TH_MS);
     },
-    [sortColumnsForWaitingDoubleClick, onCanSortColumnsChange]
+    [sortColumnsForWaitingDoubleClick, onCanSortColumnsChange, onHeaderCellClick, column.key]
   );
 
   const handleDoubleClick = useCallback(
@@ -147,12 +164,6 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
     [onDoubleClick]
   );
 
-  function handleWindowClick(e: MouseEvent) {
-    if (e.target !== textAreaRef.current) {
-      setIsEditing(false);
-    }
-  }
-
   useEffect(() => {
     if (isIgnoreHeaderRow) {
       return;
@@ -161,7 +172,6 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
     rootRef.current?.parentElement?.addEventListener("contextmenu", handleContextMenu);
     rootRef.current?.parentElement?.addEventListener("dblclick", handleDoubleClick);
     rootRef.current?.parentElement?.addEventListener("click", handleClick);
-    window.addEventListener("click", handleWindowClick);
     if (setTimeoutRef.current) {
       // クリック判定待ちタイマーが起動していた場合は再度最新の情報でタイマーをセットしなおす
       setTimeoutRef.current = setTimeout(() => {
@@ -175,7 +185,6 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
       rootRef.current?.parentElement?.removeEventListener("contextmenu", handleContextMenu);
       rootRef.current?.parentElement?.removeEventListener("dblclick", handleDoubleClick);
       rootRef.current?.parentElement?.removeEventListener("click", handleClick);
-      window.removeEventListener("click", handleWindowClick);
       if (setTimeoutRef.current) {
         clearTimeout(setTimeoutRef.current);
       }
@@ -193,16 +202,16 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
 
   return (
     <>
-      <div className={styles.headerContainer}>
-        <span
-          ref={(ref) => {
-            rootRef.current = ref;
-            if (ref) {
-              drag(ref.firstElementChild);
-            }
-            drop(ref);
-          }}
-          className={styles.cellRoot}>
+      <div
+        ref={(ref) => {
+          rootRef.current = ref;
+          if (ref) {
+            drag(ref.firstElementChild);
+          }
+          drop(ref);
+        }}
+        className={styles.headerContainer}>
+        <span className={styles.cellRoot}>
           {!isIgnoreHeaderRow && isEditing && (
             <textarea
               ref={textAreaRef}
@@ -247,7 +256,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
           </span>
           <span>{priority}</span>
         </span>
-        
+
         {showFilters && column.key !== ROW_IDX_KEY && onFilterChange && onFilterClear && (
           <div className={styles.filterContainer}>
             <FilterCell
