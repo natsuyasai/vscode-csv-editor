@@ -10,6 +10,7 @@ import {
 import { FC } from "react";
 import styles from "./Header.module.scss";
 import { CellAlignmentControls } from "./Header/CellAlignmentControls";
+import { useAlignmentModeStore } from "@/stores/useAlignmentModeStore";
 
 interface Props {
   isIgnoreHeaderRow: boolean;
@@ -50,6 +51,9 @@ export const Header: FC<Props> = ({
   currentAlignment,
   onAlignmentChange,
 }) => {
+  // Zustandの状態を分割して取得（再レンダリングを確実にするため）
+  const isAlignmentModeEnabled = useAlignmentModeStore((state) => state.isAlignmentModeEnabled);
+  const setAlignmentModeEnabled = useAlignmentModeStore((state) => state.setAlignmentModeEnabled);
   return (
     <>
       <div className={styles.headerRoot}>
@@ -138,6 +142,14 @@ export const Header: FC<Props> = ({
               <VscodeIcon name="clear-all" action-icon />
             </VscodeButton>
           )}
+          <VscodeButton
+            tabIndex={0}
+            aria-label="toggle alignment mode"
+            aria-description="Toggle cell alignment mode"
+            {...(isAlignmentModeEnabled ? {} : { secondary: true })}
+            onClick={() => setAlignmentModeEnabled(!isAlignmentModeEnabled)}>
+            <VscodeIcon name="layout" action-icon />
+          </VscodeButton>
         </div>
         <div className={styles.apply}>
           <VscodeButton
@@ -150,7 +162,7 @@ export const Header: FC<Props> = ({
           </VscodeButton>
         </div>
       </div>
-      {onAlignmentChange && currentAlignment && (
+      {onAlignmentChange && currentAlignment && isAlignmentModeEnabled && (
         <CellAlignmentControls
           selectedColumnKey={selectedColumnKey ?? null}
           currentAlignment={currentAlignment}
