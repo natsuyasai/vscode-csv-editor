@@ -1,11 +1,6 @@
 import { FC } from "react";
 import { VscodeButton } from "@vscode-elements/react-elements";
-import {
-  CellAlignment,
-  VerticalAlignment,
-  HorizontalAlignment,
-  CELL_ALIGNMENT_CLASS,
-} from "@/types";
+import { CellAlignment, VerticalAlignment, HorizontalAlignment } from "@/types";
 import styles from "./CellAlignmentControls.module.scss";
 
 interface Props {
@@ -54,7 +49,7 @@ export const CellAlignmentControls: FC<Props> = ({
   }
 
   return (
-    <div className={[styles.container, CELL_ALIGNMENT_CLASS].join(" ")}>
+    <div className={[styles.container].join(" ")}>
       <div className={styles.section}>
         <span className={styles.label}>Vertical:</span>
         <div className={styles.buttonGroup}>

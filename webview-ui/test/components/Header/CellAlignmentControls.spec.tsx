@@ -285,7 +285,7 @@ describe("CellAlignmentControls", () => {
           <CellAlignmentControls
             selectedColumnKey="col0"
             currentAlignment={defaultAlignment}
-            onAlignmentChange={undefined as any}
+            onAlignmentChange={undefined as never}
           />
         );
       }).not.toThrow();
@@ -296,7 +296,7 @@ describe("CellAlignmentControls", () => {
         render(
           <CellAlignmentControls
             selectedColumnKey="col0"
-            currentAlignment={{ vertical: "invalid" as any, horizontal: "left" }}
+            currentAlignment={{ vertical: "invalid" as never, horizontal: "left" }}
             onAlignmentChange={mockOnAlignmentChange}
           />
         );

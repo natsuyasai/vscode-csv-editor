@@ -26,5 +26,3 @@ export const ROW_IDX_COL: Column<Record<string, string>> = {
   draggable: false,
   cellClass: "csv-row-index",
 };
-
-export const CELL_ALIGNMENT_CLASS = "cell_aligment_root";

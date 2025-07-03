@@ -201,11 +201,11 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
       idx: args.column.idx,
       rowIdx: args.rowIdx,
     });
-    
+
     // データセルにフォーカスが移動した場合、選択中のヘッダー列をクリア
     // （ヘッダーセルの場合はクリアしない）
     setSelectedColumnKey(null);
-    
+
     if (args.mode === "EDIT") {
       return;
     }
@@ -470,7 +470,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
                   onClickRow: (rowKey) => {
                     // ヘッダーセル以外がクリックされた場合、選択中の列をクリア
                     setSelectedColumnKey(null);
-                    
+
                     if (rowKey) {
                       setSelectedRows(new Set([rowKey]));
                     } else {

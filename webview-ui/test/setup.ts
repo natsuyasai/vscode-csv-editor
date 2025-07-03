@@ -5,7 +5,7 @@ vi.mock("zustand");
 
 // VSCode要素のモック
 vi.mock("@vscode-elements/react-elements", () => ({
-  VscodeButton: ({ children, onClick, secondary, ...props }: any) => 
+  VscodeButton: ({ children, onClick, secondary, ...props }: React.ComponentProps<"button"> & { secondary?: boolean }) => 
     React.createElement(
       "button",
       {
