@@ -1,5 +1,6 @@
 import { FC, Ref } from "react";
-import { VscodeContextMenu } from "@vscode-elements/react-elements";
+import { BaseContextMenu } from "@/components/common";
+import { MenuItemProps } from "@/types/components";
 
 interface HeaderCelContextMenuProps {
   isContextMenuOpen: boolean;
@@ -10,6 +11,24 @@ interface HeaderCelContextMenuProps {
   className?: string;
 }
 
+const headerMenuItems: MenuItemProps[] = [
+  {
+    label: "Delete HeaderCel",
+    keybinding: "Ctrl+Shift+D",
+    value: "deleteHeaderCel",
+  },
+  {
+    label: "Insert HeaderCel Left",
+    keybinding: "Ctrl+Shift+L",
+    value: "insertHeaderCelLeft",
+  },
+  {
+    label: "Insert HeaderCel Right",
+    keybinding: "Ctrl+Shift+R",
+    value: "insertHeaderCelRight",
+  },
+];
+
 export const HeaderCelContextMenu: FC<HeaderCelContextMenuProps> = ({
   isContextMenuOpen,
   menuRef,
@@ -18,41 +37,17 @@ export const HeaderCelContextMenu: FC<HeaderCelContextMenuProps> = ({
   onClose,
   className,
 }) => {
-  if (!isContextMenuOpen || !contextMenuProps) return null;
+  if (!contextMenuProps) return null;
 
   return (
-    <VscodeContextMenu
+    <BaseContextMenu
       ref={menuRef as never}
-      show={isContextMenuOpen}
+      isOpen={isContextMenuOpen}
+      position={{ top: contextMenuProps.top, left: contextMenuProps.left }}
+      onSelect={onSelect}
+      onClose={onClose}
+      items={headerMenuItems}
       className={className}
-      data={[
-        {
-          label: "Delete HeaderCel",
-          keybinding: "Ctrl+Shift+D",
-          value: "deleteHeaderCel",
-          tabindex: 0,
-        },
-        {
-          label: "Insert HeaderCel Left",
-          keybinding: "Ctrl+Shift+L",
-          value: "insertHeaderCelLeft",
-          tabindex: 1,
-        },
-        {
-          label: "Insert HeaderCel Right",
-          keybinding: "Ctrl+Shift+R",
-          value: "insertHeaderCelRight",
-          tabindex: 2,
-        },
-      ]}
-      onVscContextMenuSelect={(item) => {
-        onSelect(item.detail.value);
-        onClose();
-      }}
-      style={{
-        top: contextMenuProps.top,
-        left: contextMenuProps.left,
-      }}
     />
   );
 };

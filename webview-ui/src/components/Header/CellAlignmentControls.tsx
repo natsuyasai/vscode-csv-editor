@@ -3,13 +3,13 @@ import { VscodeButton } from "@vscode-elements/react-elements";
 import { CellAlignment, VerticalAlignment, HorizontalAlignment } from "@/types";
 import styles from "./CellAlignmentControls.module.scss";
 
-interface Props {
+interface CellAlignmentControlsProps {
   selectedColumnKey: string | null;
   currentAlignment: CellAlignment;
   onAlignmentChange: (alignment: CellAlignment) => void;
 }
 
-export const CellAlignmentControls: FC<Props> = ({
+export const CellAlignmentControls: FC<CellAlignmentControlsProps> = ({
   selectedColumnKey,
   currentAlignment,
   onAlignmentChange,

@@ -1,5 +1,6 @@
 import { FC } from "react";
-import { VscodeContextMenu } from "@vscode-elements/react-elements";
+import { BaseContextMenu } from "@/components/common";
+import { MenuItemProps } from "@/types/components";
 
 interface RowContextMenuProps {
   isContextMenuOpen: boolean;
@@ -10,6 +11,24 @@ interface RowContextMenuProps {
   className?: string;
 }
 
+const rowMenuItems: MenuItemProps[] = [
+  {
+    label: "Delete Row",
+    keybinding: "Ctrl+Shift+D",
+    value: "deleteRow",
+  },
+  {
+    label: "Insert Row Above",
+    keybinding: "Ctrl+Shift+I",
+    value: "insertRowAbove",
+  },
+  {
+    label: "Insert Row Below",
+    keybinding: "Ctrl+Shift+B",
+    value: "insertRowBelow",
+  },
+];
+
 export const RowContextMenu: FC<RowContextMenuProps> = ({
   isContextMenuOpen,
   menuRef,
@@ -18,43 +37,17 @@ export const RowContextMenu: FC<RowContextMenuProps> = ({
   onClose,
   className,
 }) => {
-  if (!isContextMenuOpen || !contextMenuProps) {
-    return null;
-  }
+  if (!contextMenuProps) return null;
 
   return (
-    <VscodeContextMenu
+    <BaseContextMenu
       ref={menuRef as never}
-      show={isContextMenuOpen}
+      isOpen={isContextMenuOpen}
+      position={{ top: contextMenuProps.top, left: contextMenuProps.left }}
+      onSelect={onSelect}
+      onClose={onClose}
+      items={rowMenuItems}
       className={className}
-      data={[
-        {
-          label: "Delete Row",
-          keybinding: "Ctrl+Shift+D",
-          value: "deleteRow",
-          tabindex: 0,
-        },
-        {
-          label: "Insert Row Above",
-          keybinding: "Ctrl+Shift+I",
-          value: "insertRowAbove",
-          tabindex: 1,
-        },
-        {
-          label: "Insert Row Below",
-          keybinding: "Ctrl+Shift+B",
-          value: "insertRowBelow",
-          tabindex: 2,
-        },
-      ]}
-      onVscContextMenuSelect={(item) => {
-        onSelect(item.detail.value);
-        onClose();
-      }}
-      style={{
-        top: contextMenuProps.top,
-        left: contextMenuProps.left,
-      }}
     />
   );
 };
