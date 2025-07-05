@@ -67,13 +67,7 @@ export const Default: Story = {
 
     setInitData();
 
-    // DataGrid（react-data-grid）が表示されることを確認
-    const grid = canvas.getByRole("grid");
-    await expect(grid).toBeInTheDocument();
-    await expect(grid).toHaveClass("rdg");
-
-    // 少し待機してCSVデータが処理されるのを待つ
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await waitReadyForGrid(canvasElement);
 
     // 列ヘッダー（columnheader）が正しく表示されることを確認
     const columnHeaders = canvas.getAllByRole("columnheader");
@@ -101,10 +95,7 @@ export const CellEditingFunctionality: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
 
     // セルをダブルクリックして編集モードに入る
@@ -124,10 +115,7 @@ export const CellEditingFunctionality_Backspace: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
 
     // セルをクリックして選択状態にする
@@ -152,10 +140,7 @@ export const CellEditingFunctionality_Delete: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
 
     // セルをクリックして選択状態にする
@@ -179,41 +164,85 @@ export const CellEditingFunctionality_Delete: Story = {
   },
 };
 
+async function insertTextTest(canvasElement: HTMLElement, key: string) {
+  const canvas = within(canvasElement);
+
+  setInitData();
+  await waitReadyForGrid(canvasElement);
+
+  // セルをクリックして選択状態にする
+  const aliceCell = await canvas.findByRole("gridcell", { name: "Alice" });
+  await userEvent.click(aliceCell);
+
+  // セルが選択された状態で文字を入力する
+  await userEvent.keyboard(key);
+
+  // 編集モードに入り、入力した文字が表示される（元の内容はクリアされている）
+  // react-data-gridでは編集中にinput要素が作成される
+  const input = canvas.queryByRole("textbox") as HTMLTextAreaElement;
+  await expect(input).toBeInTheDocument();
+  await expect(input?.type).toBe("textarea");
+  await expect(input).toHaveValue(key);
+}
 export const CellEditingFunctionality_CharacterInput: Story = {
   name: "セル編集機能_文字入力（内容クリア→編集モード）",
   play: async ({ canvasElement }) => {
+    await insertTextTest(canvasElement, "X");
+  },
+};
+
+// 英数字のテスト
+export const CellEditingFunctionality_AlphanumericInput: Story = {
+  name: "セル編集機能_英数字入力",
+  play: async ({ canvasElement }) => {
+    // 英小文字
+    await insertTextTest(canvasElement, "a");
+    // 英大文字
+    await insertTextTest(canvasElement, "A");
+    // 数字
+    await insertTextTest(canvasElement, "1");
+    // 数字0
+    await insertTextTest(canvasElement, "0");
+    // 数字9
+    await insertTextTest(canvasElement, "9");
+  },
+};
+
+// 特殊キーの組み合わせテスト（編集モードに入らないキー）
+export const CellEditingFunctionality_SpecialKeyInput: Story = {
+  name: "セル編集機能_特殊キー入力",
+  play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
 
     // セルをクリックして選択状態にする
     const aliceCell = await canvas.findByRole("gridcell", { name: "Alice" });
     await userEvent.click(aliceCell);
 
-    // セルが選択された状態で文字を入力する
-    await userEvent.keyboard("X");
+    // 以下のキーは編集モードに入らない（特殊動作をする）
 
-    // 編集モードに入り、入力した文字が表示される（元の内容はクリアされている）
-    // react-data-gridでは編集中にinput要素が作成される
-    const input = canvas.queryByRole("textbox") as HTMLTextAreaElement;
-    await expect(input).toBeInTheDocument();
-    await expect(input?.type).toBe("textarea");
-    // 入力した文字が表示されていることを確認
-    await expect(input).toHaveValue("X");
+    // F1キー（何も起こらない）
+    await userEvent.keyboard("{F1}");
+    let input = canvas.queryByRole("textbox");
+    await expect(input).not.toBeInTheDocument();
+
+    // Arrow keys（セル移動）のテストを簡略化
+    // セルを再度クリックして選択状態にする
+    await userEvent.click(aliceCell);
+
+    // 特殊キーの一部のみテスト
+    await userEvent.keyboard("{Escape}");
+    input = canvas.queryByRole("textbox");
+    await expect(input).not.toBeInTheDocument();
   },
 };
 
 export const KeyboardShortcuts: Story = {
   name: "検索機能",
   play: async ({ canvasElement }) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
     // Ctrl+F で検索機能を開く
     await userEvent.keyboard("{Control>}f{/Control}");
@@ -258,10 +287,7 @@ export const SortingFunctionality: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
 
     // Nameヘッダーをクリックしてソート
@@ -302,10 +328,7 @@ export const FilterFunctionality: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
 
     // Ctrl+Shift+H でフィルター表示を切り替え
@@ -343,10 +366,7 @@ export const ThemeSupport: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
 
     // 初期状態（ライトテーマ）の確認
@@ -444,10 +464,7 @@ async function triggerRowContextMenu(canvasElement: HTMLElement, targetValue: st
 export const AddHeaderForLeft: Story = {
   name: "ヘッダーを左側に追加",
   play: async ({ canvasElement }) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
 
     await triggerHeaderContextMenu(canvasElement, "insertHeaderCelLeft");
@@ -473,10 +490,7 @@ export const AddHeaderForLeft: Story = {
 export const AddHeaderForRight: Story = {
   name: "ヘッダーを右側に追加",
   play: async ({ canvasElement }) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
 
     await triggerHeaderContextMenu(canvasElement, "insertHeaderCelRight");
@@ -501,7 +515,6 @@ export const AddHeaderForRight: Story = {
 export const DeleteHeader: Story = {
   name: "ヘッダーを削除",
   play: async ({ canvasElement }) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
     setInitData();
     await waitReadyForGrid(canvasElement);
 
@@ -558,11 +571,7 @@ export const RowSizeAdjustment: Story = {
   name: "行サイズ調整機能",
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
 
     await setRowSize(canvas, "large");
@@ -575,10 +584,7 @@ export const RowSizeAdjustment: Story = {
 export const AddRowAbove: Story = {
   name: "選択行の前に追加",
   play: async ({ canvasElement }) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
 
     await triggerRowContextMenu(canvasElement, "insertRowAbove");
@@ -588,14 +594,14 @@ export const AddRowAbove: Story = {
       async () => {
         const rows = newCanvas.getAllByRole("row");
         await expect(rows).toHaveLength(1 + ROW_MAX + 1); // ヘッダー行 + 元の行数 + 新しい行
-        
+
         // 新しい行が追加されていることを確認（空の行が追加される）
         const newRow = rows[1]; // 最初のデータ行
         const cells = within(newRow).getAllByRole("gridcell");
         // 新しい行の最初のデータセル（行番号以外）が空であることを確認
         const firstDataCell = cells[1];
         await expect(firstDataCell).toHaveTextContent("");
-        
+
         return true;
       },
       { timeout: 2000 }
@@ -606,10 +612,7 @@ export const AddRowAbove: Story = {
 export const AddRowBelow: Story = {
   name: "選択行の後ろに追加",
   play: async ({ canvasElement }) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     setInitData();
-
     await waitReadyForGrid(canvasElement);
 
     await triggerRowContextMenu(canvasElement, "insertRowBelow");
@@ -619,14 +622,14 @@ export const AddRowBelow: Story = {
       async () => {
         const rows = newCanvas.getAllByRole("row");
         await expect(rows).toHaveLength(1 + ROW_MAX + 1); // ヘッダー行 + 元の行数 + 新しい行
-        
+
         // 新しい行が選択行の後ろに追加されていることを確認
         const newRow = rows[2]; // 2番目のデータ行（選択行の後ろ）
         const cells = within(newRow).getAllByRole("gridcell");
         // 新しい行の最初のデータセル（行番号以外）が空であることを確認
         const firstDataCell = cells[1];
         await expect(firstDataCell).toHaveTextContent("");
-        
+
         return true;
       },
       { timeout: 2000 }
@@ -637,10 +640,7 @@ export const AddRowBelow: Story = {
 export const DeleteRow: Story = {
   name: "選択行を削除",
   play: async ({ canvasElement }) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    
     setInitData();
-    
     await waitReadyForGrid(canvasElement);
 
     await triggerRowContextMenu(canvasElement, "deleteRow");
@@ -650,13 +650,13 @@ export const DeleteRow: Story = {
       async () => {
         const rows = newCanvas.getAllByRole("row");
         await expect(rows).toHaveLength(1 + ROW_MAX - 1); // ヘッダー行 + 元の行数 - 削除した行
-        
+
         // 最初の行（Alice）が削除されて、2番目の行（Bob）が最初に来ていることを確認
         const firstDataRow = rows[1];
         const cells = within(firstDataRow).getAllByRole("gridcell");
         const nameCell = cells[1]; // 行番号の次のセル（Name列）
         await expect(nameCell).toHaveTextContent("Bob");
-        
+
         return true;
       },
       { timeout: 2000 }
