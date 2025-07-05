@@ -27,6 +27,8 @@ export default function TextAreaEditor({
     if (initialCellKey === "Delete") {
       onRowChange({ ...row, [column.key]: "" }, true);
       onClose(true, true);
+    } else if (initialCellKey === "Backspace") {
+      onRowChange({ ...row, [column.key]: "" });
     } else if (initialCellKey !== null) {
       onRowChange({ ...row, [column.key]: initialCellKey });
     }
