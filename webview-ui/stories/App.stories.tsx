@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within, waitFor } from "@storybook/test";
 import App from "../src/App";
+import { setRowSize } from "./utils/rowSizeSelect";
 
 const meta: Meta<typeof App> = {
   title: "App",
@@ -33,19 +34,38 @@ Charlie,42,Kyoto,Manager
 Diana,31,Yokohama,Developer
 Eve,29,Kobe,Analyst`;
 
+const COL_MAX = 4;
+const COL_MAX_WITH_HEADER = COL_MAX + 1; // 行番号を含む
+const ROW_MAX = 5;
+
+function setInitData() {
+  // 初期データを設定
+  window.postMessage(
+    {
+      type: "update",
+      payload: sampleCSVData,
+    },
+    "*"
+  );
+}
+
+function waitReadyForGrid(target: HTMLElement, timeout = 3000) {
+  return waitFor(
+    async () => {
+      const canvas = within(target);
+      const gridcells = canvas.getAllByRole("gridcell");
+      return await expect(gridcells.length > 0).toBeTruthy();
+    },
+    { timeout }
+  );
+}
+
 export const Default: Story = {
   name: "基本表示",
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    // VSCodeからの初期メッセージをシミュレート
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    setInitData();
 
     // DataGrid（react-data-grid）が表示されることを確認
     const grid = canvas.getByRole("grid");
@@ -57,7 +77,7 @@ export const Default: Story = {
 
     // 列ヘッダー（columnheader）が正しく表示されることを確認
     const columnHeaders = canvas.getAllByRole("columnheader");
-    await expect(columnHeaders).toHaveLength(5); // 行番号 + 4つのデータ列
+    await expect(columnHeaders).toHaveLength(COL_MAX_WITH_HEADER); // 行番号 + 4つのデータ列
 
     // 具体的なヘッダーテキストを確認
     await expect(canvas.getByRole("columnheader", { name: "Name" })).toBeInTheDocument();
@@ -67,7 +87,7 @@ export const Default: Story = {
 
     // データ行（row）が正しく表示されることを確認
     const rows = canvas.getAllByRole("row");
-    await expect(rows).toHaveLength(6); // ヘッダー行 + 5つのデータ行
+    await expect(rows).toHaveLength(1 + ROW_MAX); // ヘッダー行 + 5つのデータ行
 
     // gridcellの内容を確認
     await expect(canvas.getByRole("gridcell", { name: "Alice" })).toBeInTheDocument();
@@ -83,17 +103,9 @@ export const CellEditingFunctionality: Story = {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // 初期データを設定
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    setInitData();
 
-    const grid = canvas.getByRole("grid");
-    await expect(grid).toBeInTheDocument();
+    await waitReadyForGrid(canvasElement);
 
     // セルをダブルクリックして編集モードに入る
     const aliceCell = await canvas.findByRole("gridcell", { name: "Alice" });
@@ -114,22 +126,9 @@ export const CellEditingFunctionality_Backspace: Story = {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // 初期データを設定
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    setInitData();
 
-    await waitFor(
-      async () => {
-        const grid = canvas.getByRole("grid");
-        return await expect(grid).toBeInTheDocument();
-      },
-      { timeout: 3000 }
-    );
+    await waitReadyForGrid(canvasElement);
 
     // セルをクリックして選択状態にする
     const aliceCell = await canvas.findByRole("gridcell", { name: "Alice" });
@@ -155,17 +154,9 @@ export const CellEditingFunctionality_Delete: Story = {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // 初期データを設定
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    setInitData();
 
-    const grid = canvas.getByRole("grid");
-    await expect(grid).toBeInTheDocument();
+    await waitReadyForGrid(canvasElement);
 
     // セルをクリックして選択状態にする
     const aliceCell = await canvas.findByRole("gridcell", { name: "Alice" });
@@ -195,17 +186,9 @@ export const CellEditingFunctionality_CharacterInput: Story = {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // 初期データを設定
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    setInitData();
 
-    const grid = canvas.getByRole("grid");
-    await expect(grid).toBeInTheDocument();
+    await waitReadyForGrid(canvasElement);
 
     // セルをクリックして選択状態にする
     const aliceCell = await canvas.findByRole("gridcell", { name: "Alice" });
@@ -227,22 +210,11 @@ export const CellEditingFunctionality_CharacterInput: Story = {
 export const KeyboardShortcuts: Story = {
   name: "検索機能",
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // 初期データを設定
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    setInitData();
 
-    const grid = canvas.getByRole("grid");
-    await expect(grid).toBeInTheDocument();
-
+    await waitReadyForGrid(canvasElement);
     // Ctrl+F で検索機能を開く
     await userEvent.keyboard("{Control>}f{/Control}");
 
@@ -288,22 +260,9 @@ export const SortingFunctionality: Story = {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // 初期データを設定
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    setInitData();
 
-    await waitFor(
-      async () => {
-        const grid = canvas.getByRole("grid");
-        return await expect(grid).toBeInTheDocument();
-      },
-      { timeout: 3000 }
-    );
+    await waitReadyForGrid(canvasElement);
 
     // Nameヘッダーをクリックしてソート
     const nameHeader = await canvas.findByRole("columnheader", { name: "Name" });
@@ -345,17 +304,9 @@ export const FilterFunctionality: Story = {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // 初期データを設定
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    setInitData();
 
-    const grid = canvas.getByRole("grid");
-    await expect(grid).toBeInTheDocument();
+    await waitReadyForGrid(canvasElement);
 
     // Ctrl+Shift+H でフィルター表示を切り替え
     await userEvent.keyboard("{Control>}{Shift>}h{/Shift}{/Control}");
@@ -363,6 +314,27 @@ export const FilterFunctionality: Story = {
     // フィルター機能が有効になることを確認
     const filterToggle = canvas.getByRole("button", { name: /toggle filters/i });
     await expect(filterToggle).toBeInTheDocument();
+
+    const newCanvas = within(document.body);
+    const filterInputs = newCanvas.getAllByPlaceholderText("filter...");
+    await expect(filterInputs).toHaveLength(COL_MAX);
+    await userEvent.type(filterInputs[0], "a");
+
+    await waitFor(
+      async () => {
+        const rows = newCanvas.getAllByRole("row");
+        if (rows.length === 4) {
+          await expect(rows).toHaveLength(4); // ヘッダー行 + フィルター後の行数
+          return true;
+        }
+        return false;
+      },
+      { timeout: 2000 }
+    );
+
+    await expect(newCanvas.getByRole("gridcell", { name: "Alice" })).toBeInTheDocument();
+    await expect(newCanvas.getByRole("gridcell", { name: "Charlie" })).toBeInTheDocument();
+    await expect(newCanvas.getByRole("gridcell", { name: "Diana" })).toBeInTheDocument();
   },
 };
 
@@ -373,26 +345,13 @@ export const ThemeSupport: Story = {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // 初期データを設定
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    setInitData();
 
-    await waitFor(
-      async () => {
-        const grid = canvas.getByRole("grid");
-        return await expect(grid).toBeInTheDocument();
-      },
-      { timeout: 3000 }
-    );
+    await waitReadyForGrid(canvasElement);
 
     // 初期状態（ライトテーマ）の確認
     const grid = canvas.getByRole("grid");
-    await expect(grid).toHaveClass("rdg");
+    await expect(grid).toHaveClass("rdg-light");
 
     // ダークテーマに変更
     window.postMessage(
@@ -413,8 +372,8 @@ export const ThemeSupport: Story = {
         await expect(updatedGrid).toHaveClass("rdg");
         // ダークテーマクラスの存在確認（実装に依存）
         const hasThemeClass =
-          updatedGrid.className.includes("rdg") &&
-          (updatedGrid.className.includes("dark") || !updatedGrid.className.includes("light"));
+          updatedGrid.className.includes("rdg-dark") ||
+          !updatedGrid.className.includes("rdg-light");
         await expect(hasThemeClass).toBe(true);
         return true;
       },
@@ -435,7 +394,7 @@ export const ThemeSupport: Story = {
     await waitFor(
       async () => {
         const lightGrid = canvas.getByRole("grid");
-        await expect(lightGrid).toHaveClass("rdg");
+        await expect(lightGrid).toHaveClass("rdg-light");
         return true;
       },
       { timeout: 2000 }
@@ -443,47 +402,46 @@ export const ThemeSupport: Story = {
   },
 };
 
-export const SaveFunctionality: Story = {
-  name: "保存機能（Ctrl+S）",
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+async function triggerHeaderContextMenu(canvasElement: HTMLElement, targetValue: string) {
+  const canvas = within(canvasElement);
+  // セルを右クリックしてコンテキストメニューを表示
+  const ageHeaderCell = await canvas.findByRole("columnheader", { name: "Age" });
+  await userEvent.click(ageHeaderCell);
+  await userEvent.pointer({
+    keys: "[MouseRight]",
+    target: ageHeaderCell,
+  });
+  const contextMenu = document.body.getElementsByTagName("vscode-context-menu");
+  await expect(contextMenu).toHaveLength(1);
+  const menuItem = contextMenu[0].shadowRoot?.querySelectorAll(
+    `vscode-context-menu-item[value='${targetValue}']`
+  );
+  const atag = menuItem?.[0].shadowRoot?.querySelector("a");
+  await userEvent.click(atag as HTMLElement);
+}
 
+export const AddHeaderForLeft: Story = {
+  name: "ヘッダーを左側に追加",
+  play: async ({ canvasElement }) => {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // 初期データを設定
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    setInitData();
 
+    await waitReadyForGrid(canvasElement);
+
+    await triggerHeaderContextMenu(canvasElement, "insertHeaderCelLeft");
+
+    const newCanvas = within(document.body);
     await waitFor(
       async () => {
-        const grid = canvas.getByRole("grid");
-        return await expect(grid).toBeInTheDocument();
-      },
-      { timeout: 3000 }
-    );
+        // 左側に新しいヘッダーが追加されていることを確認
+        const newHeader = newCanvas.getByRole("columnheader", { name: "new column" });
+        await expect(newHeader).toBeInTheDocument();
 
-    // 保存前のグリッドの状態を確認
-    const grid = canvas.getByRole("grid");
-    await expect(grid).toHaveClass("rdg");
-    const initialRowCount = canvas.getAllByRole("row").length;
+        const headers = newCanvas.getAllByRole("columnheader");
+        await expect(headers).toHaveLength(COL_MAX_WITH_HEADER + 1); // 新しいヘッダーが追加されていることを確認
 
-    // Ctrl+S で保存（実際の保存処理は実装によるため、キーイベントの発生を確認）
-    await userEvent.keyboard("{Control>}s{/Control}");
-
-    // 保存処理が実行されてもグリッドは正常に表示され続けることを確認
-    await waitFor(
-      async () => {
-        const gridAfterSave = canvas.getByRole("grid");
-        await expect(gridAfterSave).toBeInTheDocument();
-        await expect(gridAfterSave).toHaveClass("rdg");
-        // 行数が変わらないことを確認
-        const finalRowCount = canvas.getAllByRole("row").length;
-        await expect(finalRowCount).toBe(initialRowCount);
+        await expect(headers[2].innerHTML).toContain("new column"); // 新しいヘッダーの内容を確認
         return true;
       },
       { timeout: 2000 }
@@ -491,98 +449,83 @@ export const SaveFunctionality: Story = {
   },
 };
 
-export const ContextMenuFunctionality: Story = {
-  name: "コンテキストメニュー機能",
+export const AddHeaderForRight: Story = {
+  name: "ヘッダーを右側に追加",
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // 初期データを設定
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    setInitData();
 
+    await waitReadyForGrid(canvasElement);
+
+    await triggerHeaderContextMenu(canvasElement, "insertHeaderCelRight");
+
+    const newCanvas = within(document.body);
     await waitFor(
       async () => {
-        const grid = canvas.getByRole("grid");
-        return await expect(grid).toBeInTheDocument();
-      },
-      { timeout: 3000 }
-    );
+        // 左側に新しいヘッダーが追加されていることを確認
+        const newHeader = newCanvas.getByRole("columnheader", { name: "new column" });
+        await expect(newHeader).toBeInTheDocument();
 
-    // セルを右クリックしてコンテキストメニューを表示
-    const aliceCell = await canvas.findByRole("gridcell", { name: "Alice" });
-    await userEvent.pointer({
-      keys: "[MouseRight]",
-      target: aliceCell,
-    });
-
-    // 右クリック後もグリッドが正常に表示されることを確認
-    await waitFor(
-      async () => {
-        // グリッドが正常に機能していることを確認
-        const grid = canvas.getByRole("grid");
-        await expect(grid).toBeInTheDocument();
-        await expect(grid).toHaveClass("rdg");
+        const headers = newCanvas.getAllByRole("columnheader");
+        await expect(headers).toHaveLength(COL_MAX_WITH_HEADER + 1); // 新しいヘッダーが追加されていることを確認
+        await expect(headers[3].innerHTML).toContain("new column"); // 新しいヘッダーの内容を確認
+        return true;
       },
       { timeout: 2000 }
     );
   },
 };
 
-export const UndoRedoFunctionality: Story = {
-  name: "元に戻す・やり直し機能",
+export const DeleteHeader: Story = {
+  name: "ヘッダーを削除",
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
     await new Promise((resolve) => setTimeout(resolve, 500));
+    setInitData();
+    await waitReadyForGrid(canvasElement);
 
-    // 初期データを設定
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    await triggerHeaderContextMenu(canvasElement, "deleteHeaderCel");
 
+    const newCanvas = within(document.body);
     await waitFor(
       async () => {
-        const grid = canvas.getByRole("grid");
-        return await expect(grid).toBeInTheDocument();
+        const headers = newCanvas.getAllByRole("columnheader");
+        await expect(headers).toHaveLength(COL_MAX_WITH_HEADER - 1);
+        await expect(headers[2].innerHTML).toContain("City");
+        return true;
       },
-      { timeout: 3000 }
+      { timeout: 2000 }
     );
+  },
+};
 
-    // 初期状態のデータ構造を確認
-    const initialGrid = canvas.getByRole("grid");
-    await expect(initialGrid).toHaveClass("rdg");
-    const initialRows = canvas.getAllByRole("row");
-    const initialRowCount = initialRows.length;
+export const UndoRedo: Story = {
+  name: "元に戻す・やり直し",
+  play: async ({ context }) => {
+    await DeleteHeader.play!(context);
 
-    // Ctrl+Z で元に戻す（操作履歴がない場合は何も起こらない）
+    // Ctrl+Z で元に戻す
     await userEvent.keyboard("{Control>}z{/Control}");
 
-    // 少し待機
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    // Ctrl+Y でやり直し（操作履歴がない場合は何も起こらない）
-    await userEvent.keyboard("{Control>}y{/Control}");
-
-    // 操作後もグリッドが正常に表示され続けることを確認
+    // 削除した列が戻っていること
+    const newCanvas = within(document.body);
     await waitFor(
       async () => {
-        const grid = canvas.getByRole("grid");
-        await expect(grid).toBeInTheDocument();
-        await expect(grid).toHaveClass("rdg");
-        // 行数が変わらないことを確認
-        const finalRowCount = canvas.getAllByRole("row").length;
-        await expect(finalRowCount).toBe(initialRowCount);
+        const headers = newCanvas.getAllByRole("columnheader");
+        await expect(headers).toHaveLength(COL_MAX_WITH_HEADER);
+        await expect(headers[2].innerHTML).toContain("Age");
+        return true;
+      },
+      { timeout: 2000 }
+    );
+
+    // Ctrl+Y でやり直し
+    await userEvent.keyboard("{Control>}y{/Control}");
+    await waitFor(
+      async () => {
+        const headers = newCanvas.getAllByRole("columnheader");
+        await expect(headers).toHaveLength(COL_MAX_WITH_HEADER - 1);
+        await expect(headers[2].innerHTML).toContain("City");
         return true;
       },
       { timeout: 2000 }
@@ -597,38 +540,13 @@ export const RowSizeAdjustment: Story = {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // 初期データを設定
-    window.postMessage(
-      {
-        type: "update",
-        payload: sampleCSVData,
-      },
-      "*"
-    );
+    setInitData();
 
-    await waitFor(
-      async () => {
-        const grid = canvas.getByRole("grid");
-        return await expect(grid).toBeInTheDocument();
-      },
-      { timeout: 3000 }
-    );
+    await waitReadyForGrid(canvasElement);
 
-    // ヘッダー部分のUIを確認
-    const grid = canvas.getByRole("grid");
-    await expect(grid).toHaveClass("rdg");
+    await setRowSize(canvas, "large");
 
-    // 行サイズ調整のセレクトボックスを探す
-    await waitFor(
-      async () => {
-        const rowSizeSelector = canvas.getByRole("listbox", { name: /row size/i });
-        await expect(rowSizeSelector).toBeInTheDocument();
-
-        // 行サイズ関連のテキストが存在するかチェック（最初の一つだけ）
-        const rowSizeText = canvas.getAllByText(/small|normal|large/i)[0];
-        await expect(rowSizeText).toBeInTheDocument();
-      },
-      { timeout: 2000 }
-    );
+    const cell = canvas.getByRole("gridcell", { name: "Alice" });
+    await expect(cell.getBoundingClientRect().height).toBe(80); // largeサイズの高さを確認
   },
 };
