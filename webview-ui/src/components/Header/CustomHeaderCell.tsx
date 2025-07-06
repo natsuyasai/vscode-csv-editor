@@ -57,6 +57,13 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const WAIT_DOUBLE_CLICK_TH_MS = 500;
   const setTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const headerCellRoot = () => {
+    let parent = rootRef.current?.parentElement;
+    while (parent && parent.role !== "columnheader") {
+      parent = parent.parentElement;
+    }
+    return parent;
+  };
 
   const [, drag] = useDrag({
     type: "COL_DRAG",
@@ -94,20 +101,23 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
       }
 
       // TextAreaEditor.tsxと合わせる
-      if (e.key === "Delete") {
-        onHeaderEdit(column.idx, "");
-      } else if (e.key === "Backspace") {
-        onHeaderEdit(column.idx, "");
-        setIsEditing(true);
-      } else if (e.key === "F2") {
-        setIsEditing(true);
-      } else if (!isEditing && canEdit(e)) {
-        // 編集モードに移行することで、onHeaderEdit分と通常入力分の2回入力が発生してしまうため止める
-        e.preventDefault();
-        onHeaderEdit(column.idx, e.key);
-        setIsEditing(true);
+      if (!isEditing) {
+        if (e.key === "Delete") {
+          onHeaderEdit(column.idx, "");
+        } else if (e.key === "Backspace") {
+          onHeaderEdit(column.idx, "");
+          setIsEditing(true);
+        } else if (e.key === "F2") {
+          setIsEditing(true);
+        } else if (canEdit(e)) {
+          // 編集モードに移行することで、onHeaderEdit分と通常入力分の2回入力が発生してしまうため止める
+          e.preventDefault();
+          onHeaderEdit(column.idx, e.key);
+          setIsEditing(true);
+        }
         return;
       }
+
       onKeyDown(column, e);
     },
     [column, isEditing, onHeaderEdit, onKeyDown]
@@ -140,7 +150,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
         onHeaderCellClick(column.key);
       }
 
-      if (rootRef.current?.parentElement?.getAttribute("aria-selected") === "false") {
+      if (headerCellRoot()?.getAttribute("aria-selected") === "false") {
         return;
       }
       setTimeoutRef.current = setTimeout(() => {
@@ -170,10 +180,11 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
     if (isIgnoreHeaderRow) {
       return;
     }
-    rootRef.current?.parentElement?.addEventListener("keydown", handleKeyDown);
-    rootRef.current?.parentElement?.addEventListener("contextmenu", handleContextMenu);
-    rootRef.current?.parentElement?.addEventListener("dblclick", handleDoubleClick);
-    rootRef.current?.parentElement?.addEventListener("click", handleClick);
+    const root = headerCellRoot();
+    root?.addEventListener("keydown", handleKeyDown);
+    root?.addEventListener("contextmenu", handleContextMenu);
+    root?.addEventListener("dblclick", handleDoubleClick);
+    root?.addEventListener("click", handleClick);
     if (setTimeoutRef.current) {
       // クリック判定待ちタイマーが起動していた場合は再度最新の情報でタイマーをセットしなおす
       setTimeoutRef.current = setTimeout(() => {
@@ -183,10 +194,10 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
     }
 
     return () => {
-      rootRef.current?.parentElement?.removeEventListener("keydown", handleKeyDown);
-      rootRef.current?.parentElement?.removeEventListener("contextmenu", handleContextMenu);
-      rootRef.current?.parentElement?.removeEventListener("dblclick", handleDoubleClick);
-      rootRef.current?.parentElement?.removeEventListener("click", handleClick);
+      root?.removeEventListener("keydown", handleKeyDown);
+      root?.removeEventListener("contextmenu", handleContextMenu);
+      root?.removeEventListener("dblclick", handleDoubleClick);
+      root?.removeEventListener("click", handleClick);
       if (setTimeoutRef.current) {
         clearTimeout(setTimeoutRef.current);
       }
@@ -230,7 +241,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
                   onHeaderEdit(column.idx, (e.target as HTMLTextAreaElement).value);
                 } else if (e.key === "Enter" || e.key === "Tab" || e.key === "Escape") {
                   setIsEditing(false);
-                  rootRef.current?.parentElement?.focus();
+                  headerCellRoot()?.focus();
                 } else if (
                   e.key === "ArrowDown" ||
                   e.key === "ArrowLeft" ||
