@@ -66,6 +66,7 @@ export default function App() {
         preventDefault: true,
       },
     ],
+    element: window as unknown as HTMLElement,
   });
 
   const _handleReloadWebview = () => {
