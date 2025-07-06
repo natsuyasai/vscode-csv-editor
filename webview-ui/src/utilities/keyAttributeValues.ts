@@ -423,5 +423,9 @@ export const ALL_KEY_ATTRIBUTE_VALUES = new Map<Key, Editable>([
   ...NUMERIC_KEYPAD_KEYS,
 ]);
 export function isEditableKey(key: Key): boolean {
-  return ALL_KEY_ATTRIBUTE_VALUES.get(key) === true;
+  const isValidKey = ALL_KEY_ATTRIBUTE_VALUES.get(key);
+  if (isValidKey === undefined) {
+    return true;
+  }
+  return isValidKey;
 }
