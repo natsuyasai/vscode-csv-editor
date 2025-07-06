@@ -3,6 +3,7 @@ import { expect, userEvent, within, waitFor } from "@storybook/test";
 import App from "../../src/App";
 import { setRowSize } from "../utils/rowSizeSelect";
 import { DeleteHeader } from "./App.HeaderActions.stories";
+import { setInitData, waitReadyForGrid, COL_MAX_WITH_HEADER } from "./utils";
 
 const meta: Meta<typeof App> = {
   title: "App/Utilities",
@@ -26,38 +27,6 @@ const meta: Meta<typeof App> = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-// サンプルCSVデータ
-const sampleCSVData = `Name,Age,City,Occupation
-Alice,28,Tokyo,Engineer
-Bob,35,Osaka,Designer
-Charlie,42,Kyoto,Manager
-Diana,31,Yokohama,Developer
-Eve,29,Kobe,Analyst`;
-
-const COL_MAX_WITH_HEADER = 5; // 行番号を含む
-
-function setInitData() {
-  // 初期データを設定
-  window.postMessage(
-    {
-      type: "update",
-      payload: sampleCSVData,
-    },
-    "*"
-  );
-}
-
-function waitReadyForGrid(target: HTMLElement, timeout = 3000) {
-  return waitFor(
-    async () => {
-      const canvas = within(target);
-      const gridcells = canvas.getAllByRole("gridcell");
-      return await expect(gridcells.length > 0).toBeTruthy();
-    },
-    { timeout }
-  );
-}
 
 export const UndoRedo: Story = {
   name: "元に戻す・やり直し",
