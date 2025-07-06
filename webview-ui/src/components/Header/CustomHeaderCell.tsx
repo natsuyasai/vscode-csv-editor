@@ -161,9 +161,20 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
     [sortColumnsForWaitingDoubleClick, onCanSortColumnsChange, onHeaderCellClick, column.key]
   );
 
+  function isHeaderCell(target: HTMLElement) {
+    let element = target;
+    while (element && element !== document.body) {
+      if (element.getAttribute("role") === "columnheader") {
+        return true;
+      }
+      element = element.parentElement as HTMLElement;
+    }
+    return false;
+  }
+
   const handleDoubleClick = useCallback(
     (e: MouseEvent) => {
-      if (e.target !== headerTextRef.current) {
+      if (!isHeaderCell(e.target as HTMLElement)) {
         return;
       }
       if (setTimeoutRef.current) {
