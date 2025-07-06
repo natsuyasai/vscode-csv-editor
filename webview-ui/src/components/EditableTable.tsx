@@ -316,6 +316,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
         stopPropagation: true,
       },
     ],
+    element: window as unknown as HTMLElement,
   });
 
   function setRowSizeFromHeader(size: RowSizeType) {
