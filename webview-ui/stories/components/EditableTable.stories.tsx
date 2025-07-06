@@ -2,8 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { fn, expect, userEvent, within } from "@storybook/test";
 
 import { EditableTable } from "@/components/EditableTable";
-import { Canvas } from "storybook/internal/types";
-import { RowSizeType } from "@/types";
+import { setRowSize } from "../utils/rowSizeSelect";
 
 const meta = {
   title: "components/EditableTable",
@@ -61,20 +60,6 @@ export const IgnoreHeaderRow: Story = {
     await expect(cell[5]).toHaveTextContent("");
   },
 };
-
-async function setRowSize(canvas: Canvas, rowSize: RowSizeType) {
-  const listbox = canvas.getByRole("listbox");
-  const listItem = listbox.shadowRoot?.querySelector("div[class*='select-face']");
-  await expect(listItem).toBeVisible();
-  await userEvent.click(listItem!);
-  const dropdown = listbox.shadowRoot?.querySelector("div[class*=' dropdown ']");
-  await expect(dropdown).toBeVisible();
-  const option = dropdown!.querySelector("ul[class*='options']");
-  const item = [...(option?.querySelectorAll("li") ?? [])].filter(
-    (li) => (li.textContent?.indexOf(rowSize) ?? -1) >= 0
-  )[0];
-  await userEvent.click(item);
-}
 
 export const RowSize_small: Story = {
   play: async ({ canvas }) => setRowSize(canvas, "small"),
@@ -185,7 +170,7 @@ export const FilterToggle: Story = {
     const filterButton = canvas.getByLabelText("toggle filters");
     await expect(filterButton).toBeVisible();
     await userEvent.click(filterButton);
-    
+
     // フィルター入力フィールドが表示されること
     const filterInputs = canvas.queryAllByPlaceholderText("filter...");
     await expect(filterInputs.length).toBeGreaterThan(0);
@@ -197,14 +182,14 @@ export const FilterInput: Story = {
     // フィルターボタンをクリックしてフィルターを表示
     const filterButton = canvas.getByLabelText("toggle filters");
     await userEvent.click(filterButton);
-    
+
     // フィルター入力フィールドに値を入力
     const filterInputs = canvas.getAllByPlaceholderText("filter...");
     const firstFilterInput = filterInputs[1]; // 最初の列（行番号以外）のフィルター
-    
+
     await userEvent.type(firstFilterInput, "1");
     await expect(firstFilterInput).toHaveValue("1");
-    
+
     // クリアボタンが表示されること
     const clearButton = canvas.getByTitle("Clear Filter");
     await expect(clearButton).toBeVisible();
@@ -216,17 +201,17 @@ export const FilterClear: Story = {
     // フィルターボタンをクリックしてフィルターを表示
     const filterButton = canvas.getByLabelText("toggle filters");
     await userEvent.click(filterButton);
-    
+
     // フィルター入力フィールドに値を入力
     const filterInputs = canvas.getAllByPlaceholderText("filter...");
     const firstFilterInput = filterInputs[1];
-    
+
     await userEvent.type(firstFilterInput, "test");
-    
+
     // クリアボタンをクリック
     const clearButton = canvas.getByTitle("Clear Filter");
     await userEvent.click(clearButton);
-    
+
     // 入力値がクリアされること
     await expect(firstFilterInput).toHaveValue("");
   },
@@ -237,14 +222,14 @@ export const FilterKeyboardNavigation: Story = {
     // フィルターボタンをクリックしてフィルターを表示
     const filterButton = canvas.getByLabelText("toggle filters");
     await userEvent.click(filterButton);
-    
+
     // フィルター入力フィールドにフォーカス
     const filterInputs = canvas.getAllByPlaceholderText("filter...");
     const firstFilterInput = filterInputs[1];
-    
+
     await userEvent.click(firstFilterInput);
     await userEvent.type(firstFilterInput, "test");
-    
+
     // Escapeキーでクリア
     await userEvent.keyboard("{Escape}");
     await expect(firstFilterInput).toHaveValue("");
@@ -265,11 +250,11 @@ export const FilterAndSearch: Story = {
     // フィルターボタンをクリックしてフィルターを表示
     const filterButton = canvas.getByLabelText("toggle filters");
     await userEvent.click(filterButton);
-    
+
     // 名前列でAND検索
     const filterInputs = canvas.getAllByPlaceholderText("filter...");
     const nameFilterInput = filterInputs[1]; // 名前列のフィルター
-    
+
     await userEvent.type(nameFilterInput, "田中 太郎");
     await expect(nameFilterInput).toHaveValue("田中 太郎");
   },
@@ -289,11 +274,11 @@ export const FilterOrSearch: Story = {
     // フィルターボタンをクリックしてフィルターを表示
     const filterButton = canvas.getByLabelText("toggle filters");
     await userEvent.click(filterButton);
-    
+
     // 部署列でOR検索
     const filterInputs = canvas.getAllByPlaceholderText("filter...");
     const deptFilterInput = filterInputs[1]; // 部署列のフィルター
-    
+
     await userEvent.type(deptFilterInput, "Engineering or Marketing");
     await expect(deptFilterInput).toHaveValue("Engineering or Marketing");
   },
@@ -313,11 +298,11 @@ export const FilterZenkakuHankaku: Story = {
     // フィルターボタンをクリックしてフィルターを表示
     const filterButton = canvas.getByLabelText("toggle filters");
     await userEvent.click(filterButton);
-    
+
     // 商品名列で全角検索（半角もマッチする）
     const filterInputs = canvas.getAllByPlaceholderText("filter...");
     const productFilterInput = filterInputs[1]; // 商品名列のフィルター
-    
+
     await userEvent.type(productFilterInput, "ProductＡ");
     await expect(productFilterInput).toHaveValue("ProductＡ");
   },
@@ -337,11 +322,11 @@ export const FilterExactMatch: Story = {
     // フィルターボタンをクリックしてフィルターを表示
     const filterButton = canvas.getByLabelText("toggle filters");
     await userEvent.click(filterButton);
-    
+
     // ステータス列でダブルクオート完全一致検索
     const filterInputs = canvas.getAllByPlaceholderText("filter...");
     const statusFilterInput = filterInputs[1]; // ステータス列のフィルター
-    
+
     await userEvent.type(statusFilterInput, '"Active"');
     await expect(statusFilterInput).toHaveValue('"Active"');
   },

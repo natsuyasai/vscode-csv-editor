@@ -33,7 +33,11 @@ const mockColumn: CalculatedColumn<Record<string, string>, unknown> = {
 
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
   <DndProvider backend={HTML5Backend}>
-    <div style={{ display: "grid", width: "200px", height: "60px" }}>{children}</div>
+    <div style={{ display: "grid", width: "200px", height: "60px" }}>
+      <div role="columnheader" tabIndex={0}>
+        {children}
+      </div>
+    </div>
   </DndProvider>
 );
 
@@ -102,20 +106,27 @@ describe("CustomHeaderCell", () => {
 
   it("フィルター以外のエリアからのkeydownイベントは正常に処理されること", () => {
     const mockOnKeyDown = vi.fn();
+    const mockOnHeaderEdit = vi.fn();
 
     render(
       <TestWrapper>
-        <CustomHeaderCell {...defaultProps} showFilters={true} onKeyDown={mockOnKeyDown} />
+        <CustomHeaderCell 
+          {...defaultProps} 
+          showFilters={true} 
+          onKeyDown={mockOnKeyDown}
+          onHeaderEdit={mockOnHeaderEdit}
+        />
       </TestWrapper>
     );
 
-    const headerText = screen.getByText("テストカラム");
+    // columnheaderロール要素（親要素）を取得
+    const headerCell = screen.getByRole("columnheader");
 
-    // ヘッダーテキストエリアでキーダウンイベントを発火
-    fireEvent.keyDown(headerText, { key: "F2" });
+    // columnheader要素でキーダウンイベントを発火
+    fireEvent.keyDown(headerCell, { key: "a" });
 
-    // CustomHeaderCellのonKeyDownが呼ばれることを確認
-    expect(mockOnKeyDown).toHaveBeenCalled();
+    // onHeaderEditが呼ばれることを確認
+    expect(mockOnHeaderEdit).toHaveBeenCalledWith(0, "a");
   });
 
   it("フィルタークリアボタンからのkeydownイベントが除外されること", () => {
@@ -173,14 +184,14 @@ describe("CustomHeaderCell", () => {
       </TestWrapper>
     );
 
-    const headerText = screen.getByText("テストカラム");
+    // columnheaderロール要素（親要素）を取得
+    const headerCell = screen.getByRole("columnheader");
 
-    // F2キーで編集モードに入る
-    fireEvent.keyDown(headerText, { key: "F2" });
+    // Backspaceキーで編集モードに入ることをテスト
+    fireEvent.keyDown(headerCell, { key: "Backspace" });
 
-    // テキストエリアが表示されることを確認
-    const textarea = screen.getByDisplayValue("テストカラム");
-    expect(textarea).toBeInTheDocument();
+    // onHeaderEditが呼ばれることを確認（Backspaceは内容をクリアして編集モードに入る）
+    expect(mockOnHeaderEdit).toHaveBeenCalledWith(0, "");
   });
 
   it("ソート情報が正しく表示されること", () => {
