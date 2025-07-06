@@ -1,5 +1,5 @@
-import { FC } from "react";
 import { VscodeButton } from "@vscode-elements/react-elements";
+import { FC } from "react";
 import { CellAlignment, VerticalAlignment, HorizontalAlignment } from "@/types";
 import styles from "./CellAlignmentControls.module.scss";
 

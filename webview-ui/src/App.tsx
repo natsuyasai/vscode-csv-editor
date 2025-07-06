@@ -1,3 +1,4 @@
+import { InitMessage } from "@message/messageTypeToExtention";
 import { Message, ThemeKind, UpdateMessage } from "@message/messageTypeToWebview";
 import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
@@ -6,7 +7,6 @@ import styles from "./App.module.scss";
 import { EditableTable } from "./components/EditableTable";
 import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
-import { InitMessage } from "@message/messageTypeToExtention";
 
 export default function App() {
   const [rawText, setRawText] = useState("");

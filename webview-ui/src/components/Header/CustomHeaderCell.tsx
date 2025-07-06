@@ -1,10 +1,10 @@
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import { CalculatedColumn, RenderHeaderCellProps, SortColumn } from "react-data-grid";
 import { useDrag, useDrop } from "react-dnd";
-import styles from "./CustomHeaderCell.module.scss";
-import { canEdit } from "@/utilities/keyboard";
-import { FilterCell } from "./FilterCell";
 import { ROW_IDX_KEY } from "@/types";
+import { canEdit } from "@/utilities/keyboard";
+import styles from "./CustomHeaderCell.module.scss";
+import { FilterCell } from "./FilterCell";
 
 interface Props {
   isIgnoreHeaderRow: boolean;

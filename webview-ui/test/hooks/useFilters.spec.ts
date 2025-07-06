@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { act, renderHook } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
 import { useFilters } from "@/hooks/useFilters";
 
 describe("useFilters", () => {

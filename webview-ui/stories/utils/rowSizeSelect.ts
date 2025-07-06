@@ -1,6 +1,6 @@
-import { RowSizeType } from "@/types";
-import { Canvas } from "storybook/internal/types";
 import { expect, userEvent } from "@storybook/test";
+import { Canvas } from "storybook/internal/types";
+import { RowSizeType } from "@/types";
 
 export async function setRowSize(canvas: Canvas, rowSize: RowSizeType) {
   const listbox = canvas.getByRole("listbox");

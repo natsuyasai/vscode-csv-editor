@@ -1,16 +1,3 @@
-import { useCellCopy } from "@/hooks/useCellCopy";
-import { useColumns } from "@/hooks/useColumns";
-import { useContextMenu } from "@/hooks/useContextMenu";
-import { useFilters } from "@/hooks/useFilters";
-import { useHeaderAction } from "@/hooks/useHeaderAction";
-import { useRows } from "@/hooks/useRows";
-import { useSearch } from "@/hooks/useSearch";
-import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
-import { useCellEditStore } from "@/stores/useCellEditStore";
-import { useColumnAlignmentStore } from "@/stores/useColumnAlignmentStore";
-import { useSelectedHeaderStore } from "@/stores/useSelectedHeaderStore";
-import { ROW_ID_KEY, RowSizeType, CellAlignment } from "@/types";
-import { canEdit } from "@/utilities/keyboard";
 import { VscodeDivider } from "@vscode-elements/react-elements";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -27,6 +14,20 @@ import {
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { createPortal } from "react-dom";
+import { DataGridContext } from "@/contexts/dataGridContext";
+import { useCellCopy } from "@/hooks/useCellCopy";
+import { useColumns } from "@/hooks/useColumns";
+import { useContextMenu } from "@/hooks/useContextMenu";
+import { useFilters } from "@/hooks/useFilters";
+import { useHeaderAction } from "@/hooks/useHeaderAction";
+import { useRows } from "@/hooks/useRows";
+import { useSearch } from "@/hooks/useSearch";
+import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
+import { useCellEditStore } from "@/stores/useCellEditStore";
+import { useColumnAlignmentStore } from "@/stores/useColumnAlignmentStore";
+import { useSelectedHeaderStore } from "@/stores/useSelectedHeaderStore";
+import { ROW_ID_KEY, RowSizeType, CellAlignment } from "@/types";
+import { canEdit } from "@/utilities/keyboard";
 import styles from "./EditableTable.module.scss";
 import { Header } from "./Header";
 import { CustomHeaderCell, CustomHeaderCellProps } from "./Header/CustomHeaderCell";
@@ -35,7 +36,6 @@ import { CustomCell, CustomCellProps } from "./Row/CustomCell";
 import { CustomRow, CustomRowProps } from "./Row/CustomRow";
 import { RowContextMenu } from "./Row/RowContextMenu";
 import { Search } from "./Search";
-import { DataGridContext } from "@/contexts/dataGridContext";
 
 interface Props {
   csvArray: Array<Array<string>>;

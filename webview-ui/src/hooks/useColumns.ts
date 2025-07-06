@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from "react";
 import { Column } from "react-data-grid";
 import TextAreaEditor from "@/components/Row/TextAreaEditor";
-import { ROW_IDX_COL } from "@/types";
 import { useColumnAlignmentStore } from "@/stores/useColumnAlignmentStore";
+import { ROW_IDX_COL } from "@/types";
 
 const empty: Column<Record<string, string>>[] = [];
 export function useColumns(csvArray: Array<Array<string>>, isIgnoreHeaderRow: boolean) {
