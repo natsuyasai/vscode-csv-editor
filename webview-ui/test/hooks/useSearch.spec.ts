@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useSearch } from "@/hooks/useSearch";
 import { DataGridHandle } from "react-data-grid";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useSearch } from "@/hooks/useSearch";
 
 describe("useSearch", () => {
   let sortedRows: Array<Record<string, string>>;

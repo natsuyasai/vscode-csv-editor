@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest";
 import { renderHook } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
+import TextAreaEditor from "@/components/Row/TextAreaEditor";
 import { useColumns } from "@/hooks/useColumns";
 import { ROW_IDX_COL } from "@/types";
-import TextAreaEditor from "@/components/Row/TextAreaEditor";
 
 describe("カラムの作成", () => {
   it("データが空の場合は空の行が生成されること", () => {

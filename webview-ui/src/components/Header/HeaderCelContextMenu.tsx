@@ -1,5 +1,5 @@
 import { FC, Ref } from "react";
-import { VscodeContextMenu } from "@vscode-elements/react-elements";
+import { BaseContextMenu, ContextMenuItem } from "../common/BaseContextMenu";
 
 interface HeaderCelContextMenuProps {
   isContextMenuOpen: boolean;
@@ -10,49 +10,27 @@ interface HeaderCelContextMenuProps {
   className?: string;
 }
 
-export const HeaderCelContextMenu: FC<HeaderCelContextMenuProps> = ({
-  isContextMenuOpen,
-  menuRef,
-  contextMenuProps,
-  onSelect,
-  onClose,
-  className,
-}) => {
-  if (!isContextMenuOpen || !contextMenuProps) return null;
+const headerCelMenuData: ContextMenuItem[] = [
+  {
+    label: "Delete HeaderCel",
+    keybinding: "Ctrl+Shift+D",
+    value: "deleteHeaderCel",
+    tabindex: 0,
+  },
+  {
+    label: "Insert HeaderCel Left",
+    keybinding: "Ctrl+Shift+L",
+    value: "insertHeaderCelLeft",
+    tabindex: 1,
+  },
+  {
+    label: "Insert HeaderCel Right",
+    keybinding: "Ctrl+Shift+R",
+    value: "insertHeaderCelRight",
+    tabindex: 2,
+  },
+];
 
-  return (
-    <VscodeContextMenu
-      ref={menuRef as never}
-      show={isContextMenuOpen}
-      className={className}
-      data={[
-        {
-          label: "Delete HeaderCel",
-          keybinding: "Ctrl+Shift+D",
-          value: "deleteHeaderCel",
-          tabindex: 0,
-        },
-        {
-          label: "Insert HeaderCel Left",
-          keybinding: "Ctrl+Shift+L",
-          value: "insertHeaderCelLeft",
-          tabindex: 1,
-        },
-        {
-          label: "Insert HeaderCel Right",
-          keybinding: "Ctrl+Shift+R",
-          value: "insertHeaderCelRight",
-          tabindex: 2,
-        },
-      ]}
-      onVscContextMenuSelect={(item) => {
-        onSelect(item.detail.value);
-        onClose();
-      }}
-      style={{
-        top: contextMenuProps.top,
-        left: contextMenuProps.left,
-      }}
-    />
-  );
+export const HeaderCelContextMenu: FC<HeaderCelContextMenuProps> = (props) => {
+  return <BaseContextMenu {...props} data={headerCelMenuData} />;
 };

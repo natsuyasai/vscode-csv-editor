@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
+import { describe, it, expect, beforeEach } from "vitest";
 import { useSelectedHeaderStore } from "@/stores/useSelectedHeaderStore";
 
 describe("useSelectedHeaderStore", () => {
