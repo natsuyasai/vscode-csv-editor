@@ -1,5 +1,6 @@
 import { VscodeButton, VscodeIcon, VscodeTextfield } from "@vscode-elements/react-elements";
 import { FC, useEffect, useRef, useState } from "react";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import styles from "./Search.module.scss";
 
 interface Props {
@@ -41,20 +42,16 @@ export const Search: FC<Props> = ({
     };
   }, [inputRef]);
 
-  useEffect(() => {
-    function handleKeyDownForRoot(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-    }
-
-    document.body.addEventListener("keydown", handleKeyDownForRoot);
-
-    return () => {
-      document.body.removeEventListener("keydown", handleKeyDownForRoot);
-    };
-  }, [onClose]);
+  // Escapeキーでダイアログを閉じる
+  useKeyboardShortcuts({
+    shortcuts: [
+      {
+        key: "Escape",
+        handler: () => onClose(),
+      },
+    ],
+    element: document.body,
+  });
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") {

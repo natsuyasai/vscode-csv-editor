@@ -5,6 +5,7 @@ import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { useCallback, useEffect, useState } from "react";
 import styles from "./App.module.scss";
 import { EditableTable } from "./components/EditableTable";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
 
@@ -56,21 +57,18 @@ export default function App() {
     });
   }, [rawText]);
 
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      const key = e.key.toUpperCase();
-      if (key === "S" && e.ctrlKey) {
-        e.stopPropagation();
-        handleApply();
-        return;
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [handleApply]);
+  // グローバルキーボードショートカット
+  useKeyboardShortcuts({
+    shortcuts: [
+      {
+        key: "s",
+        ctrl: true,
+        handler: () => handleApply(),
+        stopPropagation: true,
+        preventDefault: true,
+      },
+    ],
+  });
 
   const _handleReloadWebview = () => {
     vscode.postMessage({

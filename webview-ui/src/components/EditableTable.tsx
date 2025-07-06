@@ -1,5 +1,5 @@
 import { VscodeDivider } from "@vscode-elements/react-elements";
-import { FC, useCallback, useEffect, useRef, useState } from "react";
+import { FC, useCallback, useRef, useState } from "react";
 import {
   CalculatedColumn,
   CellClickArgs,
@@ -20,6 +20,7 @@ import { useColumns } from "@/hooks/useColumns";
 import { useContextMenu } from "@/hooks/useContextMenu";
 import { useFilters } from "@/hooks/useFilters";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useRows } from "@/hooks/useRows";
 import { useSearch } from "@/hooks/useSearch";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
@@ -289,37 +290,36 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     }
   }
 
-  useEffect(() => {
-    function handleKeyDownForDocument(e: KeyboardEvent) {
-      const key = e.key.toUpperCase();
-      if (key === "Z" && e.ctrlKey) {
-        e.stopPropagation();
-        undo();
-        return;
-      }
-      if (key === "Y" && e.ctrlKey) {
-        e.stopPropagation();
-        redo();
-        return;
-      }
-      if (key === "F" && e.ctrlKey) {
-        e.stopPropagation();
-        setIsShowSearch((prev) => !prev);
-        return;
-      }
-      if (key === "H" && e.ctrlKey && e.shiftKey) {
-        e.stopPropagation();
-        setShowFilters((prev) => !prev);
-        return;
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDownForDocument);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDownForDocument);
-    };
-  }, [undo, redo]);
+  // グローバルキーボードショートカット
+  useKeyboardShortcuts({
+    shortcuts: [
+      {
+        key: "z",
+        ctrl: true,
+        handler: () => undo(),
+        stopPropagation: true,
+      },
+      {
+        key: "y",
+        ctrl: true,
+        handler: () => redo(),
+        stopPropagation: true,
+      },
+      {
+        key: "f",
+        ctrl: true,
+        handler: () => setIsShowSearch((prev) => !prev),
+        stopPropagation: true,
+      },
+      {
+        key: "h",
+        ctrl: true,
+        shift: true,
+        handler: () => setShowFilters((prev) => !prev),
+        stopPropagation: true,
+      },
+    ],
+  });
 
   function setRowSizeFromHeader(size: RowSizeType) {
     switch (size) {
