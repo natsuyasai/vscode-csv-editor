@@ -1,6 +1,6 @@
-import { ROW_ID_KEY, ROW_IDX_KEY } from "@/types";
 import { useCallback, useMemo, useState } from "react";
 import { SortColumn } from "react-data-grid";
+import { ROW_ID_KEY, ROW_IDX_KEY } from "@/types";
 
 const empty: Record<string, string>[] = [];
 export function useRows(csvArray: Array<Array<string>>, isIgnoreHeaderRow: boolean) {

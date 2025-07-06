@@ -1,6 +1,6 @@
+import { act, renderHook, RenderHookResult } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
-import { act, renderHook, RenderHookResult } from "@testing-library/react";
 
 describe("useUpdateCsvArray", () => {
   let csvArray: Array<Array<string>>;
@@ -350,6 +350,7 @@ describe("useUpdateCsvArray", () => {
       act(() => hooks.result.current.redo());
       expect(setCSVArray).toHaveBeenLastCalledWith([
         ["col0", "col1", "col2"],
+        ["", "", ""],
         ["a", "b", "c"],
         ["d", "e", "f"],
       ]);

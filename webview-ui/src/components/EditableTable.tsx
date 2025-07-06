@@ -1,18 +1,5 @@
-import { useCellCopy } from "@/hooks/useCellCopy";
-import { useColumns } from "@/hooks/useColumns";
-import { useContextMenu } from "@/hooks/useContextMenu";
-import { useFilters } from "@/hooks/useFilters";
-import { useHeaderAction } from "@/hooks/useHeaderAction";
-import { useRows } from "@/hooks/useRows";
-import { useSearch } from "@/hooks/useSearch";
-import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
-import { useCellEditStore } from "@/stores/useCellEditStore";
-import { useColumnAlignmentStore } from "@/stores/useColumnAlignmentStore";
-import { useSelectedHeaderStore } from "@/stores/useSelectedHeaderStore";
-import { ROW_ID_KEY, RowSizeType, CellAlignment } from "@/types";
-import { canEdit } from "@/utilities/keyboard";
 import { VscodeDivider } from "@vscode-elements/react-elements";
-import { FC, useCallback, useEffect, useRef, useState } from "react";
+import { FC, useCallback, useRef, useState } from "react";
 import {
   CalculatedColumn,
   CellClickArgs,
@@ -26,16 +13,27 @@ import {
 } from "react-data-grid";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { createPortal } from "react-dom";
+import { DataGridContext } from "@/contexts/dataGridContext";
+import { useCellCopy } from "@/hooks/useCellCopy";
+import { useColumns } from "@/hooks/useColumns";
+import { useContextMenu } from "@/hooks/useContextMenu";
+import { useFilters } from "@/hooks/useFilters";
+import { useHeaderAction } from "@/hooks/useHeaderAction";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useRows } from "@/hooks/useRows";
+import { useSearch } from "@/hooks/useSearch";
+import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
+import { useCellEditStore } from "@/stores/useCellEditStore";
+import { useColumnAlignmentStore } from "@/stores/useColumnAlignmentStore";
+import { useSelectedHeaderStore } from "@/stores/useSelectedHeaderStore";
+import { ROW_ID_KEY, RowSizeType, CellAlignment } from "@/types";
+import { canEdit } from "@/utilities/keyboard";
+import { PortalManager } from "./EditableTable/PortalManager";
 import styles from "./EditableTable.module.scss";
 import { Header } from "./Header";
 import { CustomHeaderCell, CustomHeaderCellProps } from "./Header/CustomHeaderCell";
-import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
 import { CustomCell, CustomCellProps } from "./Row/CustomCell";
 import { CustomRow, CustomRowProps } from "./Row/CustomRow";
-import { RowContextMenu } from "./Row/RowContextMenu";
-import { Search } from "./Search";
-import { DataGridContext } from "@/contexts/dataGridContext";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -164,7 +162,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     event.preventGridDefault();
     event.preventDefault();
     setRowContextMenuProps({
-      itemIdx: rows.indexOf(args.row),
+      itemIdx: rows.findIndex((item) => item[ROW_ID_KEY] === args.row[ROW_ID_KEY]),
       top: event.clientY,
       left: event.clientX,
     });
@@ -289,37 +287,37 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     }
   }
 
-  useEffect(() => {
-    function handleKeyDownForDocument(e: KeyboardEvent) {
-      const key = e.key.toUpperCase();
-      if (key === "Z" && e.ctrlKey) {
-        e.stopPropagation();
-        undo();
-        return;
-      }
-      if (key === "Y" && e.ctrlKey) {
-        e.stopPropagation();
-        redo();
-        return;
-      }
-      if (key === "F" && e.ctrlKey) {
-        e.stopPropagation();
-        setIsShowSearch((prev) => !prev);
-        return;
-      }
-      if (key === "H" && e.ctrlKey && e.shiftKey) {
-        e.stopPropagation();
-        setShowFilters((prev) => !prev);
-        return;
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDownForDocument);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDownForDocument);
-    };
-  }, [undo, redo]);
+  // グローバルキーボードショートカット
+  useKeyboardShortcuts({
+    shortcuts: [
+      {
+        key: "z",
+        ctrl: true,
+        handler: () => undo(),
+        stopPropagation: true,
+      },
+      {
+        key: "y",
+        ctrl: true,
+        handler: () => redo(),
+        stopPropagation: true,
+      },
+      {
+        key: "f",
+        ctrl: true,
+        handler: () => setIsShowSearch((prev) => !prev),
+        stopPropagation: true,
+      },
+      {
+        key: "h",
+        ctrl: true,
+        shift: true,
+        handler: () => setShowFilters((prev) => !prev),
+        stopPropagation: true,
+      },
+    ],
+    element: window as unknown as HTMLElement,
+  });
 
   function setRowSizeFromHeader(size: RowSizeType) {
     switch (size) {
@@ -501,46 +499,39 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
               resizable: true,
             }}
           />
-          {isShowSearch &&
-            createPortal(
-              <Search
-                isMatching={isMatched}
-                machedCount={machedCount}
-                searchedSelectedItemIdx={searchedSelectedItemIdx}
-                onSearch={(text) => handleSearch(text)}
-                onClose={() => {
-                  setIsShowSearch(false);
-                  handleClose();
-                }}
-                onNext={() => handleNextSearch()}
-                onPrevious={() => handlePreviousSearch()}
-              />,
-              document.body
-            )}
-          {isRowContextMenuOpen &&
-            createPortal(
-              <RowContextMenu
-                isContextMenuOpen={isRowContextMenuOpen}
-                menuRef={rowMenuRef}
-                contextMenuProps={rowContextMenuProps}
-                className={styles.contextMenu}
-                onSelect={handleSelectRowContextMenu}
-                onClose={() => setRowContextMenuProps(null)}
-              />,
-              document.body
-            )}
-          {isHeaderContextMenuOpen &&
-            createPortal(
-              <HeaderCelContextMenu
-                isContextMenuOpen={isHeaderContextMenuOpen}
-                menuRef={headerMenuRef}
-                contextMenuProps={headerContextMenuProps}
-                className={styles.contextMenu}
-                onSelect={handleSelectHeaderContextMenu}
-                onClose={() => setHeaderContextMenuProps(null)}
-              />,
-              document.body
-            )}
+          <PortalManager
+            isShowSearch={isShowSearch}
+            searchProps={{
+              isMatching: isMatched,
+              machedCount,
+              searchedSelectedItemIdx,
+              onSearch: handleSearch,
+              onClose: () => {
+                setIsShowSearch(false);
+                handleClose();
+              },
+              onNext: handleNextSearch,
+              onPrevious: handlePreviousSearch,
+            }}
+            isRowContextMenuOpen={isRowContextMenuOpen}
+            rowContextMenuProps={{
+              isContextMenuOpen: isRowContextMenuOpen,
+              menuRef: rowMenuRef,
+              contextMenuProps: rowContextMenuProps,
+              className: styles.contextMenu,
+              onSelect: handleSelectRowContextMenu,
+              onClose: () => setRowContextMenuProps(null),
+            }}
+            isHeaderContextMenuOpen={isHeaderContextMenuOpen}
+            headerContextMenuProps={{
+              isContextMenuOpen: isHeaderContextMenuOpen,
+              menuRef: headerMenuRef,
+              contextMenuProps: headerContextMenuProps,
+              className: styles.contextMenu,
+              onSelect: handleSelectHeaderContextMenu,
+              onClose: () => setHeaderContextMenuProps(null),
+            }}
+          />
         </DataGridContext.Provider>
       </DndProvider>
     </>

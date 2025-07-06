@@ -1,6 +1,6 @@
+import { VscodeIcon } from "@vscode-elements/react-elements";
 import { FC, useState } from "react";
 import styles from "./FilterCell.module.scss";
-import { VscodeIcon } from "@vscode-elements/react-elements";
 
 interface Props {
   columnKey: string;
