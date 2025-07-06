@@ -1,5 +1,5 @@
-import { FC, Ref } from "react";
 import { VscodeContextMenu } from "@vscode-elements/react-elements";
+import { FC, Ref } from "react";
 
 interface HeaderCelContextMenuProps {
   isContextMenuOpen: boolean;

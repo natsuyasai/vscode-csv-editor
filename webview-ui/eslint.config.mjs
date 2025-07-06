@@ -3,6 +3,7 @@ import eslint from "@eslint/js";
 import pluginTypeScript from "@typescript-eslint/eslint-plugin";
 import typescriptParser from "@typescript-eslint/parser";
 import pluginPrettier from "eslint-config-prettier";
+import pluginImport from "eslint-plugin-import";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
@@ -61,15 +62,19 @@ const reactConfig = {
       version: "detect",
     },
     "import/resolver": {
+      typescript: {
+        alwaysTryTypes: true,
+        project: "./tsconfig.json",
+      },
       node: {
         extensions: [".js", ".jsx", ".ts", ".tsx"],
       },
-      typescript: {},
     },
   },
   plugins: {
     "react": pluginReact,
     "react-hooks": pluginReactHooks,
+    "import": pluginImport,
   },
   rules: {
     ...pluginReact.configs.recommended.rules,
@@ -78,6 +83,21 @@ const reactConfig = {
     "react/react-in-jsx-scope": "off",
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn",
+    "import/order": ["error", {
+      "groups": [
+        "builtin",
+        "external", 
+        "internal",
+        "parent",
+        "sibling",
+        "index"
+      ],
+      "newlines-between": "never",
+      "alphabetize": {
+        "order": "asc",
+        "caseInsensitive": true
+      }
+    }],
   },
 };
 

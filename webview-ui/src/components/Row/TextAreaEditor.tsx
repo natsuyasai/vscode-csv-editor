@@ -1,8 +1,8 @@
 import { useContext, useEffect, useRef } from "react";
 import { RenderEditCellProps } from "react-data-grid";
-import styles from "./TextAreaEditor.module.scss";
-import { useCellEditStore } from "@/stores/useCellEditStore";
 import { DataGridContext } from "@/contexts/dataGridContext";
+import { useCellEditStore } from "@/stores/useCellEditStore";
+import styles from "./TextAreaEditor.module.scss";
 
 export default function TextAreaEditor({
   row,

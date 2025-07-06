@@ -1,4 +1,3 @@
-import { RowSizeType, CellAlignment } from "@/types";
 import {
   VscodeButton,
   VscodeCheckbox,
@@ -8,9 +7,10 @@ import {
   VscodeSingleSelect,
 } from "@vscode-elements/react-elements";
 import { FC } from "react";
-import styles from "./Header.module.scss";
-import { CellAlignmentControls } from "./Header/CellAlignmentControls";
 import { useAlignmentModeStore } from "@/stores/useAlignmentModeStore";
+import { RowSizeType, CellAlignment } from "@/types";
+import { CellAlignmentControls } from "./Header/CellAlignmentControls";
+import styles from "./Header.module.scss";
 
 interface Props {
   isIgnoreHeaderRow: boolean;

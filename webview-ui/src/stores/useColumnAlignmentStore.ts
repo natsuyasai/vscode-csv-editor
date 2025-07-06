@@ -1,5 +1,5 @@
-import { CellAlignment, ColumnAlignments } from "@/types";
 import { create } from "zustand";
+import { CellAlignment, ColumnAlignments } from "@/types";
 
 interface ColumnAlignmentState {
   columnAlignments: ColumnAlignments;

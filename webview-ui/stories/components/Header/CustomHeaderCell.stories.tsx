@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
-import { CustomHeaderCell } from "@/components/Header/CustomHeaderCell";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { CustomHeaderCell } from "@/components/Header/CustomHeaderCell";
 
 const meta = {
   title: "components/CustomHeaderCell",

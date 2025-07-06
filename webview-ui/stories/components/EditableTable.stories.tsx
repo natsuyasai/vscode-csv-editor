@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn, expect, userEvent, within } from "@storybook/test";
-
 import { EditableTable } from "@/components/EditableTable";
 import { setRowSize } from "../utils/rowSizeSelect";
 

@@ -1,6 +1,6 @@
-import { ROW_ID_KEY, ROW_IDX_KEY } from "@/types";
 import { FC, useMemo, useRef, useState } from "react";
 import { Cell, CellRendererProps } from "react-data-grid";
+import { ROW_ID_KEY, ROW_IDX_KEY } from "@/types";
 import styles from "./CustomCell.module.scss";
 
 interface Props {
