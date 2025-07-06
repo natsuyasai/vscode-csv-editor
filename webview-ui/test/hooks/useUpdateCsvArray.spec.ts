@@ -350,6 +350,7 @@ describe("useUpdateCsvArray", () => {
       act(() => hooks.result.current.redo());
       expect(setCSVArray).toHaveBeenLastCalledWith([
         ["col0", "col1", "col2"],
+        ["", "", ""],
         ["a", "b", "c"],
         ["d", "e", "f"],
       ]);
