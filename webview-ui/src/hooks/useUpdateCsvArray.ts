@@ -1,37 +1,28 @@
-import { useMemo, useState } from "react";
+import { useHistory } from "./useHistory";
 
 export function useUpdateCsvArray(
   csvArray: Array<Array<string>>,
   setCSVArray: (csv: Array<Array<string>>) => void,
   isIgnoreHeaderRow: boolean
 ) {
-  const [history, setHistory] = useState<Array<Array<Array<string>>>>([]);
-  const [poppedHistory, setPoppedHistory] = useState<Array<Array<Array<string>>>>([]);
-  const isEnabledUndo = useMemo(() => history.length > 0, [history]);
-  const isEnabledRedo = useMemo(() => poppedHistory.length > 0, [poppedHistory]);
+  const {
+    setDataAndPushHistory,
+    undo: undoHistory,
+    redo: redoHistory,
+    isEnabledUndo,
+    isEnabledRedo,
+  } = useHistory(setCSVArray);
 
   function undo() {
-    const lastItem = history.slice(-1)[0];
-    const newHistroy = history.slice(0, -1);
-    if (lastItem) {
-      setPoppedHistory([...poppedHistory, csvArray]);
-      setCSVArray(lastItem);
-      setHistory(newHistroy);
-    }
+    undoHistory(csvArray);
   }
 
   function redo() {
-    const lastItem = poppedHistory.slice(-1)[0];
-    const newHistroy = poppedHistory.slice(0, -1);
-    if (lastItem) {
-      setCSVArrayAndPushHistory(lastItem);
-      setPoppedHistory(newHistroy);
-    }
+    redoHistory(csvArray);
   }
 
   function setCSVArrayAndPushHistory(newArray: Array<Array<string>>) {
-    setHistory((prevHistory) => [...prevHistory, csvArray]);
-    setCSVArray(newArray);
+    setDataAndPushHistory(newArray, csvArray);
   }
 
   function insertRow(insertRowIdx: number) {
