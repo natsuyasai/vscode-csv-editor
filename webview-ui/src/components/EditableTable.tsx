@@ -162,7 +162,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     event.preventGridDefault();
     event.preventDefault();
     setRowContextMenuProps({
-      itemIdx: rows.indexOf(args.row),
+      itemIdx: rows.findIndex((item) => item[ROW_ID_KEY] === args.row[ROW_ID_KEY]),
       top: event.clientY,
       left: event.clientX,
     });
