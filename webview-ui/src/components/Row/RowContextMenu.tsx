@@ -1,5 +1,5 @@
-import { VscodeContextMenu } from "@vscode-elements/react-elements";
 import { FC } from "react";
+import { BaseContextMenu, ContextMenuItem } from "../common/BaseContextMenu";
 
 interface RowContextMenuProps {
   isContextMenuOpen: boolean;
@@ -10,51 +10,27 @@ interface RowContextMenuProps {
   className?: string;
 }
 
-export const RowContextMenu: FC<RowContextMenuProps> = ({
-  isContextMenuOpen,
-  menuRef,
-  contextMenuProps,
-  onSelect,
-  onClose,
-  className,
-}) => {
-  if (!isContextMenuOpen || !contextMenuProps) {
-    return null;
-  }
+const rowMenuData: ContextMenuItem[] = [
+  {
+    label: "Delete Row",
+    keybinding: "Ctrl+Shift+D",
+    value: "deleteRow",
+    tabindex: 0,
+  },
+  {
+    label: "Insert Row Above",
+    keybinding: "Ctrl+Shift+I",
+    value: "insertRowAbove",
+    tabindex: 1,
+  },
+  {
+    label: "Insert Row Below",
+    keybinding: "Ctrl+Shift+B",
+    value: "insertRowBelow",
+    tabindex: 2,
+  },
+];
 
-  return (
-    <VscodeContextMenu
-      ref={menuRef as never}
-      show={isContextMenuOpen}
-      className={className}
-      data={[
-        {
-          label: "Delete Row",
-          keybinding: "Ctrl+Shift+D",
-          value: "deleteRow",
-          tabindex: 0,
-        },
-        {
-          label: "Insert Row Above",
-          keybinding: "Ctrl+Shift+I",
-          value: "insertRowAbove",
-          tabindex: 1,
-        },
-        {
-          label: "Insert Row Below",
-          keybinding: "Ctrl+Shift+B",
-          value: "insertRowBelow",
-          tabindex: 2,
-        },
-      ]}
-      onVscContextMenuSelect={(item) => {
-        onSelect(item.detail.value);
-        onClose();
-      }}
-      style={{
-        top: contextMenuProps.top,
-        left: contextMenuProps.left,
-      }}
-    />
-  );
+export const RowContextMenu: FC<RowContextMenuProps> = (props) => {
+  return <BaseContextMenu {...props} data={rowMenuData} />;
 };
