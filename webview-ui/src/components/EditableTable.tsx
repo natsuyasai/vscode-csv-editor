@@ -13,7 +13,6 @@ import {
 } from "react-data-grid";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { createPortal } from "react-dom";
 import { DataGridContext } from "@/contexts/dataGridContext";
 import { useCellCopy } from "@/hooks/useCellCopy";
 import { useColumns } from "@/hooks/useColumns";
@@ -29,14 +28,12 @@ import { useColumnAlignmentStore } from "@/stores/useColumnAlignmentStore";
 import { useSelectedHeaderStore } from "@/stores/useSelectedHeaderStore";
 import { ROW_ID_KEY, RowSizeType, CellAlignment } from "@/types";
 import { canEdit } from "@/utilities/keyboard";
+import { PortalManager } from "./EditableTable/PortalManager";
 import styles from "./EditableTable.module.scss";
 import { Header } from "./Header";
 import { CustomHeaderCell, CustomHeaderCellProps } from "./Header/CustomHeaderCell";
-import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
 import { CustomCell, CustomCellProps } from "./Row/CustomCell";
 import { CustomRow, CustomRowProps } from "./Row/CustomRow";
-import { RowContextMenu } from "./Row/RowContextMenu";
-import { Search } from "./Search";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -501,46 +498,39 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
               resizable: true,
             }}
           />
-          {isShowSearch &&
-            createPortal(
-              <Search
-                isMatching={isMatched}
-                machedCount={machedCount}
-                searchedSelectedItemIdx={searchedSelectedItemIdx}
-                onSearch={(text) => handleSearch(text)}
-                onClose={() => {
-                  setIsShowSearch(false);
-                  handleClose();
-                }}
-                onNext={() => handleNextSearch()}
-                onPrevious={() => handlePreviousSearch()}
-              />,
-              document.body
-            )}
-          {isRowContextMenuOpen &&
-            createPortal(
-              <RowContextMenu
-                isContextMenuOpen={isRowContextMenuOpen}
-                menuRef={rowMenuRef}
-                contextMenuProps={rowContextMenuProps}
-                className={styles.contextMenu}
-                onSelect={handleSelectRowContextMenu}
-                onClose={() => setRowContextMenuProps(null)}
-              />,
-              document.body
-            )}
-          {isHeaderContextMenuOpen &&
-            createPortal(
-              <HeaderCelContextMenu
-                isContextMenuOpen={isHeaderContextMenuOpen}
-                menuRef={headerMenuRef}
-                contextMenuProps={headerContextMenuProps}
-                className={styles.contextMenu}
-                onSelect={handleSelectHeaderContextMenu}
-                onClose={() => setHeaderContextMenuProps(null)}
-              />,
-              document.body
-            )}
+          <PortalManager
+            isShowSearch={isShowSearch}
+            searchProps={{
+              isMatching: isMatched,
+              machedCount,
+              searchedSelectedItemIdx,
+              onSearch: handleSearch,
+              onClose: () => {
+                setIsShowSearch(false);
+                handleClose();
+              },
+              onNext: handleNextSearch,
+              onPrevious: handlePreviousSearch,
+            }}
+            isRowContextMenuOpen={isRowContextMenuOpen}
+            rowContextMenuProps={{
+              isContextMenuOpen: isRowContextMenuOpen,
+              menuRef: rowMenuRef,
+              contextMenuProps: rowContextMenuProps,
+              className: styles.contextMenu,
+              onSelect: handleSelectRowContextMenu,
+              onClose: () => setRowContextMenuProps(null),
+            }}
+            isHeaderContextMenuOpen={isHeaderContextMenuOpen}
+            headerContextMenuProps={{
+              isContextMenuOpen: isHeaderContextMenuOpen,
+              menuRef: headerMenuRef,
+              contextMenuProps: headerContextMenuProps,
+              className: styles.contextMenu,
+              onSelect: handleSelectHeaderContextMenu,
+              onClose: () => setHeaderContextMenuProps(null),
+            }}
+          />
         </DataGridContext.Provider>
       </DndProvider>
     </>
