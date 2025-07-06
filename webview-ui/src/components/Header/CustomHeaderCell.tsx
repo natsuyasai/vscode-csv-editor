@@ -93,12 +93,14 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
         return;
       }
 
-      if (e.key === "F2") {
-        setIsEditing(true);
-      } else if (e.key === "Backspace") {
-        setIsEditing(true);
-      } else if (e.key === "Delete") {
+      // TextAreaEditor.tsxと合わせる
+      if (e.key === "Delete") {
         onHeaderEdit(column.idx, "");
+      } else if (e.key === "Backspace") {
+        onHeaderEdit(column.idx, "");
+        setIsEditing(true);
+      } else if (e.key === "F2") {
+        setIsEditing(true);
       } else if (!isEditing && canEdit(e)) {
         // 編集モードに移行することで、onHeaderEdit分と通常入力分の2回入力が発生してしまうため止める
         e.preventDefault();

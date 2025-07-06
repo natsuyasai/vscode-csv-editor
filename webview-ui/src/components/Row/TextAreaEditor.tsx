@@ -24,11 +24,14 @@ export default function TextAreaEditor({
   }, []);
 
   useEffect(() => {
+    // CustomHeaderCell.tsxと合わせる
     if (initialCellKey === "Delete") {
       onRowChange({ ...row, [column.key]: "" }, true);
       onClose(true, true);
     } else if (initialCellKey === "Backspace") {
       onRowChange({ ...row, [column.key]: "" });
+    } else if (initialCellKey === "F2") {
+      // do nathing
     } else if (initialCellKey !== null) {
       onRowChange({ ...row, [column.key]: initialCellKey });
     }
