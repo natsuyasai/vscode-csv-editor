@@ -1,4 +1,5 @@
-import { useState, useRef, useLayoutEffect } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useEventListener } from "./useEventListener";
 
 interface DefaultContextMenuProps {
   itemIdx: number;
@@ -11,24 +12,14 @@ export function useContextMenu<T extends DefaultContextMenuProps = DefaultContex
   const menuRef = useRef<HTMLElement>(null);
   const isContextMenuOpen = contextMenuProps !== null;
 
-  useLayoutEffect(() => {
-    if (!isContextMenuOpen) {
+  const onMouseDown = useCallback((event: MouseEvent) => {
+    if (event.target instanceof Node && menuRef.current?.contains(event.target)) {
       return;
     }
+    setContextMenuProps(null);
+  }, []);
 
-    function onMouseDown(event: MouseEvent) {
-      if (event.target instanceof Node && menuRef.current?.contains(event.target)) {
-        return;
-      }
-      setContextMenuProps(null);
-    }
-
-    addEventListener("mousedown", onMouseDown);
-
-    return () => {
-      removeEventListener("mousedown", onMouseDown);
-    };
-  }, [isContextMenuOpen]);
+  useEventListener("mousedown", onMouseDown, document, { enabled: isContextMenuOpen });
 
   return { contextMenuProps, setContextMenuProps, menuRef, isContextMenuOpen };
 }

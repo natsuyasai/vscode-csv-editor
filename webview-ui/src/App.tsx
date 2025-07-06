@@ -5,6 +5,7 @@ import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { useCallback, useEffect, useState } from "react";
 import styles from "./App.module.scss";
 import { EditableTable } from "./components/EditableTable";
+import { useEventListener } from "./hooks/useEventListener";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { debounce } from "./utilities/debounce";
 import { vscode } from "./utilities/vscode";
@@ -14,40 +15,37 @@ export default function App() {
   const [csvArray, setCSVArray] = useState<Array<Array<string>>>([]);
   const [theme, setTheme] = useState<ThemeKind>("light");
 
-  useEffect(() => {
-    const handleMessagesFromExtension = (event: MessageEvent<Message>) => {
-      const message = event.data satisfies Message;
-      // console.log("Received message from extension:", message);
-      switch (message.type) {
-        case "init":
-        case "update":
-          {
-            const updateMessage = message as UpdateMessage;
-            debounce(() => {
-              updateCSVFromExtension(updateMessage.payload);
-            })();
-          }
-          break;
-        case "updateTheme":
-          {
-            const theme = event.data.payload as ThemeKind;
-            setTheme(theme);
-          }
-          break;
-        default:
-          console.log(`Unknown command: ${message.type as string}`);
-          break;
-      }
-    };
-    window.addEventListener("message", handleMessagesFromExtension);
+  const handleMessagesFromExtension = useCallback((event: MessageEvent<Message>) => {
+    const message = event.data satisfies Message;
+    // console.log("Received message from extension:", message);
+    switch (message.type) {
+      case "init":
+      case "update":
+        {
+          const updateMessage = message as UpdateMessage;
+          debounce(() => {
+            updateCSVFromExtension(updateMessage.payload);
+          })();
+        }
+        break;
+      case "updateTheme":
+        {
+          const theme = event.data.payload as ThemeKind;
+          setTheme(theme);
+        }
+        break;
+      default:
+        console.log(`Unknown command: ${message.type as string}`);
+        break;
+    }
+  }, []);
 
+  useEventListener("message", handleMessagesFromExtension, window);
+
+  useEffect(() => {
     vscode.postMessage({
       type: "init",
     } satisfies InitMessage);
-
-    return () => {
-      window.removeEventListener("message", handleMessagesFromExtension);
-    };
   }, []);
 
   const handleApply = useCallback(() => {
