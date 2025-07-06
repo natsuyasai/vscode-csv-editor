@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within, waitFor } from "@storybook/test";
 import App from "../../src/App";
+import { setInitData, waitReadyForGrid } from "./utils";
 
 const meta: Meta<typeof App> = {
   title: "App/HeaderEditing",
@@ -24,36 +25,6 @@ const meta: Meta<typeof App> = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-// サンプルCSVデータ
-const sampleCSVData = `Name,Age,City,Occupation
-Alice,28,Tokyo,Engineer
-Bob,35,Osaka,Designer
-Charlie,42,Kyoto,Manager
-Diana,31,Yokohama,Developer
-Eve,29,Kobe,Analyst`;
-
-function setInitData() {
-  // 初期データを設定
-  window.postMessage(
-    {
-      type: "update",
-      payload: sampleCSVData,
-    },
-    "*"
-  );
-}
-
-function waitReadyForGrid(target: HTMLElement, timeout = 3000) {
-  return waitFor(
-    async () => {
-      const canvas = within(target);
-      const gridcells = canvas.getAllByRole("gridcell");
-      return await expect(gridcells.length > 0).toBeTruthy();
-    },
-    { timeout }
-  );
-}
 
 export const HeaderEditingFunctionality: Story = {
   name: "ヘッダーセル編集機能",
