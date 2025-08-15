@@ -1,16 +1,5 @@
-import { useCellCopy } from "@/hooks/useCellCopy";
-import { useColumns } from "@/hooks/useColumns";
-import { useContextMenu } from "@/hooks/useContextMenu";
-import { useFilters } from "@/hooks/useFilters";
-import { useHeaderAction } from "@/hooks/useHeaderAction";
-import { useRows } from "@/hooks/useRows";
-import { useSearch } from "@/hooks/useSearch";
-import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
-import { useCellEditStore } from "@/stores/useCellEditStore";
-import { ROW_ID_KEY } from "@/types";
-import { canEdit } from "@/utilities/keyboard";
 import { VscodeDivider } from "@vscode-elements/react-elements";
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FC, useCallback, useRef, useState } from "react";
 import {
   CalculatedColumn,
   CellClickArgs,
@@ -24,16 +13,27 @@ import {
 } from "react-data-grid";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { createPortal } from "react-dom";
+import { DataGridContext } from "@/contexts/dataGridContext";
+import { useCellCopy } from "@/hooks/useCellCopy";
+import { useColumns } from "@/hooks/useColumns";
+import { useContextMenu } from "@/hooks/useContextMenu";
+import { useFilters } from "@/hooks/useFilters";
+import { useHeaderAction } from "@/hooks/useHeaderAction";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useRows } from "@/hooks/useRows";
+import { useSearch } from "@/hooks/useSearch";
+import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
+import { useCellEditStore } from "@/stores/useCellEditStore";
+import { useColumnAlignmentStore } from "@/stores/useColumnAlignmentStore";
+import { useSelectedHeaderStore } from "@/stores/useSelectedHeaderStore";
+import { ROW_ID_KEY, RowSizeType, CellAlignment } from "@/types";
+import { canEdit } from "@/utilities/keyboard";
+import { PortalManager } from "./EditableTable/PortalManager";
 import styles from "./EditableTable.module.scss";
 import { Header } from "./Header";
 import { CustomHeaderCell, CustomHeaderCellProps } from "./Header/CustomHeaderCell";
-import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
 import { CustomCell, CustomCellProps } from "./Row/CustomCell";
 import { CustomRow, CustomRowProps } from "./Row/CustomRow";
-import { RowContextMenu } from "./Row/RowContextMenu";
-import { Search } from "./Search";
-import { DataGridContext } from "@/contexts/dataGridContext";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -89,6 +89,11 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     isEnabledRedo,
   } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
 
+  const setColumnAlignment = useColumnAlignmentStore((state) => state.setColumnAlignment);
+  const getColumnAlignment = useColumnAlignmentStore((state) => state.getColumnAlignment);
+  const selectedColumnKey = useSelectedHeaderStore((state) => state.selectedColumnKey);
+  const setSelectedColumnKey = useSelectedHeaderStore((state) => state.setSelectedColumnKey);
+
   const gridRef = useRef<DataGridHandle>(null);
   const [isShowSearch, setIsShowSearch] = useState(false);
   const {
@@ -136,6 +141,20 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     }
   }
 
+  function handleHeaderAlignmentChange(alignment: CellAlignment) {
+    if (selectedColumnKey) {
+      setColumnAlignment(selectedColumnKey, alignment);
+    }
+  }
+
+  function handleHeaderCellClick(columnKey: string | null) {
+    setSelectedColumnKey(columnKey);
+  }
+
+  const handleHeaderClickOutside = useCallback(() => {
+    setSelectedColumnKey(null);
+  }, [setSelectedColumnKey]);
+
   function handleCellContextMenu(
     args: CellClickArgs<NoInfer<Record<string, string>>, unknown>,
     event: CellMouseEvent
@@ -143,7 +162,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     event.preventGridDefault();
     event.preventDefault();
     setRowContextMenuProps({
-      itemIdx: rows.indexOf(args.row),
+      itemIdx: rows.findIndex((item) => item[ROW_ID_KEY] === args.row[ROW_ID_KEY]),
       top: event.clientY,
       left: event.clientX,
     });
@@ -180,6 +199,11 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
       idx: args.column.idx,
       rowIdx: args.rowIdx,
     });
+
+    // データセルにフォーカスが移動した場合、選択中のヘッダー列をクリア
+    // （ヘッダーセルの場合はクリアしない）
+    setSelectedColumnKey(null);
+
     if (args.mode === "EDIT") {
       return;
     }
@@ -263,58 +287,69 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
     }
   }
 
-  useEffect(() => {
-    function handleKeyDownForDocument(e: KeyboardEvent) {
-      const key = e.key.toUpperCase();
-      if (key === "Z" && e.ctrlKey) {
-        e.stopPropagation();
-        undo();
-        return;
-      }
-      if (key === "Y" && e.ctrlKey) {
-        e.stopPropagation();
-        redo();
-        return;
-      }
-      if (key === "F" && e.ctrlKey) {
-        e.stopPropagation();
-        setIsShowSearch((prev) => !prev);
-        return;
-      }
-      if (key === "H" && e.ctrlKey && e.shiftKey) {
-        e.stopPropagation();
-        setShowFilters((prev) => !prev);
-        return;
-      }
-    }
+  // グローバルキーボードショートカット
+  useKeyboardShortcuts({
+    shortcuts: [
+      {
+        key: "z",
+        ctrl: true,
+        handler: () => undo(),
+        stopPropagation: true,
+      },
+      {
+        key: "y",
+        ctrl: true,
+        handler: () => redo(),
+        stopPropagation: true,
+      },
+      {
+        key: "f",
+        ctrl: true,
+        handler: () => setIsShowSearch((prev) => !prev),
+        stopPropagation: true,
+      },
+      {
+        key: "h",
+        ctrl: true,
+        shift: true,
+        handler: () => setShowFilters((prev) => !prev),
+        stopPropagation: true,
+      },
+    ],
+    element: window as unknown as HTMLElement,
+  });
 
-    window.addEventListener("keydown", handleKeyDownForDocument);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDownForDocument);
-    };
-  }, [undo, redo]);
-
-  const rowHeight = useMemo(() => {
-    switch (rowSize) {
+  function setRowSizeFromHeader(size: RowSizeType) {
+    switch (size) {
       case "small":
-        return 24;
+        setRowHeight(24);
+        break;
       case "normal":
-        return 40;
+        setRowHeight(40);
+        break;
       case "large":
-        return 80;
+        setRowHeight(80);
+        break;
       case "extra large":
-        return 120;
+        setRowHeight(120);
+        break;
       default:
-        return 40;
+        setRowHeight(40);
+        break;
     }
-  }, [rowSize]);
+    setRowSize(size);
+  }
 
-  // const [rowHeight, setRowHeight] = useState(40);
+  const [rowHeight, setRowHeight] = useState(40);
 
-  // function handleUpdateRowHeight(rowIdx: number, height: number) {
-  //   setRowHeight(height);
-  // }
+  function handleUpdateRowHeight(_rowIdx: number, height: number) {
+    const MAX_ROW_HEIGHT = 500;
+    if (height > MAX_ROW_HEIGHT) {
+      setRowHeight(MAX_ROW_HEIGHT);
+    } else {
+      setRowHeight(height);
+    }
+  }
 
   const [sortColumnsForWaitingDoubleClick, setSortColumnsForWaitingDoubleClick] = useState<
     SortColumn[]
@@ -340,7 +375,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
   );
 
   const renderCell = useCallback((props: CustomCellProps) => {
-    return <CustomCell key={props.cellKey} {...props} onUpdateRowHeight={() => {}} />;
+    return <CustomCell key={props.cellKey} {...props} onUpdateRowHeight={handleUpdateRowHeight} />;
   }, []);
 
   const renderHeaderCell = useCallback(
@@ -354,10 +389,11 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           onFilterChange={setFilter}
           onFilterClear={clearFilter}
           isFilterActive={isFilterActive(columnKey)}
+          onClickOutside={handleHeaderClickOutside}
         />
       );
     },
-    [showFilters, filters, setFilter, clearFilter, isFilterActive]
+    [showFilters, filters, setFilter, clearFilter, isFilterActive, handleHeaderClickOutside]
   );
 
   return (
@@ -372,12 +408,19 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           onUndo={undo}
           onRedo={redo}
           onSearch={() => setIsShowSearch(true)}
-          onUpdateRowSize={setRowSize}
+          onUpdateRowSize={setRowSizeFromHeader}
           onClickApply={onApply}
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters(!showFilters)}
           onClearFilters={clearFilters}
           hasActiveFilters={hasActiveFilters}
+          selectedColumnKey={selectedColumnKey}
+          currentAlignment={
+            selectedColumnKey
+              ? getColumnAlignment(selectedColumnKey)
+              : ({ vertical: "center", horizontal: "left" } as CellAlignment)
+          }
+          onAlignmentChange={handleHeaderAlignmentChange}
         />
         <VscodeDivider className={styles.divider} />
       </div>
@@ -412,8 +455,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
                 renderRow({
                   ...props,
                   rowKey: key,
-                  onUpdateRowHeight: () => {},
-                  onRowReorder: () => {},
+                  onRowReorder: () => {}, // renderRow内で別途定義しているため不要
                 }),
               renderCell: (key, props) =>
                 renderCell({
@@ -424,6 +466,9 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
                     currentCell?.colIdx === props.column.idx,
                   onUpdateRowHeight: () => {},
                   onClickRow: (rowKey) => {
+                    // ヘッダーセル以外がクリックされた場合、選択中の列をクリア
+                    setSelectedColumnKey(null);
+
                     if (rowKey) {
                       setSelectedRows(new Set([rowKey]));
                     } else {
@@ -441,6 +486,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
                   onHeaderCellContextMenu: handleHeaderCellContextMenu,
                   onHeaderEdit: handleHeaderEdit,
                   onKeyDown: handleKeyDownHeaderCell,
+                  onHeaderCellClick: handleHeaderCellClick,
                   onCanSortColumnsChange: (sortColumns) => {
                     setSortColumns(sortColumns);
                   },
@@ -453,46 +499,39 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
               resizable: true,
             }}
           />
-          {isShowSearch &&
-            createPortal(
-              <Search
-                isMatching={isMatched}
-                machedCount={machedCount}
-                searchedSelectedItemIdx={searchedSelectedItemIdx}
-                onSearch={(text) => handleSearch(text)}
-                onClose={() => {
-                  setIsShowSearch(false);
-                  handleClose();
-                }}
-                onNext={() => handleNextSearch()}
-                onPrevious={() => handlePreviousSearch()}
-              />,
-              document.body
-            )}
-          {isRowContextMenuOpen &&
-            createPortal(
-              <RowContextMenu
-                isContextMenuOpen={isRowContextMenuOpen}
-                menuRef={rowMenuRef}
-                contextMenuProps={rowContextMenuProps}
-                className={styles.contextMenu}
-                onSelect={handleSelectRowContextMenu}
-                onClose={() => setRowContextMenuProps(null)}
-              />,
-              document.body
-            )}
-          {isHeaderContextMenuOpen &&
-            createPortal(
-              <HeaderCelContextMenu
-                isContextMenuOpen={isHeaderContextMenuOpen}
-                menuRef={headerMenuRef}
-                contextMenuProps={headerContextMenuProps}
-                className={styles.contextMenu}
-                onSelect={handleSelectHeaderContextMenu}
-                onClose={() => setHeaderContextMenuProps(null)}
-              />,
-              document.body
-            )}
+          <PortalManager
+            isShowSearch={isShowSearch}
+            searchProps={{
+              isMatching: isMatched,
+              machedCount,
+              searchedSelectedItemIdx,
+              onSearch: handleSearch,
+              onClose: () => {
+                setIsShowSearch(false);
+                handleClose();
+              },
+              onNext: handleNextSearch,
+              onPrevious: handlePreviousSearch,
+            }}
+            isRowContextMenuOpen={isRowContextMenuOpen}
+            rowContextMenuProps={{
+              isContextMenuOpen: isRowContextMenuOpen,
+              menuRef: rowMenuRef,
+              contextMenuProps: rowContextMenuProps,
+              className: styles.contextMenu,
+              onSelect: handleSelectRowContextMenu,
+              onClose: () => setRowContextMenuProps(null),
+            }}
+            isHeaderContextMenuOpen={isHeaderContextMenuOpen}
+            headerContextMenuProps={{
+              isContextMenuOpen: isHeaderContextMenuOpen,
+              menuRef: headerMenuRef,
+              contextMenuProps: headerContextMenuProps,
+              className: styles.contextMenu,
+              onSelect: handleSelectHeaderContextMenu,
+              onClose: () => setHeaderContextMenuProps(null),
+            }}
+          />
         </DataGridContext.Provider>
       </DndProvider>
     </>

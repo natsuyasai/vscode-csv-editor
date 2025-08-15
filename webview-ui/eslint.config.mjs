@@ -3,10 +3,10 @@ import eslint from "@eslint/js";
 import pluginTypeScript from "@typescript-eslint/eslint-plugin";
 import typescriptParser from "@typescript-eslint/parser";
 import pluginPrettier from "eslint-config-prettier";
+import pluginImport from "eslint-plugin-import";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
-import reactConfigRecommended from "eslint-plugin-react/configs/recommended.js";
 import storybook from "eslint-plugin-storybook";
 import tseslint from "typescript-eslint";
 
@@ -32,6 +32,10 @@ const typescriptConfig = {
   files: ["**/*.ts", "**/*.tsx", "**/*.stories.ts", "**/*.stories.tsx"],
   languageOptions: {
     parser: typescriptParser,
+    parserOptions: {
+      projectService: true,
+      tsconfigRootDir: import.meta.dirname,
+    },
   },
   plugins: {
     "@typescript-eslint": pluginTypeScript,
@@ -58,23 +62,42 @@ const reactConfig = {
       version: "detect",
     },
     "import/resolver": {
+      typescript: {
+        alwaysTryTypes: true,
+        project: "./tsconfig.json",
+      },
       node: {
         extensions: [".js", ".jsx", ".ts", ".tsx"],
       },
-      typescript: {},
     },
   },
   plugins: {
     "react": pluginReact,
     "react-hooks": pluginReactHooks,
+    "import": pluginImport,
   },
   rules: {
-    ...reactConfigRecommended.rules,
+    ...pluginReact.configs.recommended.rules,
     ...pluginPrettier.rules,
     "react/jsx-uses-react": "off",
     "react/react-in-jsx-scope": "off",
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn",
+    "import/order": ["error", {
+      "groups": [
+        "builtin",
+        "external", 
+        "internal",
+        "parent",
+        "sibling",
+        "index"
+      ],
+      "newlines-between": "never",
+      "alphabetize": {
+        "order": "asc",
+        "caseInsensitive": true
+      }
+    }],
   },
 };
 
@@ -116,15 +139,17 @@ export default [
   ...storybook.configs["flat/recommended"],
   storybookConfig,
   eslint.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
-  {
+  ...tseslint.configs.recommendedTypeChecked.map(config => ({
+    ...config,
     languageOptions: {
+      ...config.languageOptions,
       parserOptions: {
+        ...config.languageOptions?.parserOptions,
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
-  },
+  })),
   typescriptConfig,
   reactConfig,
   jsxA11y.flatConfigs.strict,

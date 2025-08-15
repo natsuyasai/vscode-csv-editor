@@ -1,10 +1,10 @@
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import { CalculatedColumn, RenderHeaderCellProps, SortColumn } from "react-data-grid";
 import { useDrag, useDrop } from "react-dnd";
-import styles from "./CustomHeaderCell.module.scss";
-import { canEdit } from "@/utilities/keyboard";
-import { FilterCell } from "./FilterCell";
 import { ROW_IDX_KEY } from "@/types";
+import { canEdit } from "@/utilities/keyboard";
+import styles from "./CustomHeaderCell.module.scss";
+import { FilterCell } from "./FilterCell";
 
 interface Props {
   isIgnoreHeaderRow: boolean;
@@ -20,6 +20,8 @@ interface Props {
   ) => void;
   onCanSortColumnsChange: (sortColumns: SortColumn[]) => void;
   onDoubleClick: () => void;
+  onHeaderCellClick?: (columnKey: string | null) => void;
+  onClickOutside?: () => void;
   filterValue?: string;
   onFilterChange?: (columnKey: string, value: string) => void;
   onFilterClear?: (columnKey: string) => void;
@@ -40,6 +42,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   onKeyDown,
   onCanSortColumnsChange,
   onDoubleClick,
+  onHeaderCellClick,
   sortColumnsForWaitingDoubleClick,
   filterValue = "",
   onFilterChange,
@@ -54,6 +57,13 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const WAIT_DOUBLE_CLICK_TH_MS = 500;
   const setTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const headerCellRoot = () => {
+    let parent = rootRef.current?.parentElement;
+    while (parent && parent.role !== "columnheader") {
+      parent = parent.parentElement;
+    }
+    return parent;
+  };
 
   const [, drag] = useDrag({
     type: "COL_DRAG",
@@ -81,26 +91,33 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       // FilterCellからのイベントは無視する
-      if (e.target instanceof HTMLElement && 
-          (e.target.hasAttribute('data-filter-input') || 
-           e.target.hasAttribute('data-filter-button') ||
-           e.target.closest('[data-filter-cell]'))) {
+      if (
+        e.target instanceof HTMLElement &&
+        (e.target.hasAttribute("data-filter-input") ||
+          e.target.hasAttribute("data-filter-button") ||
+          e.target.closest("[data-filter-cell]"))
+      ) {
         return;
       }
-      
-      if (e.key === "F2") {
-        setIsEditing(true);
-      } else if (e.key === "Backspace") {
-        setIsEditing(true);
-      } else if (e.key === "Delete") {
-        onHeaderEdit(column.idx, "");
-      } else if (!isEditing && canEdit(e)) {
-        // 編集モードに移行することで、onHeaderEdit分と通常入力分の2回入力が発生してしまうため止める
-        e.preventDefault();
-        onHeaderEdit(column.idx, e.key);
-        setIsEditing(true);
+
+      // TextAreaEditor.tsxと合わせる
+      if (!isEditing) {
+        if (e.key === "Delete") {
+          onHeaderEdit(column.idx, "");
+        } else if (e.key === "Backspace") {
+          onHeaderEdit(column.idx, "");
+          setIsEditing(true);
+        } else if (e.key === "F2") {
+          setIsEditing(true);
+        } else if (canEdit(e)) {
+          // 編集モードに移行することで、onHeaderEdit分と通常入力分の2回入力が発生してしまうため止める
+          e.preventDefault();
+          onHeaderEdit(column.idx, e.key);
+          setIsEditing(true);
+        }
         return;
       }
+
       onKeyDown(column, e);
     },
     [column, isEditing, onHeaderEdit, onKeyDown]
@@ -115,13 +132,25 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
-      if (e.target !== headerTextRef.current) {
+      // 行インデックス列の場合は選択をクリア
+      if (onHeaderCellClick && column.key === ROW_IDX_KEY) {
+        onHeaderCellClick(null);
+        return;
+      }
+
+      if (rootRef.current?.parentElement?.contains(e.target as Node) === false) {
         return;
       }
       if (setTimeoutRef.current !== null) {
         return;
       }
-      if (rootRef.current?.parentElement?.getAttribute("aria-selected") === "false") {
+
+      // 通常のヘッダーセルがクリックされた場合は選択状態にする
+      if (onHeaderCellClick) {
+        onHeaderCellClick(column.key);
+      }
+
+      if (headerCellRoot()?.getAttribute("aria-selected") === "false") {
         return;
       }
       setTimeoutRef.current = setTimeout(() => {
@@ -129,12 +158,23 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
         onCanSortColumnsChange(sortColumnsForWaitingDoubleClick);
       }, WAIT_DOUBLE_CLICK_TH_MS);
     },
-    [sortColumnsForWaitingDoubleClick, onCanSortColumnsChange]
+    [sortColumnsForWaitingDoubleClick, onCanSortColumnsChange, onHeaderCellClick, column.key]
   );
+
+  function isHeaderCell(target: HTMLElement) {
+    let element = target;
+    while (element && element !== document.body) {
+      if (element.getAttribute("role") === "columnheader") {
+        return true;
+      }
+      element = element.parentElement as HTMLElement;
+    }
+    return false;
+  }
 
   const handleDoubleClick = useCallback(
     (e: MouseEvent) => {
-      if (e.target !== headerTextRef.current) {
+      if (!isHeaderCell(e.target as HTMLElement)) {
         return;
       }
       if (setTimeoutRef.current) {
@@ -147,21 +187,15 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
     [onDoubleClick]
   );
 
-  function handleWindowClick(e: MouseEvent) {
-    if (e.target !== textAreaRef.current) {
-      setIsEditing(false);
-    }
-  }
-
   useEffect(() => {
     if (isIgnoreHeaderRow) {
       return;
     }
-    rootRef.current?.parentElement?.addEventListener("keydown", handleKeyDown);
-    rootRef.current?.parentElement?.addEventListener("contextmenu", handleContextMenu);
-    rootRef.current?.parentElement?.addEventListener("dblclick", handleDoubleClick);
-    rootRef.current?.parentElement?.addEventListener("click", handleClick);
-    window.addEventListener("click", handleWindowClick);
+    const root = headerCellRoot();
+    root?.addEventListener("keydown", handleKeyDown);
+    root?.addEventListener("contextmenu", handleContextMenu);
+    root?.addEventListener("dblclick", handleDoubleClick);
+    root?.addEventListener("click", handleClick);
     if (setTimeoutRef.current) {
       // クリック判定待ちタイマーが起動していた場合は再度最新の情報でタイマーをセットしなおす
       setTimeoutRef.current = setTimeout(() => {
@@ -171,11 +205,10 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
     }
 
     return () => {
-      rootRef.current?.parentElement?.removeEventListener("keydown", handleKeyDown);
-      rootRef.current?.parentElement?.removeEventListener("contextmenu", handleContextMenu);
-      rootRef.current?.parentElement?.removeEventListener("dblclick", handleDoubleClick);
-      rootRef.current?.parentElement?.removeEventListener("click", handleClick);
-      window.removeEventListener("click", handleWindowClick);
+      root?.removeEventListener("keydown", handleKeyDown);
+      root?.removeEventListener("contextmenu", handleContextMenu);
+      root?.removeEventListener("dblclick", handleDoubleClick);
+      root?.removeEventListener("click", handleClick);
       if (setTimeoutRef.current) {
         clearTimeout(setTimeoutRef.current);
       }
@@ -193,16 +226,16 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
 
   return (
     <>
-      <div className={styles.headerContainer}>
-        <span
-          ref={(ref) => {
-            rootRef.current = ref;
-            if (ref) {
-              drag(ref.firstElementChild);
-            }
-            drop(ref);
-          }}
-          className={styles.cellRoot}>
+      <div
+        ref={(ref) => {
+          rootRef.current = ref;
+          if (ref) {
+            drag(ref.firstElementChild);
+          }
+          drop(ref);
+        }}
+        className={styles.headerContainer}>
+        <span className={styles.cellRoot}>
           {!isIgnoreHeaderRow && isEditing && (
             <textarea
               ref={textAreaRef}
@@ -219,7 +252,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
                   onHeaderEdit(column.idx, (e.target as HTMLTextAreaElement).value);
                 } else if (e.key === "Enter" || e.key === "Tab" || e.key === "Escape") {
                   setIsEditing(false);
-                  rootRef.current?.parentElement?.focus();
+                  headerCellRoot()?.focus();
                 } else if (
                   e.key === "ArrowDown" ||
                   e.key === "ArrowLeft" ||
@@ -247,7 +280,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
           </span>
           <span>{priority}</span>
         </span>
-        
+
         {showFilters && column.key !== ROW_IDX_KEY && onFilterChange && onFilterClear && (
           <div className={styles.filterContainer}>
             <FilterCell

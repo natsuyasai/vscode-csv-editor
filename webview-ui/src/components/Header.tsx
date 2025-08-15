@@ -1,4 +1,3 @@
-import { RowSizeType } from "@/types";
 import {
   VscodeButton,
   VscodeCheckbox,
@@ -8,6 +7,9 @@ import {
   VscodeSingleSelect,
 } from "@vscode-elements/react-elements";
 import { FC } from "react";
+import { useAlignmentModeStore } from "@/stores/useAlignmentModeStore";
+import { RowSizeType, CellAlignment } from "@/types";
+import { CellAlignmentControls } from "./Header/CellAlignmentControls";
 import styles from "./Header.module.scss";
 
 interface Props {
@@ -25,6 +27,9 @@ interface Props {
   onToggleFilters?: () => void;
   onClearFilters?: () => void;
   hasActiveFilters?: boolean;
+  selectedColumnKey?: string | null;
+  currentAlignment?: CellAlignment;
+  onAlignmentChange?: (alignment: CellAlignment) => void;
 }
 
 export const Header: FC<Props> = ({
@@ -42,7 +47,13 @@ export const Header: FC<Props> = ({
   onToggleFilters,
   onClearFilters,
   hasActiveFilters = false,
+  selectedColumnKey,
+  currentAlignment,
+  onAlignmentChange,
 }) => {
+  // Zustandの状態を分割して取得（再レンダリングを確実にするため）
+  const isAlignmentModeEnabled = useAlignmentModeStore((state) => state.isAlignmentModeEnabled);
+  const setAlignmentModeEnabled = useAlignmentModeStore((state) => state.setAlignmentModeEnabled);
   return (
     <>
       <div className={styles.headerRoot}>
@@ -131,6 +142,14 @@ export const Header: FC<Props> = ({
               <VscodeIcon name="clear-all" action-icon />
             </VscodeButton>
           )}
+          <VscodeButton
+            tabIndex={0}
+            aria-label="toggle alignment mode"
+            aria-description="Toggle cell alignment mode"
+            {...(isAlignmentModeEnabled ? {} : { secondary: true })}
+            onClick={() => setAlignmentModeEnabled(!isAlignmentModeEnabled)}>
+            <VscodeIcon name="layout" action-icon />
+          </VscodeButton>
         </div>
         <div className={styles.apply}>
           <VscodeButton
@@ -143,6 +162,13 @@ export const Header: FC<Props> = ({
           </VscodeButton>
         </div>
       </div>
+      {onAlignmentChange && currentAlignment && isAlignmentModeEnabled && (
+        <CellAlignmentControls
+          selectedColumnKey={selectedColumnKey ?? null}
+          currentAlignment={currentAlignment}
+          onAlignmentChange={onAlignmentChange}
+        />
+      )}
     </>
   );
 };

@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest";
 import { renderHook } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
+import TextAreaEditor from "@/components/Row/TextAreaEditor";
 import { useColumns } from "@/hooks/useColumns";
 import { ROW_IDX_COL } from "@/types";
-import TextAreaEditor from "@/components/Row/TextAreaEditor";
 
 describe("カラムの作成", () => {
   it("データが空の場合は空の行が生成されること", () => {
@@ -23,18 +23,21 @@ describe("カラムの作成", () => {
         name: "Header1",
         resizable: true,
         renderEditCell: TextAreaEditor,
+        cellClass: "cell-align-v-center cell-align-h-left",
       },
       {
         key: "col1",
         name: "Header2",
         resizable: true,
         renderEditCell: TextAreaEditor,
+        cellClass: "cell-align-v-center cell-align-h-left",
       },
       {
         key: "col2",
         name: "Header3",
         resizable: true,
         renderEditCell: TextAreaEditor,
+        cellClass: "cell-align-v-center cell-align-h-left",
       },
     ]);
   });
@@ -49,12 +52,14 @@ describe("カラムの作成", () => {
         name: "Header1",
         resizable: true,
         renderEditCell: TextAreaEditor,
+        cellClass: "cell-align-v-center cell-align-h-left",
       },
       {
         key: "col1",
         name: "Header2",
         resizable: true,
         renderEditCell: TextAreaEditor,
+        cellClass: "cell-align-v-center cell-align-h-left",
       },
     ]);
   });
@@ -67,9 +72,9 @@ describe("カラムの作成", () => {
     const { result } = renderHook(() => useColumns(csvArray, true));
     expect(result.current.columns).toEqual([
       ROW_IDX_COL,
-      { key: "col0", name: "", resizable: true, renderEditCell: TextAreaEditor },
-      { key: "col1", name: "", resizable: true, renderEditCell: TextAreaEditor },
-      { key: "col2", name: "", resizable: true, renderEditCell: TextAreaEditor },
+      { key: "col0", name: "", resizable: true, renderEditCell: TextAreaEditor, cellClass: "cell-align-v-center cell-align-h-left" },
+      { key: "col1", name: "", resizable: true, renderEditCell: TextAreaEditor, cellClass: "cell-align-v-center cell-align-h-left" },
+      { key: "col2", name: "", resizable: true, renderEditCell: TextAreaEditor, cellClass: "cell-align-v-center cell-align-h-left" },
     ]);
   });
 });

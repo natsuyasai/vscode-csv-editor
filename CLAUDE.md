@@ -1,6 +1,14 @@
 # CLAUDE.md
-必ず日本語で回答してください。
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+- 必ず日本語で回答してください。
+- ユーザーからの指示や仕様に疑問などがあれば作業を中断し、質問すること。
+- コードエクセレンスの原則に基づき、テスト駆動開発を必須で実施すること。
+- TDDおよびテスト駆動開発で実装する際は、すべてt-wadaの推奨する進め方に従ってください。
+- リファクタリングはMartin Fowloerが推奨する進め方に従ってください。
+- セキュリティルールに従うこと。
+- 実装完了時に必ず「npm run check-types」と「npm run lint」を実行し、エラーや警告がない状態としてください。
 
 ## Project Structure
 
@@ -15,6 +23,13 @@ Key components:
 - Communication between extension and webview via postMessage API
 - Uses Zustand for state management and custom hooks for data operations
 
+## Communication Architecture
+
+Message passing uses typed interfaces in `src/message/`:
+- `messageTypeToWebview.ts`: Extension → Webview messages (init, update, updateTheme)
+- `messageTypeToExtention.ts`: Webview → Extension messages (init, update, reload, save)
+- Data flow: VSCode Document ↔ Extension ↔ Webview with debounced updates
+
 ## Build Commands
 
 ### Extension Development
@@ -22,10 +37,10 @@ Key components:
 # Install dependencies for both extension and webview
 npm run install:all
 
-# Development build with watching
+# Development build with watching (builds extension + webview, watches TypeScript)
 npm run watch
 
-# Production build
+# Production build (includes webview build)
 npm run package
 
 # Type checking
@@ -34,30 +49,36 @@ npm run check-types
 # Linting
 npm run lint
 
-# Run tests
+# Run tests (requires pre-compilation)
 npm test
+
+# Run single test file
+npx vscode-test --grep "test name"
 ```
 
 ### Webview Development
 ```bash
 cd webview-ui
 
-# Start development server
+# Start development server (for isolated webview development)
 npm start
 
-# Build for production
+# Build for production (called automatically by extension package command)
 npm run build
 
-# Run tests
+# Run tests with Vitest
 npm test
 
-# Run Storybook
+# Run tests in watch mode
+npm test -- --watch
+
+# Run Storybook for component development
 npm run storybook
 
 # Type checking
 npm run check-types
 
-# Linting (includes markup linting)
+# Linting (includes ESLint + markuplint for JSX/TSX)
 npm run lint
 ```
 
@@ -71,10 +92,22 @@ npm run lint
 
 The extension registers a custom editor for CSV files that:
 1. Creates a webview panel with React UI
-2. Parses CSV content using `csv-parse` library
+2. Parses CSV content using `csv-parse` library  
 3. Renders editable table using `react-data-grid`
-4. Supports features like sorting, searching, row/column operations
+4. Supports features like sorting, searching, row/column operations, drag & drop
 5. Updates the underlying VSCode document when changes are made
 6. Handles theme changes and VS Code integration
 
-Message passing between extension and webview uses typed interfaces defined in `src/message/`.
+Key architectural decisions:
+- **State Management**: Combination of React state + Zustand store for cell editing
+- **Custom Hooks**: Extensive use of custom hooks (`useRows`, `useColumns`, `useFilters`, etc.)
+- **Performance**: Virtual scrolling, debounced updates, React.memo optimizations
+- **History Management**: Built-in undo/redo functionality with state history
+- **Keyboard Shortcuts**: Ctrl+S (save), Ctrl+F (search), Ctrl+Z/Y (undo/redo)
+
+## Key Files for Development
+
+- `src/editor/csvEditorProvider.ts`: Main extension logic and webview communication
+- `webview-ui/src/App.tsx`: Main React component with state management
+- `webview-ui/src/components/EditableTable.tsx`: Core table component with extensive features
+- `webview-ui/src/hooks/useUpdateCsvArray.ts`: CSV data operations with history management

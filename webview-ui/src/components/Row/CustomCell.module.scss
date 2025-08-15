@@ -1,15 +1,77 @@
 .cell {
   &::after {
     content: "";
-    // cursor: row-resize;
-    // width: 100%;
-    // position: absolute;
-    // height: 8px;
-    // bottom: 0;
-    // left: 0;
+    cursor: row-resize;
+    width: 100%;
+    position: absolute;
+    height: 8px;
+    bottom: 0;
+    left: 0;
   }
 }
 
 .searchTarget {
   background-color: #ffff0067;
+}
+
+// 垂直配置
+:global(.cell-align-v-top) {
+  display: flex !important;
+  align-items: flex-start !important;
+  
+  & > div {
+    align-self: flex-start;
+  }
+}
+
+:global(.cell-align-v-center) {
+  display: flex !important;
+  align-items: center !important;
+  
+  & > div {
+    align-self: center;
+  }
+}
+
+:global(.cell-align-v-bottom) {
+  display: flex !important;
+  align-items: flex-end !important;
+  
+  & > div {
+    align-self: flex-end;
+  }
+}
+
+// 水平配置
+:global(.cell-align-h-left) {
+  display: flex !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  
+  & > div {
+    justify-self: flex-start;
+    text-align: left;
+  }
+}
+
+:global(.cell-align-h-center) {
+  display: flex !important;
+  justify-content: center !important;
+  text-align: center !important;
+  
+  & > div {
+    justify-self: center;
+    text-align: center;
+  }
+}
+
+:global(.cell-align-h-right) {
+  display: flex !important;
+  justify-content: flex-end !important;
+  text-align: right !important;
+  
+  & > div {
+    justify-self: flex-end;
+    text-align: right;
+  }
 }

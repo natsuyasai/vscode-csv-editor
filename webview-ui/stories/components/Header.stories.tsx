@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn, userEvent, expect } from "@storybook/test";
-
-import { Header } from "@/components/Header";
 import { useState } from "react";
+import { Header } from "@/components/Header";
 import { RowSizeType } from "@/types";
 
 const meta = {

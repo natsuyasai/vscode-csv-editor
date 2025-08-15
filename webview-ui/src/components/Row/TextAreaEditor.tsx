@@ -1,8 +1,8 @@
 import { useContext, useEffect, useRef } from "react";
 import { RenderEditCellProps } from "react-data-grid";
-import styles from "./TextAreaEditor.module.scss";
-import { useCellEditStore } from "@/stores/useCellEditStore";
 import { DataGridContext } from "@/contexts/dataGridContext";
+import { useCellEditStore } from "@/stores/useCellEditStore";
+import styles from "./TextAreaEditor.module.scss";
 
 export default function TextAreaEditor({
   row,
@@ -24,9 +24,14 @@ export default function TextAreaEditor({
   }, []);
 
   useEffect(() => {
+    // CustomHeaderCell.tsxと合わせる
     if (initialCellKey === "Delete") {
       onRowChange({ ...row, [column.key]: "" }, true);
       onClose(true, true);
+    } else if (initialCellKey === "Backspace") {
+      onRowChange({ ...row, [column.key]: "" });
+    } else if (initialCellKey === "F2") {
+      // do nathing
     } else if (initialCellKey !== null) {
       onRowChange({ ...row, [column.key]: initialCellKey });
     }
