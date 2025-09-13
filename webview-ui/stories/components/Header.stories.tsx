@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn, userEvent, expect } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { fn, userEvent, expect } from "storybook/test";
 import { Header } from "@/components/Header";
 import { RowSizeType } from "@/types";
 
@@ -27,11 +27,11 @@ const meta = {
     const [rowSize, setRowSize] = useState<RowSizeType>("normal");
     const [showFilters, setShowFilters] = useState(false);
     const [hasActiveFilters, setHasActiveFilters] = useState(false);
-    
+
     return (
-      <Header 
-        {...args} 
-        rowSize={rowSize} 
+      <Header
+        {...args}
+        rowSize={rowSize}
         onUpdateRowSize={setRowSize}
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters(!showFilters)}

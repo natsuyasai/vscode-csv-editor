@@ -1,21 +1,56 @@
 /// <reference types="vitest" />
-import { resolve } from "path";
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { defineConfig, mergeConfig } from "vitest/config";
 
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  test: {
-    include: ["test/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-    globals: true,
-    environment: "jsdom",
-    setupFiles: "./test/setup.ts",
-    alias: {
-      "@message": resolve("../src/message"),
-      "@": resolve("src/"),
-      "@vscode-elements/elements/dist/vscode-context-menu/vscode-context-menu":
-        "@vscode-elements/elements/dist/vscode-context-menu/vscode-context-menu.js",
+const dirname =
+  typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+
+import viteConfig from "./vite.config";
+import storybookTest from "@storybook/addon-vitest/vitest-plugin";
+
+export default mergeConfig(
+  viteConfig,
+  defineConfig({
+    test: {
+      projects: [
+        {
+          extends: true,
+          test: {
+            name: "unit",
+            include: ["test/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+            globals: true,
+            environment: "jsdom",
+            setupFiles: "./test/setup.ts",
+            alias: {
+              "@vscode-elements/elements/dist/vscode-context-menu/vscode-context-menu":
+                "@vscode-elements/elements/dist/vscode-context-menu/vscode-context-menu.js",
+            },
+          },
+        },
+        {
+          extends: true,
+          plugins: [
+            storybookTest({
+              configDir: path.join(dirname, ".storybook"),
+              storybookScript: "yarn storybook --ci",
+            }),
+          ],
+          test: {
+            name: "storybook",
+            browser: {
+              enabled: true,
+              provider: "playwright",
+              headless: true,
+              instances: [{ browser: "chromium" }],
+            },
+            setupFiles: ["./.storybook/vitest.setup.ts"],
+          },
+        },
+      ],
     },
-  },
-});
+    define: {
+      global: "window",
+    },
+  })
+);

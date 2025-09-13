@@ -1,4 +1,4 @@
-import { expect, within, waitFor } from "@storybook/test";
+import { expect, within, waitFor } from "storybook/test";
 
 // サンプルCSVデータ
 export const sampleCSVData = `Name,Age,City,Occupation

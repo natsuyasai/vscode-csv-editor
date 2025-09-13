@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import App from "../../src/App";
 import { setInitData, waitReadyForGrid, COL_MAX_WITH_HEADER, ROW_MAX } from "./utils";
 
