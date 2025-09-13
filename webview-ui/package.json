@@ -9,6 +9,8 @@
     "build:debug:watch": "tsc && vite build --sourcemap \"inline\" --minify false --mode \"development\" --watch",
     "preview": "vite preview",
     "test": "vitest",
+    "test:unit": "vitest --project unit",
+    "test:story": "vitest --project storybook",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "check-types": "tsc --noEmit",
