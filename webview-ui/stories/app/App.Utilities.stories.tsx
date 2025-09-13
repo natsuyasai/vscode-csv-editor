@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within, waitFor } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within, waitFor } from "storybook/test";
 import App from "../../src/App";
 import { setRowSize } from "../utils/rowSizeSelect";
 import { DeleteHeader } from "./App.HeaderActions.stories";

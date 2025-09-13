@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn, userEvent, expect } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { fn, userEvent, expect } from "storybook/test";
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { RowSizeType } from "@/types";
