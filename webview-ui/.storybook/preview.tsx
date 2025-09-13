@@ -1,4 +1,4 @@
-import type { Preview } from "@storybook/react";
+import type { Preview } from "@storybook/react-vite";
 import "react-data-grid/lib/styles.css";
 import "../src/styles/index.css";
 import "@vscode/codicons/dist/codicon.css";

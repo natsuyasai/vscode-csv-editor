@@ -1,7 +1,7 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { fn } from "storybook/test";
 import { CustomHeaderCell } from "@/components/Header/CustomHeaderCell";
 
 const meta = {

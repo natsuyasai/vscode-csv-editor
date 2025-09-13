@@ -1,5 +1,5 @@
-import { expect, userEvent } from "@storybook/test";
 import { Canvas } from "storybook/internal/types";
+import { expect, userEvent } from "storybook/test";
 import { RowSizeType } from "@/types";
 
 export async function setRowSize(canvas: Canvas, rowSize: RowSizeType) {
