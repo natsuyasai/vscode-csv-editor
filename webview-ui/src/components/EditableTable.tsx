@@ -2,9 +2,9 @@ import { VscodeDivider } from "@vscode-elements/react-elements";
 import { FC, useCallback, useRef, useState } from "react";
 import {
   CalculatedColumn,
-  CellClickArgs,
   CellKeyboardEvent,
   CellKeyDownArgs,
+  CellMouseArgs,
   CellMouseEvent,
   DataGrid,
   DataGridHandle,
@@ -156,7 +156,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
   }, [setSelectedColumnKey]);
 
   function handleCellContextMenu(
-    args: CellClickArgs<NoInfer<Record<string, string>>, unknown>,
+    args: CellMouseArgs<Record<string, string>, unknown>,
     event: CellMouseEvent
   ) {
     event.preventGridDefault();
@@ -234,7 +234,9 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           idx: args.column.idx,
           rowIdx: args.rowIdx,
         },
-        true
+        {
+          enableEditor: true,
+        }
       );
       return;
     }
@@ -247,7 +249,9 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           idx: args.column.idx,
           rowIdx: args.rowIdx,
         },
-        true
+        {
+          enableEditor: true,
+        }
       );
       return;
     }
@@ -260,7 +264,9 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
           idx: args.column.idx,
           rowIdx: args.rowIdx + 1,
         },
-        false
+        {
+          enableEditor: false,
+        }
       );
     }
   }
@@ -384,6 +390,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
       return (
         <CustomHeaderCell
           {...props}
+          selectedColumnKey={selectedColumnKey}
           showFilters={showFilters}
           filterValue={filters[columnKey] || ""}
           onFilterChange={setFilter}
@@ -393,7 +400,15 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
         />
       );
     },
-    [showFilters, filters, setFilter, clearFilter, isFilterActive, handleHeaderClickOutside]
+    [
+      showFilters,
+      filters,
+      selectedColumnKey,
+      setFilter,
+      clearFilter,
+      isFilterActive,
+      handleHeaderClickOutside,
+    ]
   );
 
   return (

@@ -78,9 +78,7 @@ export default function App() {
 
   function updateCSVFromExtension(text: string) {
     setRawText(text);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const records = csvParseSync(text);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     setCSVArray(records);
   }
 
