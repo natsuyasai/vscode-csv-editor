@@ -9,6 +9,7 @@ import { FilterCell } from "./FilterCell";
 interface Props {
   isIgnoreHeaderRow: boolean;
   sortColumnsForWaitingDoubleClick: SortColumn[];
+  selectedColumnKey?: string | null;
   onHeaderCellContextMenu: (
     cell: CalculatedColumn<NoInfer<Record<string, string>>, unknown>,
     e: MouseEvent
@@ -37,6 +38,7 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
   sortDirection,
   priority,
   isIgnoreHeaderRow,
+  selectedColumnKey,
   onHeaderCellContextMenu,
   onHeaderEdit,
   onKeyDown,
@@ -145,12 +147,16 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
         return;
       }
 
+      // onHeaderCellClickで更新される前に保持しておく
+      const isSelectChanged = selectedColumnKey !== column.key;
+
       // 通常のヘッダーセルがクリックされた場合は選択状態にする
       if (onHeaderCellClick) {
         onHeaderCellClick(column.key);
       }
 
-      if (headerCellRoot()?.getAttribute("aria-selected") === "false") {
+      // 未選択のセルを選択した場合は、ソートは行わないためタイマーをセットせずに終了
+      if (isSelectChanged) {
         return;
       }
       setTimeoutRef.current = setTimeout(() => {
@@ -158,7 +164,13 @@ export const CustomHeaderCell: FC<CustomHeaderCellProps> = ({
         onCanSortColumnsChange(sortColumnsForWaitingDoubleClick);
       }, WAIT_DOUBLE_CLICK_TH_MS);
     },
-    [sortColumnsForWaitingDoubleClick, onCanSortColumnsChange, onHeaderCellClick, column.key]
+    [
+      sortColumnsForWaitingDoubleClick,
+      selectedColumnKey,
+      onCanSortColumnsChange,
+      onHeaderCellClick,
+      column.key,
+    ]
   );
 
   function isHeaderCell(target: HTMLElement) {

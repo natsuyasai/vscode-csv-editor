@@ -38,7 +38,9 @@ export const SortingFunctionality: Story = {
     const nameHeader = await canvas.findByRole("columnheader", { name: "Name" });
     await userEvent.click(nameHeader);
     // ソートは一度クリック後、ダブルクリック判定を経てから再度クリックしたときに反応するため、
-    // ダブルクリック判定が完了するまで待つ必要がある
+    // ダブルクリック判定を待ってから再度クリック
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await userEvent.click(nameHeader);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     // ソートインジケーターが表示されることを確認
