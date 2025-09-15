@@ -60,11 +60,11 @@ export const DisabledUndoRedo: Story = {
 
 export const OpenSlectRow: Story = {
   play: async ({ canvas }) => {
-    const listbox = canvas.getByRole("listbox");
+    const listbox = canvas.getByLabelText("Row size");
     const listItem = listbox.shadowRoot?.querySelector("div[class*='select-face']");
     await expect(listItem).toBeVisible();
     await userEvent.click(listItem!);
-    const option = listbox.shadowRoot?.querySelector("div[class*=' dropdown ']");
+    const option = listbox.shadowRoot?.querySelector("div[class*='dropdown']");
     await expect(option).toBeVisible();
   },
 };

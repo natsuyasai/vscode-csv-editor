@@ -90,7 +90,6 @@ const meta = {
     selectCell: fn(),
     selectedCellIdx: -1,
     selectedCellEditor: undefined,
-    setDraggedOverRowIdx: undefined,
     isRowSelectionDisabled: false,
     gridRowStart: 1,
     onRowReorder: fn(),
