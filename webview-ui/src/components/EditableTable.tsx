@@ -390,6 +390,7 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
       return (
         <CustomHeaderCell
           {...props}
+          selectedColumnKey={selectedColumnKey}
           showFilters={showFilters}
           filterValue={filters[columnKey] || ""}
           onFilterChange={setFilter}
@@ -399,7 +400,15 @@ export const EditableTable: FC<Props> = ({ csvArray, theme, setCSVArray, onApply
         />
       );
     },
-    [showFilters, filters, setFilter, clearFilter, isFilterActive, handleHeaderClickOutside]
+    [
+      showFilters,
+      filters,
+      selectedColumnKey,
+      setFilter,
+      clearFilter,
+      isFilterActive,
+      handleHeaderClickOutside,
+    ]
   );
 
   return (
