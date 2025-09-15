@@ -3,11 +3,11 @@ import { expect, userEvent } from "storybook/test";
 import { RowSizeType } from "@/types";
 
 export async function setRowSize(canvas: Canvas, rowSize: RowSizeType) {
-  const listbox = canvas.getByRole("listbox");
+  const listbox = canvas.getByLabelText("Row size");
   const listItem = listbox.shadowRoot?.querySelector("div[class*='select-face']");
   await expect(listItem).toBeVisible();
   await userEvent.click(listItem!);
-  const dropdown = listbox.shadowRoot?.querySelector("div[class*=' dropdown ']");
+  const dropdown = listbox.shadowRoot?.querySelector("div[class*='dropdown']");
   await expect(dropdown).toBeVisible();
   const option = dropdown!.querySelector("ul[class*='options']");
   const item = [...(option?.querySelectorAll("li") ?? [])].filter(
