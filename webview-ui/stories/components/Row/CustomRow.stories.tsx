@@ -1,8 +1,8 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { DataGrid } from "react-data-grid";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { fn } from "storybook/test";
 import { CustomRow } from "@/components/Row/CustomRow";
 import { DataGridContext } from "@/contexts/dataGridContext";
 import { ROW_ID_KEY, ROW_IDX_KEY } from "@/types";
@@ -90,7 +90,6 @@ const meta = {
     selectCell: fn(),
     selectedCellIdx: -1,
     selectedCellEditor: undefined,
-    setDraggedOverRowIdx: undefined,
     isRowSelectionDisabled: false,
     gridRowStart: 1,
     onRowReorder: fn(),
