@@ -10,6 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - セキュリティルールに従うこと。
 - 実装完了時に必ず「npm run check-types」と「npm run lint」を実行し、エラーや警告がない状態としてください。
 - エラーや警告が発生する場合は、必ず修正してください。
+- Before doing any UI, frontend or React development, ALWAYS call the storybook MCP server to get further instructions.
 
 ## Project Structure
 

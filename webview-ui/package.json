@@ -38,6 +38,7 @@
     "@markuplint/react-spec": "^4.5.21",
     "@playwright/test": "^1.55.0",
     "@storybook/addon-docs": "^9.1.5",
+    "@storybook/addon-mcp": "^0.0.9",
     "@storybook/addon-onboarding": "^9.1.5",
     "@storybook/addon-vitest": "^9.1.5",
     "@storybook/react-vite": "^9.1.5",
