@@ -83,4 +83,67 @@ test.describe("EditableTableV2", () => {
     await expect(iframe.getByText("名前")).toBeVisible();
     await expect(iframe.getByText("年齢")).toBeVisible();
   });
+
+  test("セルをダブルクリックで編集できること", async ({ page }) => {
+    await page.getByRole("button", { name: "EditableTableV2" }).click();
+    await page.getByRole("link", { name: "Default" }).click();
+
+    const iframe = page.frameLocator('iframe[title="storybook-preview-iframe"]');
+    const table = iframe.getByRole("table");
+    await expect(table).toBeVisible();
+
+    // データセル（最初のデータセル"1"）を取得
+    const firstCell = iframe.getByRole("button").filter({ hasText: "1" }).first();
+    await expect(firstCell).toBeVisible();
+
+    // ダブルクリックして編集モードに入る
+    await firstCell.dblclick();
+
+    // textareaが表示されることを確認
+    const textarea = iframe.locator("textarea");
+    await expect(textarea).toBeVisible();
+
+    // テキストエリアの値を変更
+    await textarea.fill("999");
+
+    // Enterキーで編集を確定
+    await textarea.press("Enter");
+
+    // 編集後の値が反映されることを確認
+    await expect(iframe.getByRole("button").filter({ hasText: "999" })).toBeVisible();
+  });
+
+  test("セル編集時のテキストエリアサイズがセルサイズと一致すること", async ({ page }) => {
+    await page.getByRole("button", { name: "EditableTableV2" }).click();
+    await page.getByRole("link", { name: "Default" }).click();
+
+    const iframe = page.frameLocator('iframe[title="storybook-preview-iframe"]');
+    const table = iframe.getByRole("table");
+    await expect(table).toBeVisible();
+
+    // データセルを取得
+    const firstCell = iframe.getByRole("button").filter({ hasText: "1" }).first();
+    await expect(firstCell).toBeVisible();
+
+    // セルのサイズを取得
+    const cellBox = await firstCell.boundingBox();
+    expect(cellBox).not.toBeNull();
+
+    // ダブルクリックして編集モードに入る
+    await firstCell.dblclick();
+
+    // textareaが表示されることを確認
+    const textarea = iframe.locator("textarea");
+    await expect(textarea).toBeVisible();
+
+    // テキストエリアのサイズを取得
+    const textareaBox = await textarea.boundingBox();
+    expect(textareaBox).not.toBeNull();
+
+    // サイズが一致することを確認（誤差を許容）
+    if (cellBox && textareaBox) {
+      expect(Math.abs(cellBox.width - textareaBox.width)).toBeLessThan(2);
+      expect(Math.abs(cellBox.height - textareaBox.height)).toBeLessThan(2);
+    }
+  });
 });
