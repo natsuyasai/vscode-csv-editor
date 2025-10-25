@@ -37,6 +37,10 @@ declare module "@tanstack/react-table" {
     updateData?: (rowIndex: number, columnId: string, value: string) => void;
     selectedRowIndex?: number | null;
     setSelectedRowIndex?: (index: number | null) => void;
+    selectedCells?: Set<string>;
+    handleCellMouseDown?: (row: number, col: number) => void;
+    handleCellMouseEnter?: (row: number, col: number) => void;
+    handleCellMouseUp?: () => void;
   }
 }
 
@@ -127,6 +131,13 @@ const EditableCell = (props: CellContext<RowData, unknown>) => {
   const clickTimeoutRef = useRef<number | null>(null);
   const clickCountRef = useRef(0);
 
+  // セル選択状態の取得
+  const rowIndex = props.row.index;
+  const columnId = props.column.id;
+  const columnIndex = columnId.startsWith('col') ? parseInt(columnId.substring(3)) : -1;
+  const cellKey = `${rowIndex}-${columnIndex}`;
+  const isSelected = props.table.options.meta?.selectedCells?.has(cellKey) ?? false;
+
   useEffect(() => {
     setValue(initialValue);
   }, [initialValue]);
@@ -213,6 +224,19 @@ const EditableCell = (props: CellContext<RowData, unknown>) => {
     <div
       ref={cellRef}
       onClick={handleClick}
+      onMouseDown={() => {
+        if (columnIndex >= 0) {
+          props.table.options.meta?.handleCellMouseDown?.(rowIndex, columnIndex);
+        }
+      }}
+      onMouseEnter={() => {
+        if (columnIndex >= 0) {
+          props.table.options.meta?.handleCellMouseEnter?.(rowIndex, columnIndex);
+        }
+      }}
+      onMouseUp={() => {
+        props.table.options.meta?.handleCellMouseUp?.();
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           setIsEditing(true);
@@ -229,6 +253,12 @@ const EditableCell = (props: CellContext<RowData, unknown>) => {
         whiteSpace: "nowrap",
         padding: "8px",
         boxSizing: "border-box",
+        backgroundColor: isSelected
+          ? "var(--vscode-list-inactiveSelectionBackground)"
+          : "transparent",
+        border: isSelected
+          ? "1px solid var(--vscode-list-activeSelectionBackground)"
+          : "1px solid transparent",
       }}>
       {value}
     </div>
@@ -259,6 +289,50 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectionStart, setSelectionStart] = useState<{ row: number; col: number } | null>(null);
+
+  // セル選択のヘルパー関数
+  const getCellKey = (row: number, col: number) => `${row}-${col}`;
+
+  const handleCellMouseDown = useCallback((row: number, col: number) => {
+    setIsSelecting(true);
+    setSelectionStart({ row, col });
+    setSelectedCells(new Set([getCellKey(row, col)]));
+  }, []);
+
+  const handleCellMouseEnter = useCallback((row: number, col: number) => {
+    if (!isSelecting || !selectionStart) return;
+
+    const minRow = Math.min(selectionStart.row, row);
+    const maxRow = Math.max(selectionStart.row, row);
+    const minCol = Math.min(selectionStart.col, col);
+    const maxCol = Math.max(selectionStart.col, col);
+
+    const newSelection = new Set<string>();
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        newSelection.add(getCellKey(r, c));
+      }
+    }
+    setSelectedCells(newSelection);
+  }, [isSelecting, selectionStart]);
+
+  const handleCellMouseUp = useCallback(() => {
+    setIsSelecting(false);
+  }, []);
+
+  // マウスアップイベントをdocumentに登録
+  useEffect(() => {
+    const handleDocumentMouseUp = () => {
+      setIsSelecting(false);
+    };
+    document.addEventListener('mouseup', handleDocumentMouseUp);
+    return () => {
+      document.removeEventListener('mouseup', handleDocumentMouseUp);
+    };
+  }, []);
 
   // データの変更をCSV配列に反映
   useEffect(() => {
@@ -384,6 +458,10 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
       },
       selectedRowIndex,
       setSelectedRowIndex,
+      selectedCells,
+      handleCellMouseDown,
+      handleCellMouseEnter,
+      handleCellMouseUp,
     },
   });
 
