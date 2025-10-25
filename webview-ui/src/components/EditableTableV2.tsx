@@ -4,6 +4,8 @@ import {
   useReactTable,
   ColumnDef,
   CellContext,
+  getSortedRowModel,
+  SortingState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { VscodeDivider } from "@vscode-elements/react-elements";
@@ -195,6 +197,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
 
   const [rowHeight, setRowHeight] = useState(40);
   const [data, setData] = useState<RowData[]>([]);
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   // データの変更をCSV配列に反映
   useEffect(() => {
@@ -281,7 +284,12 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   const table = useReactTable({
     data,
     columns,
+    state: {
+      sorting,
+    },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     meta: {
       updateData: (rowIndex: number, columnId: string, value: string) => {
         setData((old) =>
@@ -384,6 +392,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
+                      onClick={header.column.getToggleSortingHandler()}
                       style={{
                         display: "table-cell",
                         width: `${header.getSize()}px`,
@@ -394,10 +403,20 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
                         borderBottom: "1px solid var(--vscode-panel-border)",
                         backgroundColor: "var(--vscode-editor-background)",
                         boxSizing: "border-box",
+                        cursor: header.column.getCanSort() ? "pointer" : "default",
+                        userSelect: "none",
                       }}>
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : (
+                          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {{
+                              asc: " 🔼",
+                              desc: " 🔽",
+                            }[header.column.getIsSorted() as string] ?? null}
+                          </div>
+                        )}
                     </th>
                   ))}
                 </tr>

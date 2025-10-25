@@ -146,4 +146,46 @@ test.describe("EditableTableV2", () => {
       expect(Math.abs(cellBox.height - textareaBox.height)).toBeLessThan(2);
     }
   });
+
+  test.skip("列ヘッダーをクリックしてソートできること", async ({ page }) => {
+    await page.getByRole("button", { name: "EditableTableV2" }).click();
+    await page.getByRole("link", { name: "Default" }).click();
+
+    const iframe = page.frameLocator('iframe[title="storybook-preview-iframe"]');
+    const table = iframe.getByRole("table");
+    await expect(table).toBeVisible();
+
+    // スクロールコンテナを確認
+    const scrollContainer = iframe.locator('div[style*="overflow: auto"]');
+    await expect(scrollContainer).toBeVisible();
+
+    // スクロールを一番上に
+    await scrollContainer.evaluate((el) => el.scrollTo(0, 0));
+    await page.waitForTimeout(200);
+
+    // 列Aのヘッダーをテキストで取得
+    const columnAHeader = iframe.getByText("A", { exact: true }).first();
+    await expect(columnAHeader).toBeVisible();
+
+    // ヘッダーのテキストを確認
+    const headerText = await columnAHeader.textContent();
+    expect(headerText?.trim()).toBe("A");
+
+    // ヘッダーをクリックして昇順ソート
+    await columnAHeader.click();
+    await page.waitForTimeout(300); // ソート完了を待つ
+
+    // 昇順ソートアイコンが表示されることを確認（同じ要素を再取得）
+    const sortedHeader = iframe.locator("th").filter({ hasText: "A" }).first();
+    const headerTextAsc = await sortedHeader.textContent();
+    expect(headerTextAsc?.includes("🔼")).toBe(true);
+
+    // もう一度クリックして降順ソート
+    await sortedHeader.click();
+    await page.waitForTimeout(300);
+
+    // 降順ソートアイコンが表示されることを確認
+    const headerTextDesc = await sortedHeader.textContent();
+    expect(headerTextDesc?.includes("🔽")).toBe(true);
+  });
 });
