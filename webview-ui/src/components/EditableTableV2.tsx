@@ -35,6 +35,8 @@ declare module "@tanstack/react-table" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface TableMeta<TData> {
     updateData?: (rowIndex: number, columnId: string, value: string) => void;
+    selectedRowIndex?: number | null;
+    setSelectedRowIndex?: (index: number | null) => void;
   }
 }
 
@@ -72,9 +74,22 @@ const FilterInput: FC<FilterInputProps> = ({ column }) => {
 };
 
 // 行番号セルコンポーネント
-const RowIndexCell = (props: CellContext<RowData, unknown>) => {
+interface RowIndexCellProps extends CellContext<RowData, unknown> {
+  isSelected: boolean;
+  onSelect: () => void;
+}
+
+const RowIndexCell = (props: RowIndexCellProps) => {
   return (
     <div
+      onClick={props.onSelect}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          props.onSelect();
+        }
+      }}
       style={{
         width: "100%",
         height: "100%",
@@ -83,6 +98,13 @@ const RowIndexCell = (props: CellContext<RowData, unknown>) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        cursor: "pointer",
+        backgroundColor: props.isSelected
+          ? "var(--vscode-list-activeSelectionBackground)"
+          : "transparent",
+        color: props.isSelected
+          ? "var(--vscode-list-activeSelectionForeground)"
+          : "inherit",
       }}>
       {props.getValue() as string}
     </div>
@@ -235,6 +257,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
 
   // データの変更をCSV配列に反映
   useEffect(() => {
@@ -299,7 +322,21 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
         size: 40,
         enableResizing: false,
         enableSorting: false,
-        cell: RowIndexCell,
+        cell: (props) => {
+          /* eslint-disable react/prop-types */
+          const rowIndex = props.row.index;
+          const isSelected = props.table.options.meta?.selectedRowIndex === rowIndex;
+          const onSelect = () => {
+            const currentSelected = props.table.options.meta?.selectedRowIndex;
+            if (currentSelected === rowIndex) {
+              props.table.options.meta?.setSelectedRowIndex?.(null);
+            } else {
+              props.table.options.meta?.setSelectedRowIndex?.(rowIndex);
+            }
+          };
+          /* eslint-enable react/prop-types */
+          return <RowIndexCell {...props} isSelected={isSelected} onSelect={onSelect} />;
+        },
       },
     ];
 
@@ -344,6 +381,8 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           })
         );
       },
+      selectedRowIndex,
+      setSelectedRowIndex,
     },
   });
 
@@ -407,6 +446,46 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
         />
         <VscodeDivider className={styles.divider} />
       </div>
+      <div style={{ padding: "8px", display: "flex", gap: "8px", borderBottom: "1px solid var(--vscode-panel-border)" }}>
+        <button
+          onClick={() => {
+            const index = selectedRowIndex !== null ? selectedRowIndex : data.length;
+            _insertRow(index);
+            setSelectedRowIndex(null);
+          }}
+          style={{
+            padding: "4px 8px",
+            cursor: "pointer",
+            backgroundColor: "var(--vscode-button-background)",
+            color: "var(--vscode-button-foreground)",
+            border: "none",
+            borderRadius: "2px",
+          }}>
+          行を追加
+        </button>
+        <button
+          onClick={() => {
+            if (selectedRowIndex !== null) {
+              _deleteRow(selectedRowIndex);
+              setSelectedRowIndex(null);
+            }
+          }}
+          disabled={selectedRowIndex === null}
+          style={{
+            padding: "4px 8px",
+            cursor: selectedRowIndex === null ? "not-allowed" : "pointer",
+            backgroundColor: selectedRowIndex === null
+              ? "var(--vscode-button-secondaryBackground)"
+              : "var(--vscode-button-background)",
+            color: "var(--vscode-button-foreground)",
+            border: "none",
+            borderRadius: "2px",
+            opacity: selectedRowIndex === null ? 0.5 : 1,
+          }}>
+          行を削除
+        </button>
+      </div>
+      <div>
       <DndProvider backend={HTML5Backend}>
         <div
           ref={tableContainerRef}
@@ -530,6 +609,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           </table>
         </div>
       </DndProvider>
+      </div>
     </>
   );
 };
