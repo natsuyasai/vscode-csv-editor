@@ -334,6 +334,40 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     };
   }, []);
 
+  // 選択中のセルに一括で値を設定する関数
+  const handleBulkEdit = useCallback(() => {
+    if (selectedCells.size === 0) {
+      return;
+    }
+
+    const value = window.prompt('選択したセルに設定する値を入力してください:');
+    if (value === null) {
+      return; // キャンセルされた
+    }
+
+    // 選択中のセルを更新
+    setData((old) => {
+      const newData = [...old];
+      selectedCells.forEach((cellKey) => {
+        const [rowStr, colStr] = cellKey.split('-');
+        const rowIndex = parseInt(rowStr);
+        const colIndex = parseInt(colStr);
+        const columnId = `col${colIndex}`;
+
+        if (newData[rowIndex]) {
+          newData[rowIndex] = {
+            ...newData[rowIndex],
+            [columnId]: value,
+          };
+        }
+      });
+      return newData;
+    });
+
+    // 選択をクリア
+    setSelectedCells(new Set());
+  }, [selectedCells]);
+
   // データの変更をCSV配列に反映
   useEffect(() => {
     if (data.length === 0) return;
@@ -600,6 +634,39 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
             opacity: selectedColumnIndex === null ? 0.5 : 1,
           }}>
           列を削除
+        </button>
+        <div style={{ width: "1px", height: "24px", backgroundColor: "var(--vscode-panel-border)" }} />
+        <button
+          onClick={handleBulkEdit}
+          disabled={selectedCells.size === 0}
+          style={{
+            padding: "4px 8px",
+            cursor: selectedCells.size === 0 ? "not-allowed" : "pointer",
+            backgroundColor: selectedCells.size === 0
+              ? "var(--vscode-button-secondaryBackground)"
+              : "var(--vscode-button-background)",
+            color: "var(--vscode-button-foreground)",
+            border: "none",
+            borderRadius: "2px",
+            opacity: selectedCells.size === 0 ? 0.5 : 1,
+          }}>
+          一括編集 ({selectedCells.size}セル)
+        </button>
+        <button
+          onClick={() => setSelectedCells(new Set())}
+          disabled={selectedCells.size === 0}
+          style={{
+            padding: "4px 8px",
+            cursor: selectedCells.size === 0 ? "not-allowed" : "pointer",
+            backgroundColor: selectedCells.size === 0
+              ? "var(--vscode-button-secondaryBackground)"
+              : "var(--vscode-button-background)",
+            color: "var(--vscode-button-foreground)",
+            border: "none",
+            borderRadius: "2px",
+            opacity: selectedCells.size === 0 ? 0.5 : 1,
+          }}>
+          選択解除
         </button>
       </div>
       <div>
