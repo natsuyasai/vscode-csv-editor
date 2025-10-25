@@ -368,6 +368,102 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     setSelectedCells(new Set());
   }, [selectedCells]);
 
+  // 選択中のセルをコピーする関数
+  const handleCopy = useCallback(async () => {
+    if (selectedCells.size === 0) {
+      return;
+    }
+
+    // 選択されたセルを行と列でグループ化
+    const cellsArray = Array.from(selectedCells).map((cellKey) => {
+      const [rowStr, colStr] = cellKey.split('-');
+      return {
+        row: parseInt(rowStr),
+        col: parseInt(colStr),
+      };
+    });
+
+    // 行と列でソート
+    cellsArray.sort((a, b) => {
+      if (a.row !== b.row) return a.row - b.row;
+      return a.col - b.col;
+    });
+
+    // TSV形式でデータを作成（Excelと互換性あり）
+    const minRow = Math.min(...cellsArray.map(c => c.row));
+    const maxRow = Math.max(...cellsArray.map(c => c.row));
+    const minCol = Math.min(...cellsArray.map(c => c.col));
+    const maxCol = Math.max(...cellsArray.map(c => c.col));
+
+    const rows: string[] = [];
+    for (let row = minRow; row <= maxRow; row++) {
+      const cols: string[] = [];
+      for (let col = minCol; col <= maxCol; col++) {
+        const columnId = `col${col}`;
+        const value = data[row]?.[columnId] ?? '';
+        cols.push(value);
+      }
+      rows.push(cols.join('\t'));
+    }
+
+    const text = rows.join('\n');
+
+    // クリップボードにコピー
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error('クリップボードへのコピーに失敗しました:', err);
+    }
+  }, [selectedCells, data]);
+
+  // クリップボードからペーストする関数
+  const handlePaste = useCallback(async () => {
+    if (selectedCells.size === 0) {
+      return;
+    }
+
+    try {
+      const text = await navigator.clipboard.readText();
+      const rows = text.split('\n').map(row => row.split('\t'));
+
+      // 選択範囲の左上のセルを取得
+      const cellsArray = Array.from(selectedCells).map((cellKey) => {
+        const [rowStr, colStr] = cellKey.split('-');
+        return {
+          row: parseInt(rowStr),
+          col: parseInt(colStr),
+        };
+      });
+      const minRow = Math.min(...cellsArray.map(c => c.row));
+      const minCol = Math.min(...cellsArray.map(c => c.col));
+
+      // データを更新
+      setData((old) => {
+        const newData = [...old];
+        rows.forEach((rowData, rowOffset) => {
+          rowData.forEach((cellValue, colOffset) => {
+            const targetRow = minRow + rowOffset;
+            const targetCol = minCol + colOffset;
+            const columnId = `col${targetCol}`;
+
+            if (newData[targetRow] && targetCol >= 0) {
+              newData[targetRow] = {
+                ...newData[targetRow],
+                [columnId]: cellValue,
+              };
+            }
+          });
+        });
+        return newData;
+      });
+
+      // 選択をクリア
+      setSelectedCells(new Set());
+    } catch (err) {
+      console.error('クリップボードからの読み取りに失敗しました:', err);
+    }
+  }, [selectedCells]);
+
   // データの変更をCSV配列に反映
   useEffect(() => {
     if (data.length === 0) return;
@@ -667,6 +763,38 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
             opacity: selectedCells.size === 0 ? 0.5 : 1,
           }}>
           選択解除
+        </button>
+        <button
+          onClick={() => void handleCopy()}
+          disabled={selectedCells.size === 0}
+          style={{
+            padding: "4px 8px",
+            cursor: selectedCells.size === 0 ? "not-allowed" : "pointer",
+            backgroundColor: selectedCells.size === 0
+              ? "var(--vscode-button-secondaryBackground)"
+              : "var(--vscode-button-background)",
+            color: "var(--vscode-button-foreground)",
+            border: "none",
+            borderRadius: "2px",
+            opacity: selectedCells.size === 0 ? 0.5 : 1,
+          }}>
+          コピー ({selectedCells.size}セル)
+        </button>
+        <button
+          onClick={() => void handlePaste()}
+          disabled={selectedCells.size === 0}
+          style={{
+            padding: "4px 8px",
+            cursor: selectedCells.size === 0 ? "not-allowed" : "pointer",
+            backgroundColor: selectedCells.size === 0
+              ? "var(--vscode-button-secondaryBackground)"
+              : "var(--vscode-button-background)",
+            color: "var(--vscode-button-foreground)",
+            border: "none",
+            borderRadius: "2px",
+            opacity: selectedCells.size === 0 ? 0.5 : 1,
+          }}>
+          ペースト
         </button>
       </div>
       <div>
