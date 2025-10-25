@@ -258,6 +258,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
+  const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
 
   // データの変更をCSV配列に反映
   useEffect(() => {
@@ -484,6 +485,44 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           }}>
           行を削除
         </button>
+        <div style={{ width: "1px", height: "24px", backgroundColor: "var(--vscode-panel-border)" }} />
+        <button
+          onClick={() => {
+            const index = selectedColumnIndex !== null ? selectedColumnIndex : csvArray[0].length;
+            _insertCol(index);
+            setSelectedColumnIndex(null);
+          }}
+          style={{
+            padding: "4px 8px",
+            cursor: "pointer",
+            backgroundColor: "var(--vscode-button-background)",
+            color: "var(--vscode-button-foreground)",
+            border: "none",
+            borderRadius: "2px",
+          }}>
+          列を追加
+        </button>
+        <button
+          onClick={() => {
+            if (selectedColumnIndex !== null) {
+              _deleteCol(selectedColumnIndex);
+              setSelectedColumnIndex(null);
+            }
+          }}
+          disabled={selectedColumnIndex === null}
+          style={{
+            padding: "4px 8px",
+            cursor: selectedColumnIndex === null ? "not-allowed" : "pointer",
+            backgroundColor: selectedColumnIndex === null
+              ? "var(--vscode-button-secondaryBackground)"
+              : "var(--vscode-button-background)",
+            color: "var(--vscode-button-foreground)",
+            border: "none",
+            borderRadius: "2px",
+            opacity: selectedColumnIndex === null ? 0.5 : 1,
+          }}>
+          列を削除
+        </button>
       </div>
       <div>
       <DndProvider backend={HTML5Backend}>
@@ -508,10 +547,23 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
             }}>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id} style={{ display: "table-row" }}>
-                  {headerGroup.headers.map((header) => (
+                  {headerGroup.headers.map((header, headerIndex) => {
+                    const columnIndex = header.column.id === ROW_IDX_KEY ? null : headerIndex - 1;
+                    const isSelected = columnIndex !== null && selectedColumnIndex === columnIndex;
+                    return (
                     <th
                       key={header.id}
                       onClick={header.column.getToggleSortingHandler()}
+                      onContextMenu={(e) => {
+                        if (columnIndex !== null) {
+                          e.preventDefault();
+                          if (selectedColumnIndex === columnIndex) {
+                            setSelectedColumnIndex(null);
+                          } else {
+                            setSelectedColumnIndex(columnIndex);
+                          }
+                        }
+                      }}
                       style={{
                         display: "table-cell",
                         width: `${header.getSize()}px`,
@@ -520,7 +572,12 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
                         padding: "8px",
                         textAlign: "left",
                         borderBottom: "1px solid var(--vscode-panel-border)",
-                        backgroundColor: "var(--vscode-editor-background)",
+                        backgroundColor: isSelected
+                          ? "var(--vscode-list-activeSelectionBackground)"
+                          : "var(--vscode-editor-background)",
+                        color: isSelected
+                          ? "var(--vscode-list-activeSelectionForeground)"
+                          : "inherit",
                         boxSizing: "border-box",
                         cursor: header.column.getCanSort() ? "pointer" : "default",
                         userSelect: "none",
@@ -537,7 +594,8 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
                           </div>
                         )}
                     </th>
-                  ))}
+                    );
+                  })}
                 </tr>
               ))}
               {showFilters && table.getHeaderGroups().map((headerGroup) => (
