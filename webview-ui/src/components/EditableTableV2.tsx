@@ -12,7 +12,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { VscodeDivider } from "@vscode-elements/react-elements";
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DndProvider } from "react-dnd";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
@@ -78,15 +78,101 @@ const FilterInput: FC<FilterInputProps> = ({ column }) => {
   );
 };
 
+// ドラッグ可能な列ヘッダーコンポーネント
+interface DraggableHeaderCellProps {
+  columnIndex: number;
+  children: React.ReactNode;
+  onColumnReorder: (sourceIndex: number, targetIndex: number) => void;
+}
+
+const DraggableHeaderCell: FC<DraggableHeaderCellProps> = ({
+  columnIndex,
+  children,
+  onColumnReorder,
+}) => {
+  const [{ isDragging }, drag] = useDrag({
+    type: "COL_DRAG",
+    item: { index: columnIndex },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  const [{ isOver }, drop] = useDrop({
+    accept: "COL_DRAG",
+    drop: (item: { index: number }) => {
+      onColumnReorder(item.index, columnIndex);
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  });
+
+  const combinedRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      drag(node);
+      drop(node);
+    },
+    [drag, drop]
+  );
+
+  return (
+    <div
+      ref={combinedRef}
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        cursor: "grab",
+        backgroundColor: isOver ? "var(--vscode-list-hoverBackground)" : "transparent",
+        border: isOver ? "2px solid var(--vscode-focusBorder)" : "none",
+        padding: "4px",
+      }}>
+      {children}
+    </div>
+  );
+};
+
 // 行番号セルコンポーネント
 interface RowIndexCellProps extends CellContext<RowData, unknown> {
   isSelected: boolean;
   onSelect: () => void;
+  onRowReorder?: (sourceIndex: number, targetIndex: number) => void;
+  rowIndex: number;
 }
 
 const RowIndexCell = (props: RowIndexCellProps) => {
+  const [{ isDragging }, drag] = useDrag({
+    type: "ROW_DRAG",
+    item: { index: props.rowIndex },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  const [{ isOver }, drop] = useDrop({
+    accept: "ROW_DRAG",
+    drop: (item: { index: number }) => {
+      if (props.onRowReorder) {
+        props.onRowReorder(item.index, props.rowIndex);
+      }
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  });
+
+  const combinedRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      drag(node);
+      drop(node);
+    },
+    [drag, drop]
+  );
+
   return (
     <div
+      ref={combinedRef}
       onClick={props.onSelect}
       role="button"
       tabIndex={0}
@@ -103,13 +189,17 @@ const RowIndexCell = (props: RowIndexCellProps) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        cursor: "pointer",
+        cursor: isDragging ? "grabbing" : "grab",
         backgroundColor: props.isSelected
           ? "var(--vscode-list-activeSelectionBackground)"
-          : "transparent",
+          : isOver
+            ? "var(--vscode-list-hoverBackground)"
+            : "transparent",
         color: props.isSelected
           ? "var(--vscode-list-activeSelectionForeground)"
           : "inherit",
+        opacity: isDragging ? 0.5 : 1,
+        border: isOver ? "2px solid var(--vscode-focusBorder)" : "none",
       }}>
       {props.getValue() as string}
     </div>
@@ -519,6 +609,18 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     return newRows;
   }, [csvArray, isIgnoreHeaderRow]);
 
+  // 行のドラッグ&ドロップハンドラー
+  const handleRowReorder = useCallback((sourceIndex: number, targetIndex: number) => {
+    if (sourceIndex === targetIndex) return;
+    _moveRows(sourceIndex, targetIndex);
+  }, [_moveRows]);
+
+  // 列のドラッグ&ドロップハンドラー
+  const handleColumnReorder = useCallback((sourceIndex: number, targetIndex: number) => {
+    if (sourceIndex === targetIndex) return;
+    _moveColumns(sourceIndex, targetIndex);
+  }, [_moveColumns]);
+
   // 列定義を生成
   const columns = useMemo((): ColumnDef<RowData>[] => {
     if (csvArray.length === 0 || csvArray[0].length === 0) {
@@ -546,7 +648,15 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
             }
           };
           /* eslint-enable react/prop-types */
-          return <RowIndexCell {...props} isSelected={isSelected} onSelect={onSelect} />;
+          return (
+            <RowIndexCell
+              {...props}
+              isSelected={isSelected}
+              onSelect={onSelect}
+              rowIndex={rowIndex}
+              onRowReorder={handleRowReorder}
+            />
+          );
         },
       },
     ];
@@ -563,7 +673,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     });
 
     return cols;
-  }, [csvArray, isIgnoreHeaderRow]);
+  }, [csvArray, isIgnoreHeaderRow, handleRowReorder]);
 
   // TanStack Tableのインスタンスを作成
   const table = useReactTable({
@@ -948,13 +1058,21 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
                       }}>
                       {header.isPlaceholder
                         ? null
-                        : (
+                        : columnIndex !== null ? (
+                          <DraggableHeaderCell
+                            columnIndex={columnIndex}
+                            onColumnReorder={handleColumnReorder}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {{
+                                asc: " 🔼",
+                                desc: " 🔽",
+                              }[header.column.getIsSorted() as string] ?? null}
+                            </div>
+                          </DraggableHeaderCell>
+                        ) : (
                           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                             {flexRender(header.column.columnDef.header, header.getContext())}
-                            {{
-                              asc: " 🔼",
-                              desc: " 🔽",
-                            }[header.column.getIsSorted() as string] ?? null}
                           </div>
                         )}
                     </th>
