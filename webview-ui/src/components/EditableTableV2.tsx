@@ -20,6 +20,7 @@ import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType } from "@/types";
 import styles from "./EditableTable.module.scss";
 import { Header } from "./Header";
 import cellEditStyles from "./Row/TextAreaEditor.module.scss";
+import { Search } from "./Search";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -292,6 +293,11 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{ row: number; col: number } | null>(null);
+
+  // 検索機能のstate
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [matchedItemPositions, setMatchedItemPositions] = useState<Array<{ rowIdx: number; colIdx: number }>>([]);
+  const [searchedSelectedItemIdx, setSearchedSelectedItemIdx] = useState(0);
 
   // セル選択のヘルパー関数
   const getCellKey = (row: number, col: number) => `${row}-${col}`;
@@ -606,6 +612,80 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     overscan: 10,
   });
 
+  // 検索ハンドラー
+  const handleSearch = useCallback((text: string) => {
+    if (text.trim() === "") {
+      return;
+    }
+    const lowerText = text.toLowerCase();
+    const positions: Array<{ rowIdx: number; colIdx: number }> = [];
+
+    data.forEach((row, rowIdx) => {
+      Object.keys(row).forEach((key) => {
+        if (key === ROW_IDX_KEY || key === ROW_ID_KEY) {
+          return;
+        }
+        const colIdx = parseInt(key.replace('col', ''));
+        const value = row[key];
+        if (value && value.toLowerCase().includes(lowerText)) {
+          positions.push({ rowIdx, colIdx });
+        }
+      });
+    });
+
+    if (positions.length === 0) {
+      return;
+    }
+
+    setMatchedItemPositions(positions);
+    setSearchedSelectedItemIdx(0);
+
+    // 最初のマッチ位置にスクロール
+    const firstMatch = positions[0];
+    tableContainerRef.current?.scrollTo({
+      top: firstMatch.rowIdx * rowHeight,
+      behavior: 'smooth',
+    });
+  }, [data, rowHeight]);
+
+  const handleNextSearch = useCallback(() => {
+    if (matchedItemPositions.length === 0) {
+      return;
+    }
+    const nextIdx =
+      searchedSelectedItemIdx + 1 < matchedItemPositions.length ? searchedSelectedItemIdx + 1 : 0;
+    const position = matchedItemPositions[nextIdx];
+    setSearchedSelectedItemIdx(nextIdx);
+
+    tableContainerRef.current?.scrollTo({
+      top: position.rowIdx * rowHeight,
+      behavior: 'smooth',
+    });
+  }, [matchedItemPositions, searchedSelectedItemIdx, rowHeight]);
+
+  const handlePreviousSearch = useCallback(() => {
+    if (matchedItemPositions.length === 0) {
+      return;
+    }
+    const prevIdx =
+      searchedSelectedItemIdx - 1 >= 0
+        ? searchedSelectedItemIdx - 1
+        : matchedItemPositions.length - 1;
+    const position = matchedItemPositions[prevIdx];
+    setSearchedSelectedItemIdx(prevIdx);
+
+    tableContainerRef.current?.scrollTo({
+      top: position.rowIdx * rowHeight,
+      behavior: 'smooth',
+    });
+  }, [matchedItemPositions, searchedSelectedItemIdx, rowHeight]);
+
+  const handleCloseSearch = useCallback(() => {
+    setMatchedItemPositions([]);
+    setSearchedSelectedItemIdx(0);
+    setSearchOpen(false);
+  }, []);
+
   function setRowSizeFromHeader(size: RowSizeType) {
     switch (size) {
       case "small":
@@ -642,7 +722,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           isEnabledRedo={isEnabledRedo}
           onUndo={undo}
           onRedo={redo}
-          onSearch={() => {}}
+          onSearch={() => setSearchOpen(true)}
           onUpdateRowSize={setRowSizeFromHeader}
           onClickApply={handleApply}
           showFilters={showFilters}
@@ -655,6 +735,17 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
         />
         <VscodeDivider className={styles.divider} />
       </div>
+      {searchOpen && (
+        <Search
+          isMatching={matchedItemPositions.length > 0}
+          machedCount={matchedItemPositions.length}
+          searchedSelectedItemIdx={searchedSelectedItemIdx}
+          onSearch={handleSearch}
+          onNext={handleNextSearch}
+          onPrevious={handlePreviousSearch}
+          onClose={handleCloseSearch}
+        />
+      )}
       <div style={{ padding: "8px", display: "flex", gap: "8px", borderBottom: "1px solid var(--vscode-panel-border)" }}>
         <button
           onClick={() => {
