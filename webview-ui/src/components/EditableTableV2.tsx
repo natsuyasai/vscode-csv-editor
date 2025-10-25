@@ -6,6 +6,8 @@ import {
   CellContext,
   getSortedRowModel,
   SortingState,
+  getFilteredRowModel,
+  ColumnFiltersState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { VscodeDivider } from "@vscode-elements/react-elements";
@@ -35,6 +37,39 @@ declare module "@tanstack/react-table" {
     updateData?: (rowIndex: number, columnId: string, value: string) => void;
   }
 }
+
+// フィルター入力コンポーネント
+interface FilterInputProps {
+  column: {
+    getFilterValue: () => unknown;
+    setFilterValue: (value: string) => void;
+  };
+}
+
+const FilterInput: FC<FilterInputProps> = ({ column }) => {
+  const columnFilterValue = column.getFilterValue() as string;
+
+  return (
+    <input
+      type="text"
+      value={columnFilterValue ?? ""}
+      onChange={(e) => {
+        column.setFilterValue(e.target.value);
+      }}
+      placeholder="フィルター..."
+      style={{
+        width: "100%",
+        padding: "4px",
+        boxSizing: "border-box",
+        border: "1px solid var(--vscode-input-border)",
+        backgroundColor: "var(--vscode-input-background)",
+        color: "var(--vscode-input-foreground)",
+        fontSize: "12px",
+        fontFamily: "var(--vscode-font-family)",
+      }}
+    />
+  );
+};
 
 // 行番号セルコンポーネント
 const RowIndexCell = (props: CellContext<RowData, unknown>) => {
@@ -198,6 +233,8 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   const [rowHeight, setRowHeight] = useState(40);
   const [data, setData] = useState<RowData[]>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [showFilters, setShowFilters] = useState(false);
 
   // データの変更をCSV配列に反映
   useEffect(() => {
@@ -286,10 +323,13 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     columns,
     state: {
       sorting,
+      columnFilters,
     },
     onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     meta: {
       updateData: (rowIndex: number, columnId: string, value: string) => {
         setData((old) =>
@@ -357,10 +397,10 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           onSearch={() => {}}
           onUpdateRowSize={setRowSizeFromHeader}
           onClickApply={handleApply}
-          showFilters={false}
-          onToggleFilters={() => {}}
-          onClearFilters={() => {}}
-          hasActiveFilters={false}
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters(!showFilters)}
+          onClearFilters={() => setColumnFilters([])}
+          hasActiveFilters={columnFilters.length > 0}
           selectedColumnKey={null}
           currentAlignment={{ vertical: "center", horizontal: "left" }}
           onAlignmentChange={() => {}}
@@ -417,6 +457,28 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
                             }[header.column.getIsSorted() as string] ?? null}
                           </div>
                         )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+              {showFilters && table.getHeaderGroups().map((headerGroup) => (
+                <tr key={`${headerGroup.id}-filter`} style={{ display: "table-row" }}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      style={{
+                        display: "table-cell",
+                        width: `${header.getSize()}px`,
+                        minWidth: `${header.getSize()}px`,
+                        maxWidth: `${header.getSize()}px`,
+                        padding: "4px 8px",
+                        borderBottom: "1px solid var(--vscode-panel-border)",
+                        backgroundColor: "var(--vscode-editor-background)",
+                        boxSizing: "border-box",
+                      }}>
+                      {header.column.getCanFilter() && header.column.id !== ROW_IDX_KEY ? (
+                        <FilterInput column={header.column} />
+                      ) : null}
                     </th>
                   ))}
                 </tr>
