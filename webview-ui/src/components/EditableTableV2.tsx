@@ -19,6 +19,8 @@ import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType } from "@/types";
 import styles from "./EditableTable.module.scss";
 import { Header } from "./Header";
+import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
+import { RowContextMenu } from "./Row/RowContextMenu";
 import cellEditStyles from "./Row/TextAreaEditor.module.scss";
 import { Search } from "./Search";
 
@@ -137,6 +139,7 @@ interface RowIndexCellProps extends CellContext<RowData, unknown> {
   isSelected: boolean;
   onSelect: () => void;
   onRowReorder?: (sourceIndex: number, targetIndex: number) => void;
+  onContextMenu?: (e: React.MouseEvent, rowIndex: number) => void;
   rowIndex: number;
 }
 
@@ -174,6 +177,10 @@ const RowIndexCell = (props: RowIndexCellProps) => {
     <div
       ref={combinedRef}
       onClick={props.onSelect}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        props.onContextMenu?.(e, props.rowIndex);
+      }}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
@@ -388,6 +395,15 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   const [searchOpen, setSearchOpen] = useState(false);
   const [matchedItemPositions, setMatchedItemPositions] = useState<Array<{ rowIdx: number; colIdx: number }>>([]);
   const [searchedSelectedItemIdx, setSearchedSelectedItemIdx] = useState(0);
+
+  // コンテキストメニューのstate
+  const [isRowContextMenuOpen, setIsRowContextMenuOpen] = useState(false);
+  const [rowContextMenuProps, setRowContextMenuProps] = useState<{ itemIdx: number; top: number; left: number } | null>(null);
+  const rowContextMenuRef = useRef<HTMLElement | null>(null);
+
+  const [isColumnContextMenuOpen, setIsColumnContextMenuOpen] = useState(false);
+  const [columnContextMenuProps, setColumnContextMenuProps] = useState<{ itemIdx: number; top: number; left: number } | null>(null);
+  const columnContextMenuRef = useRef<HTMLElement | null>(null);
 
   // セル選択のヘルパー関数
   const getCellKey = (row: number, col: number) => `${row}-${col}`;
@@ -621,6 +637,54 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     _moveColumns(sourceIndex, targetIndex);
   }, [_moveColumns]);
 
+  // 行コンテキストメニューハンドラー
+  const handleSelectRowContextMenu = useCallback((value: string) => {
+    if (rowContextMenuProps === null) {
+      return;
+    }
+
+    const rowIdx = rowContextMenuProps.itemIdx;
+    if (value === "deleteRow") {
+      _deleteRow(rowIdx);
+    } else if (value === "insertRowAbove") {
+      _insertRow(rowIdx);
+    } else if (value === "insertRowBelow") {
+      _insertRow(rowIdx + 1);
+    }
+
+    setIsRowContextMenuOpen(false);
+    setRowContextMenuProps(null);
+  }, [rowContextMenuProps, _deleteRow, _insertRow]);
+
+  const handleCloseRowContextMenu = useCallback(() => {
+    setIsRowContextMenuOpen(false);
+    setRowContextMenuProps(null);
+  }, []);
+
+  // 列コンテキストメニューハンドラー
+  const handleSelectColumnContextMenu = useCallback((value: string) => {
+    if (columnContextMenuProps === null) {
+      return;
+    }
+
+    const colIdx = columnContextMenuProps.itemIdx;
+    if (value === "deleteHeaderCel") {
+      _deleteCol(colIdx);
+    } else if (value === "insertHeaderCelLeft") {
+      _insertCol(colIdx);
+    } else if (value === "insertHeaderCelRight") {
+      _insertCol(colIdx + 1);
+    }
+
+    setIsColumnContextMenuOpen(false);
+    setColumnContextMenuProps(null);
+  }, [columnContextMenuProps, _deleteCol, _insertCol]);
+
+  const handleCloseColumnContextMenu = useCallback(() => {
+    setIsColumnContextMenuOpen(false);
+    setColumnContextMenuProps(null);
+  }, []);
+
   // 列定義を生成
   const columns = useMemo((): ColumnDef<RowData>[] => {
     if (csvArray.length === 0 || csvArray[0].length === 0) {
@@ -647,6 +711,14 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
               props.table.options.meta?.setSelectedRowIndex?.(rowIndex);
             }
           };
+          const onContextMenu = (e: React.MouseEvent, rowIdx: number) => {
+            setRowContextMenuProps({
+              itemIdx: rowIdx,
+              top: e.clientY,
+              left: e.clientX,
+            });
+            setIsRowContextMenuOpen(true);
+          };
           /* eslint-enable react/prop-types */
           return (
             <RowIndexCell
@@ -655,6 +727,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
               onSelect={onSelect}
               rowIndex={rowIndex}
               onRowReorder={handleRowReorder}
+              onContextMenu={onContextMenu}
             />
           );
         },
@@ -1031,11 +1104,12 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
                       onContextMenu={(e) => {
                         if (columnIndex !== null) {
                           e.preventDefault();
-                          if (selectedColumnIndex === columnIndex) {
-                            setSelectedColumnIndex(null);
-                          } else {
-                            setSelectedColumnIndex(columnIndex);
-                          }
+                          setColumnContextMenuProps({
+                            itemIdx: columnIndex,
+                            top: e.clientY,
+                            left: e.clientX,
+                          });
+                          setIsColumnContextMenuOpen(true);
                         }
                       }}
                       style={{
@@ -1148,6 +1222,20 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
             </tbody>
           </table>
         </div>
+        <RowContextMenu
+          isContextMenuOpen={isRowContextMenuOpen}
+          menuRef={rowContextMenuRef}
+          contextMenuProps={rowContextMenuProps}
+          onSelect={handleSelectRowContextMenu}
+          onClose={handleCloseRowContextMenu}
+        />
+        <HeaderCelContextMenu
+          isContextMenuOpen={isColumnContextMenuOpen}
+          menuRef={columnContextMenuRef}
+          contextMenuProps={columnContextMenuProps}
+          onSelect={handleSelectColumnContextMenu}
+          onClose={handleCloseColumnContextMenu}
+        />
       </DndProvider>
       </div>
     </>
