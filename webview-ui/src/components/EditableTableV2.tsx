@@ -16,13 +16,11 @@ import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
-import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType } from "@/types";
+import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType, CellAlignment } from "@/types";
+import { PortalManager } from "./EditableTable/PortalManager";
 import styles from "./EditableTable.module.scss";
 import { Header } from "./Header";
-import { HeaderCelContextMenu } from "./Header/HeaderCelContextMenu";
-import { RowContextMenu } from "./Row/RowContextMenu";
 import cellEditStyles from "./Row/TextAreaEditor.module.scss";
-import { Search } from "./Search";
 
 interface Props {
   csvArray: Array<Array<string>>;
@@ -405,6 +403,9 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   const [columnContextMenuProps, setColumnContextMenuProps] = useState<{ itemIdx: number; top: number; left: number } | null>(null);
   const columnContextMenuRef = useRef<HTMLElement | null>(null);
 
+  // 列の配置調整のstate
+  const [columnAlignments, setColumnAlignments] = useState<Record<number, CellAlignment>>({});
+
   // セル選択のヘルパー関数
   const getCellKey = (row: number, col: number) => `${row}-${col}`;
 
@@ -634,7 +635,8 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   // 列のドラッグ&ドロップハンドラー
   const handleColumnReorder = useCallback((sourceIndex: number, targetIndex: number) => {
     if (sourceIndex === targetIndex) return;
-    _moveColumns(sourceIndex, targetIndex);
+    // columnIndexは0始まりだが、moveColumnsは1始まり（行番号列の次）を期待するため+1
+    _moveColumns(sourceIndex + 1, targetIndex + 1);
   }, [_moveColumns]);
 
   // 行コンテキストメニューハンドラー
@@ -869,6 +871,24 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     setSearchOpen(false);
   }, []);
 
+  // 列の配置調整ハンドラー
+  const handleAlignmentChange = useCallback((alignment: CellAlignment) => {
+    if (selectedColumnIndex === null) return;
+
+    setColumnAlignments(prev => ({
+      ...prev,
+      [selectedColumnIndex]: alignment,
+    }));
+  }, [selectedColumnIndex]);
+
+  // 選択された列の現在の配置を取得
+  const getCurrentAlignment = useCallback((): CellAlignment => {
+    if (selectedColumnIndex === null) {
+      return { vertical: "center", horizontal: "left" };
+    }
+    return columnAlignments[selectedColumnIndex] || { vertical: "center", horizontal: "left" };
+  }, [selectedColumnIndex, columnAlignments]);
+
   function setRowSizeFromHeader(size: RowSizeType) {
     switch (size) {
       case "small":
@@ -912,23 +932,12 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           onToggleFilters={() => setShowFilters(!showFilters)}
           onClearFilters={() => setColumnFilters([])}
           hasActiveFilters={columnFilters.length > 0}
-          selectedColumnKey={null}
-          currentAlignment={{ vertical: "center", horizontal: "left" }}
-          onAlignmentChange={() => {}}
+          selectedColumnKey={selectedColumnIndex !== null ? `col${selectedColumnIndex}` : null}
+          currentAlignment={getCurrentAlignment()}
+          onAlignmentChange={handleAlignmentChange}
         />
         <VscodeDivider className={styles.divider} />
       </div>
-      {searchOpen && (
-        <Search
-          isMatching={matchedItemPositions.length > 0}
-          machedCount={matchedItemPositions.length}
-          searchedSelectedItemIdx={searchedSelectedItemIdx}
-          onSearch={handleSearch}
-          onNext={handleNextSearch}
-          onPrevious={handlePreviousSearch}
-          onClose={handleCloseSearch}
-        />
-      )}
       <div style={{ padding: "8px", display: "flex", gap: "8px", borderBottom: "1px solid var(--vscode-panel-border)" }}>
         <button
           onClick={() => {
@@ -1185,6 +1194,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
               {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                 const row = table.getRowModel().rows[virtualRow.index];
                 if (!row) return null;
+                const isRowSelected = selectedRowIndex === virtualRow.index;
                 return (
                   <tr
                     key={row.id}
@@ -1198,7 +1208,10 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
                       height: `${virtualRow.size}px`,
                       transform: `translateY(${virtualRow.start}px)`,
                     }}>
-                    {row.getVisibleCells().map((cell) => (
+                    {row.getVisibleCells().map((cell, cellIndex) => {
+                      const colIndex = cellIndex - 1; // 行番号列を除く
+                      const alignment = colIndex >= 0 ? columnAlignments[colIndex] : undefined;
+                      return (
                       <td
                         key={cell.id}
                         style={{
@@ -1212,29 +1225,51 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
+                          textAlign: alignment?.horizontal || "left",
+                          verticalAlign: alignment?.vertical || "center",
+                          backgroundColor: isRowSelected
+                            ? "var(--vscode-list-activeSelectionBackground)"
+                            : "transparent",
                         }}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
-                    ))}
+                      );
+                    })}
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <RowContextMenu
-          isContextMenuOpen={isRowContextMenuOpen}
-          menuRef={rowContextMenuRef}
-          contextMenuProps={rowContextMenuProps}
-          onSelect={handleSelectRowContextMenu}
-          onClose={handleCloseRowContextMenu}
-        />
-        <HeaderCelContextMenu
-          isContextMenuOpen={isColumnContextMenuOpen}
-          menuRef={columnContextMenuRef}
-          contextMenuProps={columnContextMenuProps}
-          onSelect={handleSelectColumnContextMenu}
-          onClose={handleCloseColumnContextMenu}
+        <PortalManager
+          isShowSearch={searchOpen}
+          searchProps={{
+            isMatching: matchedItemPositions.length > 0,
+            machedCount: matchedItemPositions.length,
+            searchedSelectedItemIdx: searchedSelectedItemIdx,
+            onSearch: handleSearch,
+            onNext: handleNextSearch,
+            onPrevious: handlePreviousSearch,
+            onClose: handleCloseSearch,
+          }}
+          isRowContextMenuOpen={isRowContextMenuOpen}
+          rowContextMenuProps={{
+            isContextMenuOpen: isRowContextMenuOpen,
+            menuRef: rowContextMenuRef,
+            contextMenuProps: rowContextMenuProps,
+            className: "",
+            onSelect: handleSelectRowContextMenu,
+            onClose: handleCloseRowContextMenu,
+          }}
+          isHeaderContextMenuOpen={isColumnContextMenuOpen}
+          headerContextMenuProps={{
+            isContextMenuOpen: isColumnContextMenuOpen,
+            menuRef: columnContextMenuRef,
+            contextMenuProps: columnContextMenuProps,
+            className: "",
+            onSelect: handleSelectColumnContextMenu,
+            onClose: handleCloseColumnContextMenu,
+          }}
         />
       </DndProvider>
       </div>
