@@ -10,7 +10,7 @@ Eve,29,Kobe,Analyst`;
 
 // CSVデータの定数
 export const COL_MAX = 4;
-export const COL_MAX_WITH_HEADER = COL_MAX + 1; // 行番号を含む
+export const COL_MAX_WITH_HEADER = COL_MAX + 1; // インデックス列を含む（EditableTableV2では5列）
 export const ROW_MAX = 5;
 
 /**

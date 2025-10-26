@@ -32,7 +32,7 @@ export const BaseContextMenu: FC<BaseContextMenuProps> = ({
   return (
     <VscodeContextMenu
       ref={menuRef as never}
-      show={isContextMenuOpen}
+      show={true}
       className={className}
       data={data}
       onVscContextMenuSelect={(item) => {
@@ -40,8 +40,10 @@ export const BaseContextMenu: FC<BaseContextMenuProps> = ({
         onClose();
       }}
       style={{
-        top: contextMenuProps.top,
-        left: contextMenuProps.left,
+        position: "fixed",
+        top: `${contextMenuProps.top}px`,
+        left: `${contextMenuProps.left}px`,
+        zIndex: 9999,
       }}
     />
   );

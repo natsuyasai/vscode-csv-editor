@@ -117,8 +117,9 @@ export const HeaderEditingFunctionality_Delete: Story = {
     await expect(textarea).not.toBeInTheDocument();
 
     // ヘッダーセルの内容が空になっていることを確認
-    const nameHeaderColumnHeader = await canvas.findByRole("columnheader", { name: "" });
-    await expect(nameHeaderColumnHeader).toBeInTheDocument();
+    // "Name"というテキストを含むヘッダーが存在しないことを確認
+    const nameHeaderAfterDelete = canvas.queryByRole("button", { name: /Name/ });
+    await expect(nameHeaderAfterDelete).not.toBeInTheDocument();
   },
 };
 

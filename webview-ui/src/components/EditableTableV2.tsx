@@ -436,6 +436,27 @@ const EditableCell = (props: CellContext<RowData, unknown>) => {
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           setIsEditing(true);
+        } else if (e.key === "Delete") {
+          // Deleteキー: 内容をクリアするが、編集モードには移行しない
+          e.preventDefault();
+          setValue("");
+          props.table.options.meta?.updateData?.(props.row.index, props.column.id, "");
+        } else if (e.key === "Backspace") {
+          // Backspaceキー: 内容をクリアして編集モードに移行
+          e.preventDefault();
+          setValue("");
+          setIsEditing(true);
+        } else if (
+          !e.ctrlKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          !e.repeat &&
+          e.key.length === 1
+        ) {
+          // 通常の文字入力: 内容をクリアして入力した文字から編集モードに移行
+          e.preventDefault();
+          setValue(e.key);
+          setIsEditing(true);
         }
       }}
       role="button"
@@ -482,6 +503,17 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   const [data, setData] = useState<RowData[]>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
+  // rowSizeが変更されたときにrowHeightを更新
+  useEffect(() => {
+    const heights: Record<RowSizeType, number> = {
+      small: 30,
+      normal: 40,
+      large: 80,
+      "extra large": 120,
+    };
+    setRowHeight(heights[rowSize]);
+  }, [rowSize]);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
@@ -924,6 +956,11 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     overscan: 10,
   });
 
+  // rowHeightが変更されたときにvirtualizerを再計算
+  useEffect(() => {
+    rowVirtualizer.measure();
+  }, [rowHeight, rowVirtualizer]);
+
   // 検索ハンドラー
   const handleSearch = useCallback(
     (text: string) => {
@@ -1023,29 +1060,31 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   }, [selectedColumnIndex, columnAlignments]);
 
   function setRowSizeFromHeader(size: RowSizeType) {
-    switch (size) {
-      case "small":
-        setRowHeight(24);
-        break;
-      case "normal":
-        setRowHeight(40);
-        break;
-      case "large":
-        setRowHeight(80);
-        break;
-      case "extra large":
-        setRowHeight(120);
-        break;
-      default:
-        setRowHeight(40);
-        break;
-    }
+    // rowSizeを設定すると、useEffectでrowHeightが自動的に更新される
     setRowSize(size);
   }
 
   const handleApply = useCallback(() => {
     onApply();
   }, [onApply]);
+
+  // キーボードショートカット（Ctrl+Z、Ctrl+Y）
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "z") {
+        e.preventDefault();
+        undo();
+      } else if (e.ctrlKey && e.key === "y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [undo, redo]);
 
   return (
     <>
@@ -1501,10 +1540,25 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
                       {row.getVisibleCells().map((cell, cellIndex) => {
                         const colIndex = cellIndex - 1; // 行番号列を除く
                         const alignment = colIndex >= 0 ? columnAlignments[colIndex] : undefined;
+                        const isRowIndexCell = cell.column.id === ROW_IDX_KEY;
+
                         return (
                           <td
                             key={cell.id}
                             role="gridcell"
+                            onContextMenu={
+                              isRowIndexCell
+                                ? (e) => {
+                                    e.preventDefault();
+                                    setRowContextMenuProps({
+                                      itemIdx: row.index,
+                                      top: e.clientY,
+                                      left: e.clientX,
+                                    });
+                                    setIsRowContextMenuOpen(true);
+                                  }
+                                : undefined
+                            }
                             style={{
                               display: "table-cell",
                               width: `${cell.column.getSize()}px`,

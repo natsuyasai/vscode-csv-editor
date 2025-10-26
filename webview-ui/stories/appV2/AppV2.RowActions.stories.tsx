@@ -43,9 +43,15 @@ async function triggerRowContextMenu(canvasElement: HTMLElement, targetValue: st
     throw new Error("No data row found");
   }
   const rowNumberCell = within(dataRow).getAllByRole("gridcell")[0];
-  await userEvent.click(rowNumberCell);
+  // 行番号セルの中のボタンを取得（RowIndexCellはrole="button"のdiv）
+  const rowNumberButton = rowNumberCell.querySelector('[role="button"]') as HTMLElement;
+  if (!rowNumberButton) {
+    throw new Error("Row number button not found");
+  }
+  await userEvent.click(rowNumberButton);
 
   // 右クリックでコンテキストメニューを表示
+  // onContextMenuはtd要素に設定されているので、td要素を対象にする
   await userEvent.pointer({
     keys: "[MouseRight]",
     target: rowNumberCell,
