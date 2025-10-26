@@ -35,7 +35,7 @@ export const CellEditingFunctionality: Story = {
     await waitReadyForGrid(canvasElement);
 
     // セルをダブルクリックして編集モードに入る
-    const aliceCell = await canvas.findByRole("gridcell", { name: "Alice" });
+    const aliceCell = await canvas.findByRole("button", { name: "Alice" });
     await userEvent.dblClick(aliceCell);
 
     // 編集可能な入力フィールドが表示されることを確認
@@ -55,7 +55,7 @@ export const CellEditingFunctionality_Backspace: Story = {
     await waitReadyForGrid(canvasElement);
 
     // セルをクリックして選択状態にする
-    const aliceCell = await canvas.findByRole("gridcell", { name: "Alice" });
+    const aliceCell = await canvas.findByRole("button", { name: "Alice" });
     await userEvent.click(aliceCell);
 
     // セルが選択された状態でBackspaceキーを押す
@@ -80,7 +80,7 @@ export const CellEditingFunctionality_Delete: Story = {
     await waitReadyForGrid(canvasElement);
 
     // セルをクリックして選択状態にする
-    const aliceCell = await canvas.findByRole("gridcell", { name: "Alice" });
+    const aliceCell = await canvas.findByRole("button", { name: "Alice" });
     await userEvent.click(aliceCell);
 
     // セルが選択された状態でDeleteキーを押す
@@ -95,7 +95,7 @@ export const CellEditingFunctionality_Delete: Story = {
     }
 
     // セルの内容が空になっていることを確認
-    const updatedCell = canvas.getByRole("gridcell", { name: "" });
+    const updatedCell = canvas.getByRole("button", { name: "" });
     await expect(updatedCell).toBeInTheDocument();
   },
 };
@@ -107,7 +107,7 @@ async function insertTextTest(canvasElement: HTMLElement, key: string) {
   await waitReadyForGrid(canvasElement);
 
   // セルをクリックして選択状態にする
-  const aliceCell = await canvas.findByRole("gridcell", { name: "Alice" });
+  const aliceCell = await canvas.findByRole("button", { name: "Alice" });
   await userEvent.click(aliceCell);
 
   // セルが選択された状態で文字を入力する
@@ -155,7 +155,7 @@ export const CellEditingFunctionality_SpecialKeyInput: Story = {
     await waitReadyForGrid(canvasElement);
 
     // セルをクリックして選択状態にする
-    const aliceCell = await canvas.findByRole("gridcell", { name: "Alice" });
+    const aliceCell = await canvas.findByRole("button", { name: "Alice" });
     await userEvent.click(aliceCell);
 
     // 以下のキーは編集モードに入らない（特殊動作をする）

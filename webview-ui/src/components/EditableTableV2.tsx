@@ -83,13 +83,27 @@ interface DraggableHeaderCellProps {
   columnIndex: number;
   children: React.ReactNode;
   onColumnReorder: (sourceIndex: number, targetIndex: number) => void;
+  onSort?: (event: unknown) => void;
+  onDoubleClick?: () => void;
+  onColumnSelect?: (columnIndex: number) => void;
+  onFocusChange?: (isFocused: boolean) => void;
+  isSelected: boolean;
 }
 
 const DraggableHeaderCell: FC<DraggableHeaderCellProps> = ({
   columnIndex,
   children,
   onColumnReorder,
+  onSort,
+  onDoubleClick,
+  onColumnSelect,
+  onFocusChange,
+  isSelected,
 }) => {
+  const [isFocused, setIsFocused] = useState(false);
+  const sortTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const WAIT_DOUBLE_CLICK_TH_MS = 500;
+
   const [{ isDragging }, drag] = useDrag({
     type: "COL_DRAG",
     item: { index: columnIndex },
@@ -117,15 +131,103 @@ const DraggableHeaderCell: FC<DraggableHeaderCellProps> = ({
     [drag, drop]
   );
 
+  // クリーンアップ
+  useEffect(() => {
+    return () => {
+      if (sortTimeoutRef.current) {
+        clearTimeout(sortTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      // フォーカスされていない場合は何もしない（フォーカスのみ）
+      if (!isFocused) {
+        return;
+      }
+
+      // タイマーが既にセットされている場合は何もしない
+      if (sortTimeoutRef.current !== null) {
+        return;
+      }
+
+      // 未選択のセルをクリックした場合は、選択状態にする（ソートは行わない）
+      if (!isSelected) {
+        if (onColumnSelect) {
+          onColumnSelect(columnIndex);
+        }
+        return;
+      }
+
+      // 既に選択されているセルをクリック → ダブルクリック判定待ちタイマーをセット
+      if (onSort) {
+        sortTimeoutRef.current = setTimeout(() => {
+          sortTimeoutRef.current = null;
+          onSort(e);
+        }, WAIT_DOUBLE_CLICK_TH_MS);
+      }
+    },
+    [isFocused, isSelected, onSort, onColumnSelect, columnIndex]
+  );
+
+  const handleDoubleClick = useCallback(
+    (_e: React.MouseEvent) => {
+      // ダブルクリック時はタイマーをクリアしてソートを防止
+      if (sortTimeoutRef.current) {
+        clearTimeout(sortTimeoutRef.current);
+        sortTimeoutRef.current = null;
+      }
+
+      if (onDoubleClick) {
+        onDoubleClick();
+      }
+    },
+    [onDoubleClick]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if ((e.key === "Enter" || e.key === " ") && isFocused && isSelected && onSort) {
+        e.preventDefault();
+        onSort(e);
+      }
+    },
+    [isFocused, isSelected, onSort]
+  );
+
+  const handleFocus = useCallback(() => {
+    setIsFocused(true);
+    if (onFocusChange) {
+      onFocusChange(true);
+    }
+  }, [onFocusChange]);
+
+  const handleBlur = useCallback(() => {
+    setIsFocused(false);
+    if (onFocusChange) {
+      onFocusChange(false);
+    }
+  }, [onFocusChange]);
+
   return (
     <div
       ref={combinedRef}
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      onKeyDown={handleKeyDown}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
       style={{
         opacity: isDragging ? 0.5 : 1,
         cursor: "grab",
         backgroundColor: isOver ? "var(--vscode-list-hoverBackground)" : "transparent",
         border: isOver ? "2px solid var(--vscode-focusBorder)" : "none",
         padding: "4px",
+        outline: isFocused ? "2px solid var(--vscode-focusBorder)" : "none",
+        outlineOffset: "-2px",
       }}>
       {children}
     </div>
@@ -200,9 +302,7 @@ const RowIndexCell = (props: RowIndexCellProps) => {
           : isOver
             ? "var(--vscode-list-hoverBackground)"
             : "transparent",
-        color: props.isSelected
-          ? "var(--vscode-list-activeSelectionForeground)"
-          : "inherit",
+        color: props.isSelected ? "var(--vscode-list-activeSelectionForeground)" : "inherit",
         opacity: isDragging ? 0.5 : 1,
         border: isOver ? "2px solid var(--vscode-focusBorder)" : "none",
       }}>
@@ -230,7 +330,7 @@ const EditableCell = (props: CellContext<RowData, unknown>) => {
   // セル選択状態の取得
   const rowIndex = props.row.index;
   const columnId = props.column.id;
-  const columnIndex = columnId.startsWith('col') ? parseInt(columnId.substring(3)) : -1;
+  const columnIndex = columnId.startsWith("col") ? parseInt(columnId.substring(3)) : -1;
   const cellKey = `${rowIndex}-${columnIndex}`;
   const isSelected = props.table.options.meta?.selectedCells?.has(cellKey) ?? false;
 
@@ -385,22 +485,35 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
+  const [focusedColumnIndex, setFocusedColumnIndex] = useState<number | null>(null);
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{ row: number; col: number } | null>(null);
+  const [editingHeaderIndex, setEditingHeaderIndex] = useState<number | null>(null);
+  const [editingHeaderValue, setEditingHeaderValue] = useState<string>("");
 
   // 検索機能のstate
   const [searchOpen, setSearchOpen] = useState(false);
-  const [matchedItemPositions, setMatchedItemPositions] = useState<Array<{ rowIdx: number; colIdx: number }>>([]);
+  const [matchedItemPositions, setMatchedItemPositions] = useState<
+    Array<{ rowIdx: number; colIdx: number }>
+  >([]);
   const [searchedSelectedItemIdx, setSearchedSelectedItemIdx] = useState(0);
 
   // コンテキストメニューのstate
   const [isRowContextMenuOpen, setIsRowContextMenuOpen] = useState(false);
-  const [rowContextMenuProps, setRowContextMenuProps] = useState<{ itemIdx: number; top: number; left: number } | null>(null);
+  const [rowContextMenuProps, setRowContextMenuProps] = useState<{
+    itemIdx: number;
+    top: number;
+    left: number;
+  } | null>(null);
   const rowContextMenuRef = useRef<HTMLElement | null>(null);
 
   const [isColumnContextMenuOpen, setIsColumnContextMenuOpen] = useState(false);
-  const [columnContextMenuProps, setColumnContextMenuProps] = useState<{ itemIdx: number; top: number; left: number } | null>(null);
+  const [columnContextMenuProps, setColumnContextMenuProps] = useState<{
+    itemIdx: number;
+    top: number;
+    left: number;
+  } | null>(null);
   const columnContextMenuRef = useRef<HTMLElement | null>(null);
 
   // 列の配置調整のstate
@@ -415,22 +528,25 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     setSelectedCells(new Set([getCellKey(row, col)]));
   }, []);
 
-  const handleCellMouseEnter = useCallback((row: number, col: number) => {
-    if (!isSelecting || !selectionStart) return;
+  const handleCellMouseEnter = useCallback(
+    (row: number, col: number) => {
+      if (!isSelecting || !selectionStart) return;
 
-    const minRow = Math.min(selectionStart.row, row);
-    const maxRow = Math.max(selectionStart.row, row);
-    const minCol = Math.min(selectionStart.col, col);
-    const maxCol = Math.max(selectionStart.col, col);
+      const minRow = Math.min(selectionStart.row, row);
+      const maxRow = Math.max(selectionStart.row, row);
+      const minCol = Math.min(selectionStart.col, col);
+      const maxCol = Math.max(selectionStart.col, col);
 
-    const newSelection = new Set<string>();
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
-        newSelection.add(getCellKey(r, c));
+      const newSelection = new Set<string>();
+      for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+          newSelection.add(getCellKey(r, c));
+        }
       }
-    }
-    setSelectedCells(newSelection);
-  }, [isSelecting, selectionStart]);
+      setSelectedCells(newSelection);
+    },
+    [isSelecting, selectionStart]
+  );
 
   const handleCellMouseUp = useCallback(() => {
     setIsSelecting(false);
@@ -441,9 +557,9 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     const handleDocumentMouseUp = () => {
       setIsSelecting(false);
     };
-    document.addEventListener('mouseup', handleDocumentMouseUp);
+    document.addEventListener("mouseup", handleDocumentMouseUp);
     return () => {
-      document.removeEventListener('mouseup', handleDocumentMouseUp);
+      document.removeEventListener("mouseup", handleDocumentMouseUp);
     };
   }, []);
 
@@ -453,7 +569,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
       return;
     }
 
-    const value = window.prompt('選択したセルに設定する値を入力してください:');
+    const value = window.prompt("選択したセルに設定する値を入力してください:");
     if (value === null) {
       return; // キャンセルされた
     }
@@ -462,7 +578,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     setData((old) => {
       const newData = [...old];
       selectedCells.forEach((cellKey) => {
-        const [rowStr, colStr] = cellKey.split('-');
+        const [rowStr, colStr] = cellKey.split("-");
         const rowIndex = parseInt(rowStr);
         const colIndex = parseInt(colStr);
         const columnId = `col${colIndex}`;
@@ -489,7 +605,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
 
     // 選択されたセルを行と列でグループ化
     const cellsArray = Array.from(selectedCells).map((cellKey) => {
-      const [rowStr, colStr] = cellKey.split('-');
+      const [rowStr, colStr] = cellKey.split("-");
       return {
         row: parseInt(rowStr),
         col: parseInt(colStr),
@@ -503,29 +619,29 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
     });
 
     // TSV形式でデータを作成（Excelと互換性あり）
-    const minRow = Math.min(...cellsArray.map(c => c.row));
-    const maxRow = Math.max(...cellsArray.map(c => c.row));
-    const minCol = Math.min(...cellsArray.map(c => c.col));
-    const maxCol = Math.max(...cellsArray.map(c => c.col));
+    const minRow = Math.min(...cellsArray.map((c) => c.row));
+    const maxRow = Math.max(...cellsArray.map((c) => c.row));
+    const minCol = Math.min(...cellsArray.map((c) => c.col));
+    const maxCol = Math.max(...cellsArray.map((c) => c.col));
 
     const rows: string[] = [];
     for (let row = minRow; row <= maxRow; row++) {
       const cols: string[] = [];
       for (let col = minCol; col <= maxCol; col++) {
         const columnId = `col${col}`;
-        const value = data[row]?.[columnId] ?? '';
+        const value = data[row]?.[columnId] ?? "";
         cols.push(value);
       }
-      rows.push(cols.join('\t'));
+      rows.push(cols.join("\t"));
     }
 
-    const text = rows.join('\n');
+    const text = rows.join("\n");
 
     // クリップボードにコピー
     try {
       await navigator.clipboard.writeText(text);
     } catch (err) {
-      console.error('クリップボードへのコピーに失敗しました:', err);
+      console.error("クリップボードへのコピーに失敗しました:", err);
     }
   }, [selectedCells, data]);
 
@@ -537,18 +653,18 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
 
     try {
       const text = await navigator.clipboard.readText();
-      const rows = text.split('\n').map(row => row.split('\t'));
+      const rows = text.split("\n").map((row) => row.split("\t"));
 
       // 選択範囲の左上のセルを取得
       const cellsArray = Array.from(selectedCells).map((cellKey) => {
-        const [rowStr, colStr] = cellKey.split('-');
+        const [rowStr, colStr] = cellKey.split("-");
         return {
           row: parseInt(rowStr),
           col: parseInt(colStr),
         };
       });
-      const minRow = Math.min(...cellsArray.map(c => c.row));
-      const minCol = Math.min(...cellsArray.map(c => c.col));
+      const minRow = Math.min(...cellsArray.map((c) => c.row));
+      const minCol = Math.min(...cellsArray.map((c) => c.col));
 
       // データを更新
       setData((old) => {
@@ -573,7 +689,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
       // 選択をクリア
       setSelectedCells(new Set());
     } catch (err) {
-      console.error('クリップボードからの読み取りに失敗しました:', err);
+      console.error("クリップボードからの読み取りに失敗しました:", err);
     }
   }, [selectedCells]);
 
@@ -627,36 +743,44 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   }, [csvArray, isIgnoreHeaderRow]);
 
   // 行のドラッグ&ドロップハンドラー
-  const handleRowReorder = useCallback((sourceIndex: number, targetIndex: number) => {
-    if (sourceIndex === targetIndex) return;
-    _moveRows(sourceIndex, targetIndex);
-  }, [_moveRows]);
+  const handleRowReorder = useCallback(
+    (sourceIndex: number, targetIndex: number) => {
+      if (sourceIndex === targetIndex) return;
+      _moveRows(sourceIndex, targetIndex);
+    },
+    [_moveRows]
+  );
 
   // 列のドラッグ&ドロップハンドラー
-  const handleColumnReorder = useCallback((sourceIndex: number, targetIndex: number) => {
-    if (sourceIndex === targetIndex) return;
-    // columnIndexは0始まりだが、moveColumnsは1始まり（行番号列の次）を期待するため+1
-    _moveColumns(sourceIndex + 1, targetIndex + 1);
-  }, [_moveColumns]);
+  const handleColumnReorder = useCallback(
+    (sourceIndex: number, targetIndex: number) => {
+      if (sourceIndex === targetIndex) return;
+      _moveColumns(sourceIndex, targetIndex);
+    },
+    [_moveColumns]
+  );
 
   // 行コンテキストメニューハンドラー
-  const handleSelectRowContextMenu = useCallback((value: string) => {
-    if (rowContextMenuProps === null) {
-      return;
-    }
+  const handleSelectRowContextMenu = useCallback(
+    (value: string) => {
+      if (rowContextMenuProps === null) {
+        return;
+      }
 
-    const rowIdx = rowContextMenuProps.itemIdx;
-    if (value === "deleteRow") {
-      _deleteRow(rowIdx);
-    } else if (value === "insertRowAbove") {
-      _insertRow(rowIdx);
-    } else if (value === "insertRowBelow") {
-      _insertRow(rowIdx + 1);
-    }
+      const rowIdx = rowContextMenuProps.itemIdx;
+      if (value === "deleteRow") {
+        _deleteRow(rowIdx);
+      } else if (value === "insertRowAbove") {
+        _insertRow(rowIdx);
+      } else if (value === "insertRowBelow") {
+        _insertRow(rowIdx + 1);
+      }
 
-    setIsRowContextMenuOpen(false);
-    setRowContextMenuProps(null);
-  }, [rowContextMenuProps, _deleteRow, _insertRow]);
+      setIsRowContextMenuOpen(false);
+      setRowContextMenuProps(null);
+    },
+    [rowContextMenuProps, _deleteRow, _insertRow]
+  );
 
   const handleCloseRowContextMenu = useCallback(() => {
     setIsRowContextMenuOpen(false);
@@ -664,23 +788,26 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   }, []);
 
   // 列コンテキストメニューハンドラー
-  const handleSelectColumnContextMenu = useCallback((value: string) => {
-    if (columnContextMenuProps === null) {
-      return;
-    }
+  const handleSelectColumnContextMenu = useCallback(
+    (value: string) => {
+      if (columnContextMenuProps === null) {
+        return;
+      }
 
-    const colIdx = columnContextMenuProps.itemIdx;
-    if (value === "deleteHeaderCel") {
-      _deleteCol(colIdx);
-    } else if (value === "insertHeaderCelLeft") {
-      _insertCol(colIdx);
-    } else if (value === "insertHeaderCelRight") {
-      _insertCol(colIdx + 1);
-    }
+      const colIdx = columnContextMenuProps.itemIdx;
+      if (value === "deleteHeaderCel") {
+        _deleteCol(colIdx);
+      } else if (value === "insertHeaderCelLeft") {
+        _insertCol(colIdx);
+      } else if (value === "insertHeaderCelRight") {
+        _insertCol(colIdx + 1);
+      }
 
-    setIsColumnContextMenuOpen(false);
-    setColumnContextMenuProps(null);
-  }, [columnContextMenuProps, _deleteCol, _insertCol]);
+      setIsColumnContextMenuOpen(false);
+      setColumnContextMenuProps(null);
+    },
+    [columnContextMenuProps, _deleteCol, _insertCol]
+  );
 
   const handleCloseColumnContextMenu = useCallback(() => {
     setIsColumnContextMenuOpen(false);
@@ -798,40 +925,43 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   });
 
   // 検索ハンドラー
-  const handleSearch = useCallback((text: string) => {
-    if (text.trim() === "") {
-      return;
-    }
-    const lowerText = text.toLowerCase();
-    const positions: Array<{ rowIdx: number; colIdx: number }> = [];
+  const handleSearch = useCallback(
+    (text: string) => {
+      if (text.trim() === "") {
+        return;
+      }
+      const lowerText = text.toLowerCase();
+      const positions: Array<{ rowIdx: number; colIdx: number }> = [];
 
-    data.forEach((row, rowIdx) => {
-      Object.keys(row).forEach((key) => {
-        if (key === ROW_IDX_KEY || key === ROW_ID_KEY) {
-          return;
-        }
-        const colIdx = parseInt(key.replace('col', ''));
-        const value = row[key];
-        if (value && value.toLowerCase().includes(lowerText)) {
-          positions.push({ rowIdx, colIdx });
-        }
+      data.forEach((row, rowIdx) => {
+        Object.keys(row).forEach((key) => {
+          if (key === ROW_IDX_KEY || key === ROW_ID_KEY) {
+            return;
+          }
+          const colIdx = parseInt(key.replace("col", ""));
+          const value = row[key];
+          if (value && value.toLowerCase().includes(lowerText)) {
+            positions.push({ rowIdx, colIdx });
+          }
+        });
       });
-    });
 
-    if (positions.length === 0) {
-      return;
-    }
+      if (positions.length === 0) {
+        return;
+      }
 
-    setMatchedItemPositions(positions);
-    setSearchedSelectedItemIdx(0);
+      setMatchedItemPositions(positions);
+      setSearchedSelectedItemIdx(0);
 
-    // 最初のマッチ位置にスクロール
-    const firstMatch = positions[0];
-    tableContainerRef.current?.scrollTo({
-      top: firstMatch.rowIdx * rowHeight,
-      behavior: 'smooth',
-    });
-  }, [data, rowHeight]);
+      // 最初のマッチ位置にスクロール
+      const firstMatch = positions[0];
+      tableContainerRef.current?.scrollTo({
+        top: firstMatch.rowIdx * rowHeight,
+        behavior: "smooth",
+      });
+    },
+    [data, rowHeight]
+  );
 
   const handleNextSearch = useCallback(() => {
     if (matchedItemPositions.length === 0) {
@@ -844,7 +974,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
 
     tableContainerRef.current?.scrollTo({
       top: position.rowIdx * rowHeight,
-      behavior: 'smooth',
+      behavior: "smooth",
     });
   }, [matchedItemPositions, searchedSelectedItemIdx, rowHeight]);
 
@@ -861,7 +991,7 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
 
     tableContainerRef.current?.scrollTo({
       top: position.rowIdx * rowHeight,
-      behavior: 'smooth',
+      behavior: "smooth",
     });
   }, [matchedItemPositions, searchedSelectedItemIdx, rowHeight]);
 
@@ -872,14 +1002,17 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
   }, []);
 
   // 列の配置調整ハンドラー
-  const handleAlignmentChange = useCallback((alignment: CellAlignment) => {
-    if (selectedColumnIndex === null) return;
+  const handleAlignmentChange = useCallback(
+    (alignment: CellAlignment) => {
+      if (selectedColumnIndex === null) return;
 
-    setColumnAlignments(prev => ({
-      ...prev,
-      [selectedColumnIndex]: alignment,
-    }));
-  }, [selectedColumnIndex]);
+      setColumnAlignments((prev) => ({
+        ...prev,
+        [selectedColumnIndex]: alignment,
+      }));
+    },
+    [selectedColumnIndex]
+  );
 
   // 選択された列の現在の配置を取得
   const getCurrentAlignment = useCallback((): CellAlignment => {
@@ -938,7 +1071,13 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
         />
         <VscodeDivider className={styles.divider} />
       </div>
-      <div style={{ padding: "8px", display: "flex", gap: "8px", borderBottom: "1px solid var(--vscode-panel-border)" }}>
+      <div
+        style={{
+          padding: "8px",
+          display: "flex",
+          gap: "8px",
+          borderBottom: "1px solid var(--vscode-panel-border)",
+        }}>
         <button
           onClick={() => {
             const index = selectedRowIndex !== null ? selectedRowIndex : data.length;
@@ -966,9 +1105,10 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           style={{
             padding: "4px 8px",
             cursor: selectedRowIndex === null ? "not-allowed" : "pointer",
-            backgroundColor: selectedRowIndex === null
-              ? "var(--vscode-button-secondaryBackground)"
-              : "var(--vscode-button-background)",
+            backgroundColor:
+              selectedRowIndex === null
+                ? "var(--vscode-button-secondaryBackground)"
+                : "var(--vscode-button-background)",
             color: "var(--vscode-button-foreground)",
             border: "none",
             borderRadius: "2px",
@@ -976,7 +1116,9 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           }}>
           行を削除
         </button>
-        <div style={{ width: "1px", height: "24px", backgroundColor: "var(--vscode-panel-border)" }} />
+        <div
+          style={{ width: "1px", height: "24px", backgroundColor: "var(--vscode-panel-border)" }}
+        />
         <button
           onClick={() => {
             const index = selectedColumnIndex !== null ? selectedColumnIndex : csvArray[0].length;
@@ -1004,9 +1146,10 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           style={{
             padding: "4px 8px",
             cursor: selectedColumnIndex === null ? "not-allowed" : "pointer",
-            backgroundColor: selectedColumnIndex === null
-              ? "var(--vscode-button-secondaryBackground)"
-              : "var(--vscode-button-background)",
+            backgroundColor:
+              selectedColumnIndex === null
+                ? "var(--vscode-button-secondaryBackground)"
+                : "var(--vscode-button-background)",
             color: "var(--vscode-button-foreground)",
             border: "none",
             borderRadius: "2px",
@@ -1014,16 +1157,19 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           }}>
           列を削除
         </button>
-        <div style={{ width: "1px", height: "24px", backgroundColor: "var(--vscode-panel-border)" }} />
+        <div
+          style={{ width: "1px", height: "24px", backgroundColor: "var(--vscode-panel-border)" }}
+        />
         <button
           onClick={handleBulkEdit}
           disabled={selectedCells.size === 0}
           style={{
             padding: "4px 8px",
             cursor: selectedCells.size === 0 ? "not-allowed" : "pointer",
-            backgroundColor: selectedCells.size === 0
-              ? "var(--vscode-button-secondaryBackground)"
-              : "var(--vscode-button-background)",
+            backgroundColor:
+              selectedCells.size === 0
+                ? "var(--vscode-button-secondaryBackground)"
+                : "var(--vscode-button-background)",
             color: "var(--vscode-button-foreground)",
             border: "none",
             borderRadius: "2px",
@@ -1037,9 +1183,10 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           style={{
             padding: "4px 8px",
             cursor: selectedCells.size === 0 ? "not-allowed" : "pointer",
-            backgroundColor: selectedCells.size === 0
-              ? "var(--vscode-button-secondaryBackground)"
-              : "var(--vscode-button-background)",
+            backgroundColor:
+              selectedCells.size === 0
+                ? "var(--vscode-button-secondaryBackground)"
+                : "var(--vscode-button-background)",
             color: "var(--vscode-button-foreground)",
             border: "none",
             borderRadius: "2px",
@@ -1053,9 +1200,10 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           style={{
             padding: "4px 8px",
             cursor: selectedCells.size === 0 ? "not-allowed" : "pointer",
-            backgroundColor: selectedCells.size === 0
-              ? "var(--vscode-button-secondaryBackground)"
-              : "var(--vscode-button-background)",
+            backgroundColor:
+              selectedCells.size === 0
+                ? "var(--vscode-button-secondaryBackground)"
+                : "var(--vscode-button-background)",
             color: "var(--vscode-button-foreground)",
             border: "none",
             borderRadius: "2px",
@@ -1069,9 +1217,10 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
           style={{
             padding: "4px 8px",
             cursor: selectedCells.size === 0 ? "not-allowed" : "pointer",
-            backgroundColor: selectedCells.size === 0
-              ? "var(--vscode-button-secondaryBackground)"
-              : "var(--vscode-button-background)",
+            backgroundColor:
+              selectedCells.size === 0
+                ? "var(--vscode-button-secondaryBackground)"
+                : "var(--vscode-button-background)",
             color: "var(--vscode-button-foreground)",
             border: "none",
             borderRadius: "2px",
@@ -1081,197 +1230,339 @@ export const EditableTableV2: FC<Props> = ({ csvArray, theme, setCSVArray, onApp
         </button>
       </div>
       <div>
-      <DndProvider backend={HTML5Backend}>
-        <div
-          ref={tableContainerRef}
-          className={[styles.dataGrid, `${theme === "light" ? "rdg-light" : "rdg-dark"}`].join(
-            " "
-          )}
-          style={{
-            height: "600px",
-            overflow: "auto",
-          }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", display: "block" }}>
-            <thead style={{
-              display: "table",
-              width: "100%",
-              tableLayout: "fixed",
-              position: "sticky",
-              top: 0,
-              zIndex: 1,
-              backgroundColor: "var(--vscode-editor-background)"
+        <DndProvider backend={HTML5Backend}>
+          <div
+            ref={tableContainerRef}
+            className={[styles.dataGrid, `${theme === "light" ? "rdg-light" : "rdg-dark"}`].join(
+              " "
+            )}
+            style={{
+              height: "600px",
+              overflow: "auto",
             }}>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} style={{ display: "table-row" }}>
-                  {headerGroup.headers.map((header, headerIndex) => {
-                    const columnIndex = header.column.id === ROW_IDX_KEY ? null : headerIndex - 1;
-                    const isSelected = columnIndex !== null && selectedColumnIndex === columnIndex;
-                    return (
-                    <th
-                      key={header.id}
-                      onClick={header.column.getToggleSortingHandler()}
-                      onContextMenu={(e) => {
-                        if (columnIndex !== null) {
-                          e.preventDefault();
-                          setColumnContextMenuProps({
-                            itemIdx: columnIndex,
-                            top: e.clientY,
-                            left: e.clientX,
-                          });
-                          setIsColumnContextMenuOpen(true);
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                tableLayout: "fixed",
+                display: "block",
+              }}>
+              <thead
+                style={{
+                  display: "table",
+                  width: "100%",
+                  tableLayout: "fixed",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 1,
+                  backgroundColor: "var(--vscode-editor-background)",
+                }}>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id} style={{ display: "table-row" }}>
+                    {headerGroup.headers.map((header, headerIndex) => {
+                      const columnIndex = header.column.id === ROW_IDX_KEY ? null : headerIndex - 1;
+                      const isSelected =
+                        columnIndex !== null && selectedColumnIndex === columnIndex;
+                      const isFocused = columnIndex !== null && focusedColumnIndex === columnIndex;
+                      const isEditing = columnIndex !== null && editingHeaderIndex === columnIndex;
+
+                      // キーボード処理
+                      const handleHeaderKeyDown = (e: React.KeyboardEvent) => {
+                        if (columnIndex === null) return;
+
+                        // 編集モード中の処理
+                        if (isEditing) {
+                          // textareaのonKeyDownで処理されるため、ここでは何もしない
+                          return;
                         }
-                      }}
-                      style={{
-                        display: "table-cell",
-                        width: `${header.getSize()}px`,
-                        minWidth: `${header.getSize()}px`,
-                        maxWidth: `${header.getSize()}px`,
-                        padding: "8px",
-                        textAlign: "left",
-                        borderBottom: "1px solid var(--vscode-panel-border)",
-                        backgroundColor: isSelected
-                          ? "var(--vscode-list-activeSelectionBackground)"
-                          : "var(--vscode-editor-background)",
-                        color: isSelected
-                          ? "var(--vscode-list-activeSelectionForeground)"
-                          : "inherit",
-                        boxSizing: "border-box",
-                        cursor: header.column.getCanSort() ? "pointer" : "default",
-                        userSelect: "none",
-                      }}>
-                      {header.isPlaceholder
-                        ? null
-                        : columnIndex !== null ? (
-                          <DraggableHeaderCell
-                            columnIndex={columnIndex}
-                            onColumnReorder={handleColumnReorder}>
+
+                        // 編集モードでない場合の処理
+                        if (e.key === "Delete") {
+                          // ヘッダーの値を削除
+                          _updateCol(columnIndex, "");
+                        } else if (e.key === "Backspace") {
+                          // ヘッダーの値を削除して編集モードに移行
+                          _updateCol(columnIndex, "");
+                          setEditingHeaderIndex(columnIndex);
+                          setEditingHeaderValue("");
+                        } else if (e.key === "F2") {
+                          // 編集モードに移行
+                          setEditingHeaderIndex(columnIndex);
+                          const renderedHeader = flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          );
+                          let headerValue = "";
+                          if (typeof renderedHeader === "string") {
+                            headerValue = renderedHeader;
+                          } else if (
+                            typeof renderedHeader === "number" ||
+                            typeof renderedHeader === "boolean"
+                          ) {
+                            headerValue = String(renderedHeader);
+                          }
+                          setEditingHeaderValue(headerValue);
+                        } else if (
+                          !e.ctrlKey &&
+                          !e.altKey &&
+                          !e.metaKey &&
+                          !e.repeat &&
+                          e.key.length === 1
+                        ) {
+                          // 通常の文字入力で編集モードに移行
+                          e.preventDefault();
+                          setEditingHeaderIndex(columnIndex);
+                          setEditingHeaderValue(e.key);
+                        }
+                      };
+
+                      return (
+                        <th
+                          key={header.id}
+                          tabIndex={-1}
+                          onKeyDown={handleHeaderKeyDown}
+                          onContextMenu={(e) => {
+                            if (columnIndex !== null) {
+                              e.preventDefault();
+                              setColumnContextMenuProps({
+                                itemIdx: columnIndex,
+                                top: e.clientY,
+                                left: e.clientX,
+                              });
+                              setIsColumnContextMenuOpen(true);
+                            }
+                          }}
+                          style={{
+                            display: "table-cell",
+                            width: `${header.getSize()}px`,
+                            minWidth: `${header.getSize()}px`,
+                            maxWidth: `${header.getSize()}px`,
+                            padding: "8px",
+                            textAlign: "left",
+                            borderBottom: "1px solid var(--vscode-panel-border)",
+                            backgroundColor: isFocused
+                              ? "var(--vscode-list-hoverBackground)"
+                              : isSelected
+                                ? "var(--vscode-list-activeSelectionBackground)"
+                                : "var(--vscode-editor-background)",
+                            color: isSelected
+                              ? "var(--vscode-list-activeSelectionForeground)"
+                              : "inherit",
+                            boxSizing: "border-box",
+                            cursor: header.column.getCanSort() ? "pointer" : "default",
+                            userSelect: "none",
+                            outline: isFocused ? "2px solid var(--vscode-focusBorder)" : "none",
+                            outlineOffset: "-2px",
+                          }}>
+                          {header.isPlaceholder ? null : columnIndex !== null ? (
+                            isEditing ? (
+                              <textarea
+                                ref={(el) => {
+                                  if (el) {
+                                    el.focus();
+                                    el.setSelectionRange(el.value.length, el.value.length);
+                                  }
+                                }}
+                                value={editingHeaderValue}
+                                onChange={(e) => setEditingHeaderValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault();
+                                    // ヘッダーの値を更新
+                                    _updateCol(columnIndex, editingHeaderValue);
+                                    setEditingHeaderIndex(null);
+                                  } else if (e.key === "Escape") {
+                                    setEditingHeaderIndex(null);
+                                  } else if (e.key === "Tab") {
+                                    e.preventDefault();
+                                    // ヘッダーの値を更新
+                                    _updateCol(columnIndex, editingHeaderValue);
+                                    setEditingHeaderIndex(null);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  // ヘッダーの値を更新
+                                  _updateCol(columnIndex, editingHeaderValue);
+                                  setEditingHeaderIndex(null);
+                                }}
+                                style={{
+                                  width: "100%",
+                                  minHeight: "20px",
+                                  resize: "vertical",
+                                  fontFamily: "inherit",
+                                  fontSize: "inherit",
+                                  padding: "2px 4px",
+                                  border: "1px solid var(--vscode-focusBorder)",
+                                  backgroundColor: "var(--vscode-input-background)",
+                                  color: "var(--vscode-input-foreground)",
+                                }}
+                              />
+                            ) : (
+                              <DraggableHeaderCell
+                                columnIndex={columnIndex}
+                                isSelected={isSelected}
+                                onColumnReorder={handleColumnReorder}
+                                onColumnSelect={setSelectedColumnIndex}
+                                onFocusChange={(focused) => {
+                                  if (columnIndex !== null) {
+                                    setFocusedColumnIndex(focused ? columnIndex : null);
+                                  }
+                                }}
+                                onDoubleClick={() => {
+                                  if (columnIndex !== null) {
+                                    setEditingHeaderIndex(columnIndex);
+                                    const renderedHeader = flexRender(
+                                      header.column.columnDef.header,
+                                      header.getContext()
+                                    );
+                                    let headerValue = "";
+                                    if (typeof renderedHeader === "string") {
+                                      headerValue = renderedHeader;
+                                    } else if (
+                                      typeof renderedHeader === "number" ||
+                                      typeof renderedHeader === "boolean"
+                                    ) {
+                                      headerValue = String(renderedHeader);
+                                    }
+                                    setEditingHeaderValue(headerValue);
+                                  }
+                                }}
+                                onSort={
+                                  header.column.getCanSort()
+                                    ? header.column.getToggleSortingHandler()
+                                    : undefined
+                                }>
+                                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                  {flexRender(header.column.columnDef.header, header.getContext())}
+                                  {{
+                                    asc: " 🔼",
+                                    desc: " 🔽",
+                                  }[header.column.getIsSorted() as string] ?? null}
+                                </div>
+                              </DraggableHeaderCell>
+                            )
+                          ) : (
                             <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                               {flexRender(header.column.columnDef.header, header.getContext())}
-                              {{
-                                asc: " 🔼",
-                                desc: " 🔽",
-                              }[header.column.getIsSorted() as string] ?? null}
                             </div>
-                          </DraggableHeaderCell>
-                        ) : (
-                          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                          </div>
-                        )}
-                    </th>
-                    );
-                  })}
-                </tr>
-              ))}
-              {showFilters && table.getHeaderGroups().map((headerGroup) => (
-                <tr key={`${headerGroup.id}-filter`} style={{ display: "table-row" }}>
-                  {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      style={{
-                        display: "table-cell",
-                        width: `${header.getSize()}px`,
-                        minWidth: `${header.getSize()}px`,
-                        maxWidth: `${header.getSize()}px`,
-                        padding: "4px 8px",
-                        borderBottom: "1px solid var(--vscode-panel-border)",
-                        backgroundColor: "var(--vscode-editor-background)",
-                        boxSizing: "border-box",
-                      }}>
-                      {header.column.getCanFilter() && header.column.id !== ROW_IDX_KEY ? (
-                        <FilterInput column={header.column} />
-                      ) : null}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody style={{
-              display: "block",
-              position: "relative",
-              height: `${rowVirtualizer.getTotalSize()}px`
-            }}>
-              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                const row = table.getRowModel().rows[virtualRow.index];
-                if (!row) return null;
-                const isRowSelected = selectedRowIndex === virtualRow.index;
-                return (
-                  <tr
-                    key={row.id}
-                    style={{
-                      display: "table",
-                      width: "100%",
-                      tableLayout: "fixed",
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      height: `${virtualRow.size}px`,
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}>
-                    {row.getVisibleCells().map((cell, cellIndex) => {
-                      const colIndex = cellIndex - 1; // 行番号列を除く
-                      const alignment = colIndex >= 0 ? columnAlignments[colIndex] : undefined;
-                      return (
-                      <td
-                        key={cell.id}
-                        style={{
-                          display: "table-cell",
-                          width: `${cell.column.getSize()}px`,
-                          minWidth: `${cell.column.getSize()}px`,
-                          maxWidth: `${cell.column.getSize()}px`,
-                          padding: "0",
-                          borderBottom: "1px solid var(--vscode-panel-border)",
-                          boxSizing: "border-box",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          textAlign: alignment?.horizontal || "left",
-                          verticalAlign: alignment?.vertical || "center",
-                          backgroundColor: isRowSelected
-                            ? "var(--vscode-list-activeSelectionBackground)"
-                            : "transparent",
-                        }}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
+                          )}
+                        </th>
                       );
                     })}
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <PortalManager
-          isShowSearch={searchOpen}
-          searchProps={{
-            isMatching: matchedItemPositions.length > 0,
-            machedCount: matchedItemPositions.length,
-            searchedSelectedItemIdx: searchedSelectedItemIdx,
-            onSearch: handleSearch,
-            onNext: handleNextSearch,
-            onPrevious: handlePreviousSearch,
-            onClose: handleCloseSearch,
-          }}
-          isRowContextMenuOpen={isRowContextMenuOpen}
-          rowContextMenuProps={{
-            isContextMenuOpen: isRowContextMenuOpen,
-            menuRef: rowContextMenuRef,
-            contextMenuProps: rowContextMenuProps,
-            className: "",
-            onSelect: handleSelectRowContextMenu,
-            onClose: handleCloseRowContextMenu,
-          }}
-          isHeaderContextMenuOpen={isColumnContextMenuOpen}
-          headerContextMenuProps={{
-            isContextMenuOpen: isColumnContextMenuOpen,
-            menuRef: columnContextMenuRef,
-            contextMenuProps: columnContextMenuProps,
-            className: "",
-            onSelect: handleSelectColumnContextMenu,
-            onClose: handleCloseColumnContextMenu,
-          }}
-        />
-      </DndProvider>
+                ))}
+                {showFilters &&
+                  table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={`${headerGroup.id}-filter`} style={{ display: "table-row" }}>
+                      {headerGroup.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          style={{
+                            display: "table-cell",
+                            width: `${header.getSize()}px`,
+                            minWidth: `${header.getSize()}px`,
+                            maxWidth: `${header.getSize()}px`,
+                            padding: "4px 8px",
+                            borderBottom: "1px solid var(--vscode-panel-border)",
+                            backgroundColor: "var(--vscode-editor-background)",
+                            boxSizing: "border-box",
+                          }}>
+                          {header.column.getCanFilter() && header.column.id !== ROW_IDX_KEY ? (
+                            <FilterInput column={header.column} />
+                          ) : null}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+              </thead>
+              <tbody
+                style={{
+                  display: "block",
+                  position: "relative",
+                  height: `${rowVirtualizer.getTotalSize()}px`,
+                }}>
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const row = table.getRowModel().rows[virtualRow.index];
+                  if (!row) return null;
+                  const isRowSelected = selectedRowIndex === virtualRow.index;
+                  return (
+                    <tr
+                      key={row.id}
+                      style={{
+                        display: "table",
+                        width: "100%",
+                        tableLayout: "fixed",
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}>
+                      {row.getVisibleCells().map((cell, cellIndex) => {
+                        const colIndex = cellIndex - 1; // 行番号列を除く
+                        const alignment = colIndex >= 0 ? columnAlignments[colIndex] : undefined;
+                        return (
+                          <td
+                            key={cell.id}
+                            role="gridcell"
+                            style={{
+                              display: "table-cell",
+                              width: `${cell.column.getSize()}px`,
+                              minWidth: `${cell.column.getSize()}px`,
+                              maxWidth: `${cell.column.getSize()}px`,
+                              padding: "0",
+                              borderBottom: "1px solid var(--vscode-panel-border)",
+                              boxSizing: "border-box",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              textAlign: alignment?.horizontal || "left",
+                              verticalAlign: alignment?.vertical || "center",
+                              backgroundColor: isRowSelected
+                                ? "var(--vscode-list-activeSelectionBackground)"
+                                : "transparent",
+                            }}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <PortalManager
+            isShowSearch={searchOpen}
+            searchProps={{
+              isMatching: matchedItemPositions.length > 0,
+              machedCount: matchedItemPositions.length,
+              searchedSelectedItemIdx: searchedSelectedItemIdx,
+              onSearch: handleSearch,
+              onNext: handleNextSearch,
+              onPrevious: handlePreviousSearch,
+              onClose: handleCloseSearch,
+            }}
+            isRowContextMenuOpen={isRowContextMenuOpen}
+            rowContextMenuProps={{
+              isContextMenuOpen: isRowContextMenuOpen,
+              menuRef: rowContextMenuRef,
+              contextMenuProps: rowContextMenuProps,
+              className: "",
+              onSelect: handleSelectRowContextMenu,
+              onClose: handleCloseRowContextMenu,
+            }}
+            isHeaderContextMenuOpen={isColumnContextMenuOpen}
+            headerContextMenuProps={{
+              isContextMenuOpen: isColumnContextMenuOpen,
+              menuRef: columnContextMenuRef,
+              contextMenuProps: columnContextMenuProps,
+              className: "",
+              onSelect: handleSelectColumnContextMenu,
+              onClose: handleCloseColumnContextMenu,
+            }}
+          />
+        </DndProvider>
       </div>
     </>
   );

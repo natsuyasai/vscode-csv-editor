@@ -95,8 +95,7 @@ export function useUpdateCsvArray(
     const updatedCSVArray = csvArray.map((row, idx) => {
       const newRow = [...row];
       if (idx === correctionRowIdx) {
-        // 先頭にインデックス表示列があるので補正する
-        newRow[colIdx - 1] = text;
+        newRow[colIdx] = text;
       }
       return newRow;
     });
@@ -109,8 +108,7 @@ export function useUpdateCsvArray(
     }
     const updatedCSVArray = csvArray.map((row, rowIdx) => {
       const newRow = [...row];
-      // 先頭にインデックス表示列があるので補正する
-      newRow.splice(insertColIdx - 1, 0, rowIdx === 0 ? "new column" : "");
+      newRow.splice(insertColIdx, 0, rowIdx === 0 ? "new column" : "");
       return newRow;
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
@@ -122,8 +120,7 @@ export function useUpdateCsvArray(
     }
     const updatedCSVArray = csvArray.map((row) => {
       const newRow = [...row];
-      // 先頭にインデックス表示列があるので補正する
-      newRow.splice(deleteColIdx - 1, 1);
+      newRow.splice(deleteColIdx, 1);
       return newRow;
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
@@ -133,14 +130,10 @@ export function useUpdateCsvArray(
     if (csvArray.length === 0) {
       return;
     }
-    if (isIgnoreHeaderRow) {
-      return;
-    }
     const updatedCSVArray = csvArray.map((row, rowIdx) => {
       const newRow = [...row];
       if (rowIdx === 0) {
-        // 先頭にインデックス表示列があるので補正する
-        newRow[idx - 1] = text;
+        newRow[idx] = text;
       }
       return newRow;
     });
@@ -150,9 +143,8 @@ export function useUpdateCsvArray(
   function moveColumns(sourceIdx: number, targetIdx: number) {
     const newCsvArray = csvArray.map((row) => {
       const newRow = [...row];
-      // 先頭にインデックス表示列があるので補正するs
-      const [movedCell] = newRow.splice(sourceIdx - 1, 1);
-      newRow.splice(targetIdx - 1, 0, movedCell);
+      const [movedCell] = newRow.splice(sourceIdx, 1);
+      newRow.splice(targetIdx, 0, movedCell);
       return newRow;
     });
 

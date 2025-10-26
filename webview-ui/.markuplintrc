@@ -10,5 +10,17 @@
   },
   "specs": {
     ".tsx$": "@markuplint/react-spec"
-  }
+  },
+  "nodeRules": [
+    {
+      "selector": "div[role=button]",
+      "rules": {
+        "invalid-attr": {
+          "options": {
+            "allowAttrs": ["onDoubleClick"]
+          }
+        }
+      }
+    }
+  ]
 }

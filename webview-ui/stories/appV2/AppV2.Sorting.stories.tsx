@@ -34,32 +34,47 @@ export const SortingFunctionality: Story = {
     setInitData();
     await waitReadyForGrid(canvasElement);
 
-    // Nameヘッダーをクリックしてソート
-    const nameHeader = await canvas.findByRole("columnheader", { name: "Name" });
-    await userEvent.click(nameHeader);
-    // ソートは一度クリック後、ダブルクリック判定を経てから再度クリックしたときに反応するため、
-    // ダブルクリック判定を待ってから再度クリック
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    await userEvent.click(nameHeader);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Nameヘッダーのドラッグ可能な要素（role="button"）を取得
+    const nameHeader = await canvas.findByRole("columnheader", { name: /Name/ });
+    const draggableButton = nameHeader.querySelector('[role="button"]') as HTMLElement;
 
-    // ソートインジケーターが表示されることを確認
-    const ariaSortValueAsc = nameHeader.getAttribute("aria-sort");
-    await expect(ariaSortValueAsc).toBeTruthy();
-    await expect(ariaSortValueAsc).toBe("ascending");
+    if (!draggableButton) {
+      throw new Error("Draggable button not found in header");
+    }
 
-    // 再度クリックすると降順ソートに切り替わり
-    await userEvent.click(nameHeader);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const ariaSortValueDesc = nameHeader.getAttribute("aria-sort");
-    await expect(ariaSortValueDesc).toBeTruthy();
-    await expect(ariaSortValueDesc).toBe("descending");
+    // 1回目のクリック: 未選択のセルをクリック → 選択状態になるだけでソートしない
+    draggableButton.focus();
+    await userEvent.click(draggableButton);
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // 再度クリックするとソート解除
-    await userEvent.click(nameHeader);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const ariaSortValue = nameHeader.getAttribute("aria-sort");
-    await expect(ariaSortValue).toBeFalsy();
+    // ソートインジケーターが表示されないことを確認（まだソートされていない）
+    await expect(nameHeader.textContent).not.toContain("🔼");
+    await expect(nameHeader.textContent).not.toContain("🔽");
+
+    // 2回目のクリック: 既に選択されているセルをクリック → ダブルクリック判定待ち（500ms）後にソート実行
+    draggableButton.focus();
+    await userEvent.click(draggableButton);
+    await new Promise((resolve) => setTimeout(resolve, 600)); // 500ms + 余裕
+
+    // ソートインジケーター（🔼）が表示されることを確認
+    await expect(nameHeader.textContent).toContain("🔼");
+
+    // 3回目のクリック: 降順ソートに切り替わり
+    draggableButton.focus();
+    await userEvent.click(draggableButton);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    // ソートインジケーター（🔽）が表示されることを確認
+    await expect(nameHeader.textContent).toContain("🔽");
+
+    // 4回目のクリック: ソート解除
+    draggableButton.focus();
+    await userEvent.click(draggableButton);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    // ソートインジケーターが表示されないことを確認
+    await expect(nameHeader.textContent).not.toContain("🔼");
+    await expect(nameHeader.textContent).not.toContain("🔽");
 
     // データが表示されることを確認（ソート後も表示は継続）
     await expect(canvas.getByRole("gridcell", { name: "Alice" })).toBeInTheDocument();
