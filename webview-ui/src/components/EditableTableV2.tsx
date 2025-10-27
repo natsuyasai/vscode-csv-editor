@@ -14,6 +14,7 @@ import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useCellSelectionV2 } from "@/hooks/useCellSelectionV2";
+import { useContextMenusV2 } from "@/hooks/useContextMenusV2";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useTableSearchV2 } from "@/hooks/useTableSearchV2";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
@@ -73,29 +74,37 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     clearSelection,
   } = useCellSelectionV2(data, setData);
 
+  // コンテキストメニュー機能
+  const {
+    isRowContextMenuOpen,
+    rowContextMenuProps,
+    rowContextMenuRef,
+    openRowContextMenu,
+    handleSelectRowContextMenu,
+    handleCloseRowContextMenu,
+    isColumnContextMenuOpen,
+    columnContextMenuProps,
+    columnContextMenuRef,
+    openColumnContextMenu,
+    handleSelectColumnContextMenu,
+    handleCloseColumnContextMenu,
+  } = useContextMenusV2(
+    {
+      deleteRow: _deleteRow,
+      insertRow: _insertRow,
+    },
+    {
+      deleteCol: _deleteCol,
+      insertCol: _insertCol,
+    }
+  );
+
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
   const [focusedColumnIndex, setFocusedColumnIndex] = useState<number | null>(null);
   const [editingHeaderIndex, setEditingHeaderIndex] = useState<number | null>(null);
   const [editingHeaderValue, setEditingHeaderValue] = useState<string>("");
-
-  // コンテキストメニューのstate
-  const [isRowContextMenuOpen, setIsRowContextMenuOpen] = useState(false);
-  const [rowContextMenuProps, setRowContextMenuProps] = useState<{
-    itemIdx: number;
-    top: number;
-    left: number;
-  } | null>(null);
-  const rowContextMenuRef = useRef<HTMLElement | null>(null);
-
-  const [isColumnContextMenuOpen, setIsColumnContextMenuOpen] = useState(false);
-  const [columnContextMenuProps, setColumnContextMenuProps] = useState<{
-    itemIdx: number;
-    top: number;
-    left: number;
-  } | null>(null);
-  const columnContextMenuRef = useRef<HTMLElement | null>(null);
 
   // 列の配置調整のstate
   const [columnAlignments, setColumnAlignments] = useState<Record<number, CellAlignment>>({});
@@ -167,60 +176,6 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     [_moveColumns]
   );
 
-  // 行コンテキストメニューハンドラー
-  const handleSelectRowContextMenu = useCallback(
-    (value: string) => {
-      if (rowContextMenuProps === null) {
-        return;
-      }
-
-      const rowIdx = rowContextMenuProps.itemIdx;
-      if (value === "deleteRow") {
-        _deleteRow(rowIdx);
-      } else if (value === "insertRowAbove") {
-        _insertRow(rowIdx);
-      } else if (value === "insertRowBelow") {
-        _insertRow(rowIdx + 1);
-      }
-
-      setIsRowContextMenuOpen(false);
-      setRowContextMenuProps(null);
-    },
-    [rowContextMenuProps, _deleteRow, _insertRow]
-  );
-
-  const handleCloseRowContextMenu = useCallback(() => {
-    setIsRowContextMenuOpen(false);
-    setRowContextMenuProps(null);
-  }, []);
-
-  // 列コンテキストメニューハンドラー
-  const handleSelectColumnContextMenu = useCallback(
-    (value: string) => {
-      if (columnContextMenuProps === null) {
-        return;
-      }
-
-      const colIdx = columnContextMenuProps.itemIdx;
-      if (value === "deleteHeaderCel") {
-        _deleteCol(colIdx);
-      } else if (value === "insertHeaderCelLeft") {
-        _insertCol(colIdx);
-      } else if (value === "insertHeaderCelRight") {
-        _insertCol(colIdx + 1);
-      }
-
-      setIsColumnContextMenuOpen(false);
-      setColumnContextMenuProps(null);
-    },
-    [columnContextMenuProps, _deleteCol, _insertCol]
-  );
-
-  const handleCloseColumnContextMenu = useCallback(() => {
-    setIsColumnContextMenuOpen(false);
-    setColumnContextMenuProps(null);
-  }, []);
-
   // 列定義を生成
   const columns = useMemo((): ColumnDef<RowData>[] => {
     if (csvArray.length === 0 || csvArray[0].length === 0) {
@@ -248,12 +203,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
             }
           };
           const onContextMenu = (e: React.MouseEvent, rowIdx: number) => {
-            setRowContextMenuProps({
-              itemIdx: rowIdx,
-              top: e.clientY,
-              left: e.clientX,
-            });
-            setIsRowContextMenuOpen(true);
+            openRowContextMenu(rowIdx, e.clientY, e.clientX);
           };
            
           return (
@@ -282,7 +232,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     });
 
     return cols;
-  }, [csvArray, isIgnoreHeaderRow, handleRowReorder]);
+  }, [csvArray, isIgnoreHeaderRow, handleRowReorder, openRowContextMenu]);
 
   // TanStack Tableのインスタンスを作成
   const table = useReactTable({
@@ -673,12 +623,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                           onContextMenu={(e) => {
                             if (columnIndex !== null) {
                               e.preventDefault();
-                              setColumnContextMenuProps({
-                                itemIdx: columnIndex,
-                                top: e.clientY,
-                                left: e.clientX,
-                              });
-                              setIsColumnContextMenuOpen(true);
+                              openColumnContextMenu(columnIndex, e.clientY, e.clientX);
                             }
                           }}
                           style={{
@@ -860,12 +805,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                               isRowIndexCell
                                 ? (e) => {
                                     e.preventDefault();
-                                    setRowContextMenuProps({
-                                      itemIdx: row.index,
-                                      top: e.clientY,
-                                      left: e.clientX,
-                                    });
-                                    setIsRowContextMenuOpen(true);
+                                    openRowContextMenu(row.index, e.clientY, e.clientX);
                                   }
                                 : undefined
                             }
