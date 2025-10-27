@@ -15,6 +15,7 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useCellSelectionV2 } from "@/hooks/useCellSelectionV2";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
+import { useTableSearchV2 } from "@/hooks/useTableSearchV2";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType, CellAlignment } from "@/types";
 import { PortalManager } from "./EditableTable/PortalManager";
@@ -78,13 +79,6 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
   const [focusedColumnIndex, setFocusedColumnIndex] = useState<number | null>(null);
   const [editingHeaderIndex, setEditingHeaderIndex] = useState<number | null>(null);
   const [editingHeaderValue, setEditingHeaderValue] = useState<string>("");
-
-  // 検索機能のstate
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [matchedItemPositions, setMatchedItemPositions] = useState<
-    Array<{ rowIdx: number; colIdx: number }>
-  >([]);
-  const [searchedSelectedItemIdx, setSearchedSelectedItemIdx] = useState(0);
 
   // コンテキストメニューのstate
   const [isRowContextMenuOpen, setIsRowContextMenuOpen] = useState(false);
@@ -329,6 +323,18 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
   // 仮想スクロールのための参照
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
+  // 検索機能
+  const {
+    searchOpen,
+    matchedItemPositions,
+    searchedSelectedItemIdx,
+    handleSearch,
+    handleNextSearch,
+    handlePreviousSearch,
+    handleCloseSearch,
+    openSearch,
+  } = useTableSearchV2(data, rowHeight, tableContainerRef);
+
   // 行の仮想化
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
@@ -341,83 +347,6 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
   useEffect(() => {
     rowVirtualizer.measure();
   }, [rowHeight, rowVirtualizer]);
-
-  // 検索ハンドラー
-  const handleSearch = useCallback(
-    (text: string) => {
-      if (text.trim() === "") {
-        return;
-      }
-      const lowerText = text.toLowerCase();
-      const positions: Array<{ rowIdx: number; colIdx: number }> = [];
-
-      data.forEach((row, rowIdx) => {
-        Object.keys(row).forEach((key) => {
-          if (key === ROW_IDX_KEY || key === ROW_ID_KEY) {
-            return;
-          }
-          const colIdx = parseInt(key.replace("col", ""));
-          const value = row[key];
-          if (value && value.toLowerCase().includes(lowerText)) {
-            positions.push({ rowIdx, colIdx });
-          }
-        });
-      });
-
-      if (positions.length === 0) {
-        return;
-      }
-
-      setMatchedItemPositions(positions);
-      setSearchedSelectedItemIdx(0);
-
-      // 最初のマッチ位置にスクロール
-      const firstMatch = positions[0];
-      tableContainerRef.current?.scrollTo({
-        top: firstMatch.rowIdx * rowHeight,
-        behavior: "smooth",
-      });
-    },
-    [data, rowHeight]
-  );
-
-  const handleNextSearch = useCallback(() => {
-    if (matchedItemPositions.length === 0) {
-      return;
-    }
-    const nextIdx =
-      searchedSelectedItemIdx + 1 < matchedItemPositions.length ? searchedSelectedItemIdx + 1 : 0;
-    const position = matchedItemPositions[nextIdx];
-    setSearchedSelectedItemIdx(nextIdx);
-
-    tableContainerRef.current?.scrollTo({
-      top: position.rowIdx * rowHeight,
-      behavior: "smooth",
-    });
-  }, [matchedItemPositions, searchedSelectedItemIdx, rowHeight]);
-
-  const handlePreviousSearch = useCallback(() => {
-    if (matchedItemPositions.length === 0) {
-      return;
-    }
-    const prevIdx =
-      searchedSelectedItemIdx - 1 >= 0
-        ? searchedSelectedItemIdx - 1
-        : matchedItemPositions.length - 1;
-    const position = matchedItemPositions[prevIdx];
-    setSearchedSelectedItemIdx(prevIdx);
-
-    tableContainerRef.current?.scrollTo({
-      top: position.rowIdx * rowHeight,
-      behavior: "smooth",
-    });
-  }, [matchedItemPositions, searchedSelectedItemIdx, rowHeight]);
-
-  const handleCloseSearch = useCallback(() => {
-    setMatchedItemPositions([]);
-    setSearchedSelectedItemIdx(0);
-    setSearchOpen(false);
-  }, []);
 
   // 列の配置調整ハンドラー
   const handleAlignmentChange = useCallback(
@@ -478,7 +407,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
           isEnabledRedo={isEnabledRedo}
           onUndo={undo}
           onRedo={redo}
-          onSearch={() => setSearchOpen(true)}
+          onSearch={openSearch}
           onUpdateRowSize={setRowSizeFromHeader}
           onClickApply={handleApply}
           showFilters={showFilters}
