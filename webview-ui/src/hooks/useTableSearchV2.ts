@@ -1,11 +1,22 @@
 import { useCallback, useState } from "react";
 import { ROW_IDX_KEY, ROW_ID_KEY } from "@/types";
 
+/**
+ * 検索結果の位置情報
+ */
 export interface SearchPosition {
   rowIdx: number;
   colIdx: number;
 }
 
+/**
+ * テーブル検索機能のカスタムフック
+ * 検索、次へ/前へナビゲーション、検索終了機能を提供
+ *
+ * @param data - 検索対象のデータ配列
+ * @param rowHeight - 行の高さ（スクロール計算用）
+ * @param tableContainerRef - テーブルコンテナの参照
+ */
 export const useTableSearchV2 = <TData extends Record<string, unknown>>(
   data: TData[],
   rowHeight: number,

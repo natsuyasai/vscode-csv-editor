@@ -1,21 +1,37 @@
 import { useCallback, useRef, useState } from "react";
 
+/**
+ * コンテキストメニューの位置情報
+ */
 export interface ContextMenuPosition {
   itemIdx: number;
   top: number;
   left: number;
 }
 
+/**
+ * 行コンテキストメニューのアクション
+ */
 export interface RowContextMenuActions {
   deleteRow: (rowIdx: number) => void;
   insertRow: (position: number) => void;
 }
 
+/**
+ * 列コンテキストメニューのアクション
+ */
 export interface ColumnContextMenuActions {
   deleteCol: (colIdx: number) => void;
   insertCol: (position: number) => void;
 }
 
+/**
+ * コンテキストメニュー機能のカスタムフック
+ * 行・列のコンテキストメニューの開閉、アクション処理を提供
+ *
+ * @param rowActions - 行に対するアクション（削除、挿入）
+ * @param columnActions - 列に対するアクション（削除、挿入）
+ */
 export const useContextMenusV2 = (
   rowActions: RowContextMenuActions,
   columnActions: ColumnContextMenuActions
