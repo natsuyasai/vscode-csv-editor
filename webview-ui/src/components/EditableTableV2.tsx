@@ -13,6 +13,7 @@ import { VscodeDivider } from "@vscode-elements/react-elements";
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { useCellSelectionV2 } from "@/hooks/useCellSelectionV2";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType, CellAlignment } from "@/types";
@@ -58,13 +59,23 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     };
     setRowHeight(heights[rowSize]);
   }, [rowSize]);
+
+  // セル選択機能
+  const {
+    selectedCells,
+    handleCellMouseDown,
+    handleCellMouseEnter,
+    handleCellMouseUp,
+    handleBulkEdit,
+    handleCopy,
+    handlePaste,
+    clearSelection,
+  } = useCellSelectionV2(data, setData);
+
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
   const [focusedColumnIndex, setFocusedColumnIndex] = useState<number | null>(null);
-  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [selectionStart, setSelectionStart] = useState<{ row: number; col: number } | null>(null);
   const [editingHeaderIndex, setEditingHeaderIndex] = useState<number | null>(null);
   const [editingHeaderValue, setEditingHeaderValue] = useState<string>("");
 
@@ -94,180 +105,6 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
 
   // 列の配置調整のstate
   const [columnAlignments, setColumnAlignments] = useState<Record<number, CellAlignment>>({});
-
-  // セル選択のヘルパー関数
-  const getCellKey = (row: number, col: number) => `${row}-${col}`;
-
-  const handleCellMouseDown = useCallback((row: number, col: number) => {
-    setIsSelecting(true);
-    setSelectionStart({ row, col });
-    setSelectedCells(new Set([getCellKey(row, col)]));
-  }, []);
-
-  const handleCellMouseEnter = useCallback(
-    (row: number, col: number) => {
-      if (!isSelecting || !selectionStart) return;
-
-      const minRow = Math.min(selectionStart.row, row);
-      const maxRow = Math.max(selectionStart.row, row);
-      const minCol = Math.min(selectionStart.col, col);
-      const maxCol = Math.max(selectionStart.col, col);
-
-      const newSelection = new Set<string>();
-      for (let r = minRow; r <= maxRow; r++) {
-        for (let c = minCol; c <= maxCol; c++) {
-          newSelection.add(getCellKey(r, c));
-        }
-      }
-      setSelectedCells(newSelection);
-    },
-    [isSelecting, selectionStart]
-  );
-
-  const handleCellMouseUp = useCallback(() => {
-    setIsSelecting(false);
-  }, []);
-
-  // マウスアップイベントをdocumentに登録
-  useEffect(() => {
-    const handleDocumentMouseUp = () => {
-      setIsSelecting(false);
-    };
-    document.addEventListener("mouseup", handleDocumentMouseUp);
-    return () => {
-      document.removeEventListener("mouseup", handleDocumentMouseUp);
-    };
-  }, []);
-
-  // 選択中のセルに一括で値を設定する関数
-  const handleBulkEdit = useCallback(() => {
-    if (selectedCells.size === 0) {
-      return;
-    }
-
-    const value = window.prompt("選択したセルに設定する値を入力してください:");
-    if (value === null) {
-      return; // キャンセルされた
-    }
-
-    // 選択中のセルを更新
-    setData((old) => {
-      const newData = [...old];
-      selectedCells.forEach((cellKey) => {
-        const [rowStr, colStr] = cellKey.split("-");
-        const rowIndex = parseInt(rowStr);
-        const colIndex = parseInt(colStr);
-        const columnId = `col${colIndex}`;
-
-        if (newData[rowIndex]) {
-          newData[rowIndex] = {
-            ...newData[rowIndex],
-            [columnId]: value,
-          };
-        }
-      });
-      return newData;
-    });
-
-    // 選択をクリア
-    setSelectedCells(new Set());
-  }, [selectedCells]);
-
-  // 選択中のセルをコピーする関数
-  const handleCopy = useCallback(async () => {
-    if (selectedCells.size === 0) {
-      return;
-    }
-
-    // 選択されたセルを行と列でグループ化
-    const cellsArray = Array.from(selectedCells).map((cellKey) => {
-      const [rowStr, colStr] = cellKey.split("-");
-      return {
-        row: parseInt(rowStr),
-        col: parseInt(colStr),
-      };
-    });
-
-    // 行と列でソート
-    cellsArray.sort((a, b) => {
-      if (a.row !== b.row) return a.row - b.row;
-      return a.col - b.col;
-    });
-
-    // TSV形式でデータを作成（Excelと互換性あり）
-    const minRow = Math.min(...cellsArray.map((c) => c.row));
-    const maxRow = Math.max(...cellsArray.map((c) => c.row));
-    const minCol = Math.min(...cellsArray.map((c) => c.col));
-    const maxCol = Math.max(...cellsArray.map((c) => c.col));
-
-    const rows: string[] = [];
-    for (let row = minRow; row <= maxRow; row++) {
-      const cols: string[] = [];
-      for (let col = minCol; col <= maxCol; col++) {
-        const columnId = `col${col}`;
-        const value = data[row]?.[columnId] ?? "";
-        cols.push(value);
-      }
-      rows.push(cols.join("\t"));
-    }
-
-    const text = rows.join("\n");
-
-    // クリップボードにコピー
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (err) {
-      console.error("クリップボードへのコピーに失敗しました:", err);
-    }
-  }, [selectedCells, data]);
-
-  // クリップボードからペーストする関数
-  const handlePaste = useCallback(async () => {
-    if (selectedCells.size === 0) {
-      return;
-    }
-
-    try {
-      const text = await navigator.clipboard.readText();
-      const rows = text.split("\n").map((row) => row.split("\t"));
-
-      // 選択範囲の左上のセルを取得
-      const cellsArray = Array.from(selectedCells).map((cellKey) => {
-        const [rowStr, colStr] = cellKey.split("-");
-        return {
-          row: parseInt(rowStr),
-          col: parseInt(colStr),
-        };
-      });
-      const minRow = Math.min(...cellsArray.map((c) => c.row));
-      const minCol = Math.min(...cellsArray.map((c) => c.col));
-
-      // データを更新
-      setData((old) => {
-        const newData = [...old];
-        rows.forEach((rowData, rowOffset) => {
-          rowData.forEach((cellValue, colOffset) => {
-            const targetRow = minRow + rowOffset;
-            const targetCol = minCol + colOffset;
-            const columnId = `col${targetCol}`;
-
-            if (newData[targetRow] && targetCol >= 0) {
-              newData[targetRow] = {
-                ...newData[targetRow],
-                [columnId]: cellValue,
-              };
-            }
-          });
-        });
-        return newData;
-      });
-
-      // 選択をクリア
-      setSelectedCells(new Set());
-    } catch (err) {
-      console.error("クリップボードからの読み取りに失敗しました:", err);
-    }
-  }, [selectedCells]);
 
   // データの変更をCSV配列に反映
   useEffect(() => {
@@ -761,7 +598,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
           一括編集 ({selectedCells.size}セル)
         </button>
         <button
-          onClick={() => setSelectedCells(new Set())}
+          onClick={clearSelection}
           disabled={selectedCells.size === 0}
           style={{
             padding: "4px 8px",

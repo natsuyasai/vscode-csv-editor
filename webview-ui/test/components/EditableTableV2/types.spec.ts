@@ -4,7 +4,6 @@ import type {
   RowData,
   FilterInputProps,
   DraggableHeaderCellProps,
-  RowIndexCellProps,
   ContextMenuPosition,
 } from "@/components/EditableTableV2/types";
 
