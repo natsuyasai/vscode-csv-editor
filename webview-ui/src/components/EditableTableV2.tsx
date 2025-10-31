@@ -17,6 +17,7 @@ import { useCellSelectionV2 } from "@/hooks/useCellSelectionV2";
 import { useColumnAlignment } from "@/hooks/useColumnAlignment";
 import { useContextMenusV2 } from "@/hooks/useContextMenusV2";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
+import { useHeaderEditing } from "@/hooks/useHeaderEditing";
 import { useTableSearchV2 } from "@/hooks/useTableSearchV2";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType } from "@/types";
@@ -104,12 +105,20 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
   const [focusedColumnIndex, setFocusedColumnIndex] = useState<number | null>(null);
-  const [editingHeaderIndex, setEditingHeaderIndex] = useState<number | null>(null);
-  const [editingHeaderValue, setEditingHeaderValue] = useState<string>("");
 
   // 列の配置調整機能
   const { handleAlignmentChange, getCurrentAlignment, getColumnAlignment } =
     useColumnAlignment(selectedColumnIndex);
+
+  // ヘッダー編集機能
+  const {
+    editingHeaderIndex,
+    editingHeaderValue,
+    startEditing,
+    finishEditing,
+    cancelEditing,
+    changeEditingValue,
+  } = useHeaderEditing(_updateCol);
 
   // データの変更をCSV配列に反映
   useEffect(() => {
@@ -563,11 +572,9 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                         } else if (e.key === "Backspace") {
                           // ヘッダーの値を削除して編集モードに移行
                           _updateCol(columnIndex, "");
-                          setEditingHeaderIndex(columnIndex);
-                          setEditingHeaderValue("");
+                          startEditing(columnIndex, "");
                         } else if (e.key === "F2") {
                           // 編集モードに移行
-                          setEditingHeaderIndex(columnIndex);
                           const renderedHeader = flexRender(
                             header.column.columnDef.header,
                             header.getContext()
@@ -581,7 +588,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                           ) {
                             headerValue = String(renderedHeader);
                           }
-                          setEditingHeaderValue(headerValue);
+                          startEditing(columnIndex, headerValue);
                         } else if (
                           !e.ctrlKey &&
                           !e.altKey &&
@@ -591,8 +598,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                         ) {
                           // 通常の文字入力で編集モードに移行
                           e.preventDefault();
-                          setEditingHeaderIndex(columnIndex);
-                          setEditingHeaderValue(e.key);
+                          startEditing(columnIndex, e.key);
                         }
                       };
 
@@ -639,26 +645,20 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                                   }
                                 }}
                                 value={editingHeaderValue}
-                                onChange={(e) => setEditingHeaderValue(e.target.value)}
+                                onChange={(e) => changeEditingValue(e.target.value)}
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter" && !e.shiftKey) {
                                     e.preventDefault();
-                                    // ヘッダーの値を更新
-                                    _updateCol(columnIndex, editingHeaderValue);
-                                    setEditingHeaderIndex(null);
+                                    finishEditing();
                                   } else if (e.key === "Escape") {
-                                    setEditingHeaderIndex(null);
+                                    cancelEditing();
                                   } else if (e.key === "Tab") {
                                     e.preventDefault();
-                                    // ヘッダーの値を更新
-                                    _updateCol(columnIndex, editingHeaderValue);
-                                    setEditingHeaderIndex(null);
+                                    finishEditing();
                                   }
                                 }}
                                 onBlur={() => {
-                                  // ヘッダーの値を更新
-                                  _updateCol(columnIndex, editingHeaderValue);
-                                  setEditingHeaderIndex(null);
+                                  finishEditing();
                                 }}
                                 style={{
                                   width: "100%",
@@ -685,7 +685,6 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                                 }}
                                 onDoubleClick={() => {
                                   if (columnIndex !== null) {
-                                    setEditingHeaderIndex(columnIndex);
                                     const renderedHeader = flexRender(
                                       header.column.columnDef.header,
                                       header.getContext()
@@ -699,7 +698,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                                     ) {
                                       headerValue = String(renderedHeader);
                                     }
-                                    setEditingHeaderValue(headerValue);
+                                    startEditing(columnIndex, headerValue);
                                   }
                                 }}
                                 onSort={
