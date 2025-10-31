@@ -14,11 +14,12 @@ import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useCellSelectionV2 } from "@/hooks/useCellSelectionV2";
+import { useColumnAlignment } from "@/hooks/useColumnAlignment";
 import { useContextMenusV2 } from "@/hooks/useContextMenusV2";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useTableSearchV2 } from "@/hooks/useTableSearchV2";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
-import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType, CellAlignment } from "@/types";
+import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType } from "@/types";
 import { PortalManager } from "./EditableTable/PortalManager";
 import styles from "./EditableTable.module.scss";
 import { DraggableHeaderCell } from "./EditableTableV2/DraggableHeaderCell";
@@ -106,8 +107,9 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
   const [editingHeaderIndex, setEditingHeaderIndex] = useState<number | null>(null);
   const [editingHeaderValue, setEditingHeaderValue] = useState<string>("");
 
-  // 列の配置調整のstate
-  const [columnAlignments, setColumnAlignments] = useState<Record<number, CellAlignment>>({});
+  // 列の配置調整機能
+  const { handleAlignmentChange, getCurrentAlignment, getColumnAlignment } =
+    useColumnAlignment(selectedColumnIndex);
 
   // データの変更をCSV配列に反映
   useEffect(() => {
@@ -297,27 +299,6 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
   useEffect(() => {
     rowVirtualizer.measure();
   }, [rowHeight, rowVirtualizer]);
-
-  // 列の配置調整ハンドラー
-  const handleAlignmentChange = useCallback(
-    (alignment: CellAlignment) => {
-      if (selectedColumnIndex === null) return;
-
-      setColumnAlignments((prev) => ({
-        ...prev,
-        [selectedColumnIndex]: alignment,
-      }));
-    },
-    [selectedColumnIndex]
-  );
-
-  // 選択された列の現在の配置を取得
-  const getCurrentAlignment = useCallback((): CellAlignment => {
-    if (selectedColumnIndex === null) {
-      return { vertical: "center", horizontal: "left" };
-    }
-    return columnAlignments[selectedColumnIndex] || { vertical: "center", horizontal: "left" };
-  }, [selectedColumnIndex, columnAlignments]);
 
   function setRowSizeFromHeader(size: RowSizeType) {
     // rowSizeを設定すると、useEffectでrowHeightが自動的に更新される
@@ -794,7 +775,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                       }}>
                       {row.getVisibleCells().map((cell, cellIndex) => {
                         const colIndex = cellIndex - 1; // 行番号列を除く
-                        const alignment = colIndex >= 0 ? columnAlignments[colIndex] : undefined;
+                        const alignment = colIndex >= 0 ? getColumnAlignment(colIndex) : undefined;
                         const isRowIndexCell = cell.column.id === ROW_IDX_KEY;
 
                         return (
