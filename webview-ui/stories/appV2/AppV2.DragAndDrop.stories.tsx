@@ -53,19 +53,14 @@ export const RowColumnButtons: Story = {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // 行と列の追加/削除ボタンが表示されることを確認
-    const buttons = canvasElement.querySelectorAll("button");
-    const hasRowAddButton = Array.from(buttons).some(
-      button => button.textContent?.includes("行を追加")
-    );
-    const hasRowDeleteButton = Array.from(buttons).some(
-      button => button.textContent?.includes("行を削除")
-    );
-    const hasColumnAddButton = Array.from(buttons).some(
-      button => button.textContent?.includes("列を追加")
-    );
-    const hasColumnDeleteButton = Array.from(buttons).some(
-      button => button.textContent?.includes("列を削除")
-    );
+    // vscode-button要素を検索
+    const vscodeButtons = canvasElement.querySelectorAll("vscode-button");
+    const buttonTexts = Array.from(vscodeButtons).map(btn => btn.textContent?.trim());
+
+    const hasRowAddButton = buttonTexts.some(text => text?.includes("行を追加"));
+    const hasRowDeleteButton = buttonTexts.some(text => text?.includes("行を削除"));
+    const hasColumnAddButton = buttonTexts.some(text => text?.includes("列を追加"));
+    const hasColumnDeleteButton = buttonTexts.some(text => text?.includes("列を削除"));
 
     await expect(hasRowAddButton).toBeTruthy();
     await expect(hasRowDeleteButton).toBeTruthy();

@@ -357,166 +357,37 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
           selectedColumnKey={selectedColumnIndex !== null ? `col${selectedColumnIndex}` : null}
           currentAlignment={getCurrentAlignment()}
           onAlignmentChange={handleAlignmentChange}
-        />
-        <VscodeDivider className={styles.divider} />
-      </div>
-      <div
-        style={{
-          padding: "8px",
-          display: "flex",
-          gap: "8px",
-          borderBottom: "1px solid var(--vscode-panel-border)",
-        }}>
-        <button
-          onClick={() => {
+          onInsertRow={() => {
             const index = selectedRowIndex !== null ? selectedRowIndex : data.length;
             _insertRow(index);
             setSelectedRowIndex(null);
           }}
-          style={{
-            padding: "4px 8px",
-            cursor: "pointer",
-            backgroundColor: "var(--vscode-button-background)",
-            color: "var(--vscode-button-foreground)",
-            border: "none",
-            borderRadius: "2px",
-          }}>
-          行を追加
-        </button>
-        <button
-          onClick={() => {
+          onDeleteRow={() => {
             if (selectedRowIndex !== null) {
               _deleteRow(selectedRowIndex);
               setSelectedRowIndex(null);
             }
           }}
-          disabled={selectedRowIndex === null}
-          style={{
-            padding: "4px 8px",
-            cursor: selectedRowIndex === null ? "not-allowed" : "pointer",
-            backgroundColor:
-              selectedRowIndex === null
-                ? "var(--vscode-button-secondaryBackground)"
-                : "var(--vscode-button-background)",
-            color: "var(--vscode-button-foreground)",
-            border: "none",
-            borderRadius: "2px",
-            opacity: selectedRowIndex === null ? 0.5 : 1,
-          }}>
-          行を削除
-        </button>
-        <div
-          style={{ width: "1px", height: "24px", backgroundColor: "var(--vscode-panel-border)" }}
-        />
-        <button
-          onClick={() => {
+          isRowSelected={selectedRowIndex !== null}
+          onInsertColumn={() => {
             const index = selectedColumnIndex !== null ? selectedColumnIndex : csvArray[0].length;
             _insertCol(index);
             setSelectedColumnIndex(null);
           }}
-          style={{
-            padding: "4px 8px",
-            cursor: "pointer",
-            backgroundColor: "var(--vscode-button-background)",
-            color: "var(--vscode-button-foreground)",
-            border: "none",
-            borderRadius: "2px",
-          }}>
-          列を追加
-        </button>
-        <button
-          onClick={() => {
+          onDeleteColumn={() => {
             if (selectedColumnIndex !== null) {
               _deleteCol(selectedColumnIndex);
               setSelectedColumnIndex(null);
             }
           }}
-          disabled={selectedColumnIndex === null}
-          style={{
-            padding: "4px 8px",
-            cursor: selectedColumnIndex === null ? "not-allowed" : "pointer",
-            backgroundColor:
-              selectedColumnIndex === null
-                ? "var(--vscode-button-secondaryBackground)"
-                : "var(--vscode-button-background)",
-            color: "var(--vscode-button-foreground)",
-            border: "none",
-            borderRadius: "2px",
-            opacity: selectedColumnIndex === null ? 0.5 : 1,
-          }}>
-          列を削除
-        </button>
-        <div
-          style={{ width: "1px", height: "24px", backgroundColor: "var(--vscode-panel-border)" }}
+          isColumnSelected={selectedColumnIndex !== null}
+          onBulkEdit={handleBulkEdit}
+          onClearSelection={clearSelection}
+          onCopy={() => void handleCopy()}
+          onPaste={() => void handlePaste()}
+          selectedCellsCount={selectedCells.size}
         />
-        <button
-          onClick={handleBulkEdit}
-          disabled={selectedCells.size === 0}
-          style={{
-            padding: "4px 8px",
-            cursor: selectedCells.size === 0 ? "not-allowed" : "pointer",
-            backgroundColor:
-              selectedCells.size === 0
-                ? "var(--vscode-button-secondaryBackground)"
-                : "var(--vscode-button-background)",
-            color: "var(--vscode-button-foreground)",
-            border: "none",
-            borderRadius: "2px",
-            opacity: selectedCells.size === 0 ? 0.5 : 1,
-          }}>
-          一括編集 ({selectedCells.size}セル)
-        </button>
-        <button
-          onClick={clearSelection}
-          disabled={selectedCells.size === 0}
-          style={{
-            padding: "4px 8px",
-            cursor: selectedCells.size === 0 ? "not-allowed" : "pointer",
-            backgroundColor:
-              selectedCells.size === 0
-                ? "var(--vscode-button-secondaryBackground)"
-                : "var(--vscode-button-background)",
-            color: "var(--vscode-button-foreground)",
-            border: "none",
-            borderRadius: "2px",
-            opacity: selectedCells.size === 0 ? 0.5 : 1,
-          }}>
-          選択解除
-        </button>
-        <button
-          onClick={() => void handleCopy()}
-          disabled={selectedCells.size === 0}
-          style={{
-            padding: "4px 8px",
-            cursor: selectedCells.size === 0 ? "not-allowed" : "pointer",
-            backgroundColor:
-              selectedCells.size === 0
-                ? "var(--vscode-button-secondaryBackground)"
-                : "var(--vscode-button-background)",
-            color: "var(--vscode-button-foreground)",
-            border: "none",
-            borderRadius: "2px",
-            opacity: selectedCells.size === 0 ? 0.5 : 1,
-          }}>
-          コピー ({selectedCells.size}セル)
-        </button>
-        <button
-          onClick={() => void handlePaste()}
-          disabled={selectedCells.size === 0}
-          style={{
-            padding: "4px 8px",
-            cursor: selectedCells.size === 0 ? "not-allowed" : "pointer",
-            backgroundColor:
-              selectedCells.size === 0
-                ? "var(--vscode-button-secondaryBackground)"
-                : "var(--vscode-button-background)",
-            color: "var(--vscode-button-foreground)",
-            border: "none",
-            borderRadius: "2px",
-            opacity: selectedCells.size === 0 ? 0.5 : 1,
-          }}>
-          ペースト
-        </button>
+        <VscodeDivider className={styles.divider} />
       </div>
       <div>
         <DndProvider backend={HTML5Backend}>

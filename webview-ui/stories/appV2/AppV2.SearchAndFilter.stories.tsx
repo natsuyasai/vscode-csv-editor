@@ -35,11 +35,12 @@ export const FilterToggle: Story = {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // フィルター関連のボタンが表示されることを確認
-    const buttons = canvasElement.querySelectorAll("button");
+    // vscode-button要素を検索
+    const vscodeButtons = canvasElement.querySelectorAll("vscode-button");
 
     // フィルターボタンまたはフィルター機能が存在することを確認
     // （実装の詳細に依存するため、柔軟に確認）
-    await expect(buttons.length).toBeGreaterThan(0);
+    await expect(vscodeButtons.length).toBeGreaterThan(0);
   },
 };
 
