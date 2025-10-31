@@ -4,15 +4,18 @@ import AppV2 from "../../src/AppV2";
 import { setInitData, waitReadyForGrid } from "./utils";
 
 /**
- * TODO: EditableTableV2にはヘッダーセル編集機能がまだ実装されていません。
- * ヘッダーセル編集機能を実装後、これらのテストを有効化してください。
+ * EditableTableV2のヘッダーセル編集機能をテストするストーリー。
  *
- * 必要な実装:
+ * 実装済み機能:
  * - ダブルクリックでヘッダー編集モードに入る
  * - F2キーでヘッダー編集モードに入る
  * - Backspace/Deleteキーでヘッダーをクリア
  * - 文字入力で編集モードに入る
  * - Enter/Escapeキーで編集を確定/キャンセル
+ *
+ * 実装方法:
+ * - useHeaderEditingカスタムフックによる状態管理
+ * - EditableTableV2コンポーネントに統合
  */
 
 const meta: Meta<typeof AppV2> = {
@@ -22,7 +25,7 @@ const meta: Meta<typeof AppV2> = {
     layout: "fullscreen",
     docs: {
       description: {
-        component: "VSCode CSV Editor のヘッダーセル編集機能（TODO: 未実装）",
+        component: "VSCode CSV Editor のヘッダーセル編集機能",
       },
     },
   },
