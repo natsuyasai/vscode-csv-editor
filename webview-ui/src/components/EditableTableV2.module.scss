@@ -1,0 +1,101 @@
+// ÆüÖë³óÆÊ
+.tableContainer {
+  height: 600px;
+  overflow: auto;
+}
+
+// ÆüÖë,S
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  display: block;
+}
+
+// ÆüÖëØÃÀü
+.thead {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--vscode-editor-background);
+}
+
+// ØÃÀüL
+.headerRow {
+  display: table-row;
+}
+
+// ØÃÀü»ëú,¹¿¤ë	
+.headerCell {
+  display: table-cell;
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  box-sizing: border-box;
+  user-select: none;
+  outline-offset: -2px;
+}
+
+// ØÃÀüèÆ(textarea
+.headerEditTextarea {
+  width: 100%;
+  min-height: 20px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: inherit;
+  padding: 2px 4px;
+  border: 1px solid var(--vscode-focusBorder);
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+}
+
+// ØÃÀü³óÆóÄÕìÃ¯¹Mn	
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// Õ£ë¿üL
+.filterRow {
+  display: table-row;
+}
+
+// Õ£ë¿ü»ë
+.filterCell {
+  display: table-cell;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-editor-background);
+  box-sizing: border-box;
+}
+
+// ÆüÖëÜÇ£
+.tbody {
+  display: block;
+  position: relative;
+}
+
+// Çü¿L
+.dataRow {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+// Çü¿»ë
+.dataCell {
+  display: table-cell;
+  padding: 0;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

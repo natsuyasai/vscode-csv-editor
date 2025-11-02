@@ -28,6 +28,7 @@ import { EditableCell } from "./EditableTableV2/EditableCell";
 import { FilterInput } from "./EditableTableV2/FilterInput";
 import { RowIndexCell } from "./EditableTableV2/RowIndexCell";
 import type { EditableTableV2Props, RowData } from "./EditableTableV2/types";
+import tableStyles from "./EditableTableV2.module.scss";
 import { Header } from "./Header";
 
 
@@ -417,32 +418,15 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
         <DndProvider backend={HTML5Backend}>
           <div
             ref={tableContainerRef}
-            className={[styles.dataGrid, `${theme === "light" ? "rdg-light" : "rdg-dark"}`].join(
-              " "
-            )}
-            style={{
-              height: "600px",
-              overflow: "auto",
-            }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                tableLayout: "fixed",
-                display: "block",
-              }}>
-              <thead
-                style={{
-                  display: "table",
-                  width: "100%",
-                  tableLayout: "fixed",
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 1,
-                  backgroundColor: "var(--vscode-editor-background)",
-                }}>
+            className={[
+              styles.dataGrid,
+              tableStyles.tableContainer,
+              `${theme === "light" ? "rdg-light" : "rdg-dark"}`,
+            ].join(" ")}>
+            <table className={tableStyles.table}>
+              <thead className={tableStyles.thead}>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id} style={{ display: "table-row" }}>
+                  <tr key={headerGroup.id} className={tableStyles.headerRow}>
                     {headerGroup.headers.map((header, headerIndex) => {
                       const columnIndex = header.column.id === ROW_IDX_KEY ? null : headerIndex - 1;
                       const isSelected =
@@ -501,6 +485,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                         <th
                           key={header.id}
                           tabIndex={-1}
+                          className={tableStyles.headerCell}
                           onKeyDown={handleHeaderKeyDown}
                           onContextMenu={(e) => {
                             if (columnIndex !== null) {
@@ -509,13 +494,9 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                             }
                           }}
                           style={{
-                            display: "table-cell",
                             width: `${header.getSize()}px`,
                             minWidth: `${header.getSize()}px`,
                             maxWidth: `${header.getSize()}px`,
-                            padding: "8px",
-                            textAlign: "left",
-                            borderBottom: "1px solid var(--vscode-panel-border)",
                             backgroundColor: isFocused
                               ? "var(--vscode-list-hoverBackground)"
                               : isSelected
@@ -524,11 +505,8 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                             color: isSelected
                               ? "var(--vscode-list-activeSelectionForeground)"
                               : "inherit",
-                            boxSizing: "border-box",
                             cursor: header.column.getCanSort() ? "pointer" : "default",
-                            userSelect: "none",
                             outline: isFocused ? "2px solid var(--vscode-focusBorder)" : "none",
-                            outlineOffset: "-2px",
                           }}>
                           {header.isPlaceholder ? null : columnIndex !== null ? (
                             isEditing ? (
@@ -555,17 +533,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                                 onBlur={() => {
                                   finishEditing();
                                 }}
-                                style={{
-                                  width: "100%",
-                                  minHeight: "20px",
-                                  resize: "vertical",
-                                  fontFamily: "inherit",
-                                  fontSize: "inherit",
-                                  padding: "2px 4px",
-                                  border: "1px solid var(--vscode-focusBorder)",
-                                  backgroundColor: "var(--vscode-input-background)",
-                                  color: "var(--vscode-input-foreground)",
-                                }}
+                                className={tableStyles.headerEditTextarea}
                               />
                             ) : (
                               <DraggableHeaderCell
@@ -601,7 +569,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                                     ? header.column.getToggleSortingHandler()
                                     : undefined
                                 }>
-                                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <div className={tableStyles.headerContent}>
                                   {flexRender(header.column.columnDef.header, header.getContext())}
                                   {{
                                     asc: " 🔼",
@@ -611,7 +579,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                               </DraggableHeaderCell>
                             )
                           ) : (
-                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            <div className={tableStyles.headerContent}>
                               {flexRender(header.column.columnDef.header, header.getContext())}
                             </div>
                           )}
@@ -622,19 +590,15 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                 ))}
                 {showFilters &&
                   table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={`${headerGroup.id}-filter`} style={{ display: "table-row" }}>
+                    <tr key={`${headerGroup.id}-filter`} className={tableStyles.filterRow}>
                       {headerGroup.headers.map((header) => (
                         <th
                           key={header.id}
+                          className={tableStyles.filterCell}
                           style={{
-                            display: "table-cell",
                             width: `${header.getSize()}px`,
                             minWidth: `${header.getSize()}px`,
                             maxWidth: `${header.getSize()}px`,
-                            padding: "4px 8px",
-                            borderBottom: "1px solid var(--vscode-panel-border)",
-                            backgroundColor: "var(--vscode-editor-background)",
-                            boxSizing: "border-box",
                           }}>
                           {header.column.getCanFilter() && header.column.id !== ROW_IDX_KEY ? (
                             <FilterInput column={header.column} />
@@ -645,9 +609,8 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                   ))}
               </thead>
               <tbody
+                className={tableStyles.tbody}
                 style={{
-                  display: "block",
-                  position: "relative",
                   height: `${rowVirtualizer.getTotalSize()}px`,
                 }}>
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -657,13 +620,8 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                   return (
                     <tr
                       key={row.id}
+                      className={tableStyles.dataRow}
                       style={{
-                        display: "table",
-                        width: "100%",
-                        tableLayout: "fixed",
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
                         height: `${virtualRow.size}px`,
                         transform: `translateY(${virtualRow.start}px)`,
                       }}>
@@ -676,6 +634,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                           <td
                             key={cell.id}
                             role="gridcell"
+                            className={tableStyles.dataCell}
                             onContextMenu={
                               isRowIndexCell
                                 ? (e) => {
@@ -685,16 +644,9 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                                 : undefined
                             }
                             style={{
-                              display: "table-cell",
                               width: `${cell.column.getSize()}px`,
                               minWidth: `${cell.column.getSize()}px`,
                               maxWidth: `${cell.column.getSize()}px`,
-                              padding: "0",
-                              borderBottom: "1px solid var(--vscode-panel-border)",
-                              boxSizing: "border-box",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
                               textAlign: alignment?.horizontal || "left",
                               verticalAlign: alignment?.vertical || "center",
                               backgroundColor: isRowSelected
