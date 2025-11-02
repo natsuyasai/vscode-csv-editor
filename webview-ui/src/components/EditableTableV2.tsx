@@ -318,6 +318,48 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     onApply();
   }, [onApply]);
 
+  const handleToggleFilters = useCallback(() => {
+    setShowFilters(!showFilters);
+  }, [showFilters]);
+
+  const handleClearFilters = useCallback(() => {
+    setColumnFilters([]);
+  }, []);
+
+  const handleInsertRow = useCallback(() => {
+    const index = selectedRowIndex !== null ? selectedRowIndex : data.length;
+    _insertRow(index);
+    setSelectedRowIndex(null);
+  }, [selectedRowIndex, data.length, _insertRow]);
+
+  const handleDeleteRow = useCallback(() => {
+    if (selectedRowIndex !== null) {
+      _deleteRow(selectedRowIndex);
+      setSelectedRowIndex(null);
+    }
+  }, [selectedRowIndex, _deleteRow]);
+
+  const handleInsertColumn = useCallback(() => {
+    const index = selectedColumnIndex !== null ? selectedColumnIndex : csvArray[0].length;
+    _insertCol(index);
+    setSelectedColumnIndex(null);
+  }, [selectedColumnIndex, csvArray, _insertCol]);
+
+  const handleDeleteColumn = useCallback(() => {
+    if (selectedColumnIndex !== null) {
+      _deleteCol(selectedColumnIndex);
+      setSelectedColumnIndex(null);
+    }
+  }, [selectedColumnIndex, _deleteCol]);
+
+  const handleCopyWrapper = useCallback(() => {
+    void handleCopy();
+  }, [handleCopy]);
+
+  const handlePasteWrapper = useCallback(() => {
+    void handlePaste();
+  }, [handlePaste]);
+
   // キーボードショートカット（Ctrl+Z、Ctrl+Y）
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -351,40 +393,22 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
           onUpdateRowSize={setRowSizeFromHeader}
           onClickApply={handleApply}
           showFilters={showFilters}
-          onToggleFilters={() => setShowFilters(!showFilters)}
-          onClearFilters={() => setColumnFilters([])}
+          onToggleFilters={handleToggleFilters}
+          onClearFilters={handleClearFilters}
           hasActiveFilters={columnFilters.length > 0}
           selectedColumnKey={selectedColumnIndex !== null ? `col${selectedColumnIndex}` : null}
           currentAlignment={getCurrentAlignment()}
           onAlignmentChange={handleAlignmentChange}
-          onInsertRow={() => {
-            const index = selectedRowIndex !== null ? selectedRowIndex : data.length;
-            _insertRow(index);
-            setSelectedRowIndex(null);
-          }}
-          onDeleteRow={() => {
-            if (selectedRowIndex !== null) {
-              _deleteRow(selectedRowIndex);
-              setSelectedRowIndex(null);
-            }
-          }}
+          onInsertRow={handleInsertRow}
+          onDeleteRow={handleDeleteRow}
           isRowSelected={selectedRowIndex !== null}
-          onInsertColumn={() => {
-            const index = selectedColumnIndex !== null ? selectedColumnIndex : csvArray[0].length;
-            _insertCol(index);
-            setSelectedColumnIndex(null);
-          }}
-          onDeleteColumn={() => {
-            if (selectedColumnIndex !== null) {
-              _deleteCol(selectedColumnIndex);
-              setSelectedColumnIndex(null);
-            }
-          }}
+          onInsertColumn={handleInsertColumn}
+          onDeleteColumn={handleDeleteColumn}
           isColumnSelected={selectedColumnIndex !== null}
           onBulkEdit={handleBulkEdit}
           onClearSelection={clearSelection}
-          onCopy={() => void handleCopy()}
-          onPaste={() => void handlePaste()}
+          onCopy={handleCopyWrapper}
+          onPaste={handlePasteWrapper}
           selectedCellsCount={selectedCells.size}
         />
         <VscodeDivider className={styles.divider} />
