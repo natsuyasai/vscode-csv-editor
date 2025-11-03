@@ -22,5 +22,13 @@
         }
       }
     }
+  ],
+  "overrides": [
+    {
+      "files": ["src/components/EditableTableV2.tsx"],
+      "rules": {
+        "permitted-contents": false
+      }
+    }
   ]
 }

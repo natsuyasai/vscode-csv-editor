@@ -60,6 +60,7 @@ export const useCellSelectionV2 = <TData extends Record<string, unknown>>(
       }
 
       // 選択開始位置から現在のセルまでの範囲を選択
+      // 注: selectionStartは更新しない（範囲選択の基準点を保持）
       const minRow = Math.min(selectionStart.row, row);
       const maxRow = Math.max(selectionStart.row, row);
       const minCol = Math.min(selectionStart.col, col);

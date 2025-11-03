@@ -24,16 +24,20 @@ import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType } from "@/types";
 import { PortalManager } from "./EditableTable/PortalManager";
 import styles from "./EditableTable.module.scss";
-import { DraggableHeaderCell } from "./EditableTableV2/DraggableHeaderCell";
 import { EditableCell } from "./EditableTableV2/EditableCell";
 import { FilterInput } from "./EditableTableV2/FilterInput";
+import { HeaderCell } from "./EditableTableV2/HeaderCell";
 import { RowIndexCell } from "./EditableTableV2/RowIndexCell";
 import type { EditableTableV2Props, RowData } from "./EditableTableV2/types";
 import tableStyles from "./EditableTableV2.module.scss";
 import { Header } from "./Header";
 
-
-export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, setCSVArray, onApply }) => {
+export const EditableTableV2: FC<EditableTableV2Props> = ({
+  csvArray,
+  theme,
+  setCSVArray,
+  onApply,
+}) => {
   const { isIgnoreHeaderRow, rowSize, setIsIgnoreHeaderRow, setRowSize } = useHeaderAction();
   const {
     insertRow: _insertRow,
@@ -60,9 +64,9 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
   // rowSizeが変更されたときにrowHeightを更新
   useEffect(() => {
     const heights: Record<RowSizeType, number> = {
-      small: 30,
-      normal: 40,
-      large: 80,
+      "small": 30,
+      "normal": 40,
+      "large": 80,
       "extra large": 120,
     };
     setRowHeight(heights[rowSize]);
@@ -82,25 +86,28 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
   } = useCellSelectionV2(data, setData, _updateCells);
 
   // セルクリック時にfocusedCellも更新
-  const handleCellMouseDown = useCallback((row: number, col: number) => {
-    setFocusedCell({ row, col });
-    _handleCellMouseDown(row, col);
-  }, [_handleCellMouseDown]);
+  const handleCellMouseDown = useCallback(
+    (row: number, col: number) => {
+      setFocusedCell({ row, col });
+      _handleCellMouseDown(row, col);
+    },
+    [_handleCellMouseDown]
+  );
 
   // Shift+クリック時にもfocusedCellを更新
-  const handleShiftClick = useCallback((row: number, col: number) => {
-    setFocusedCell({ row, col });
-    _handleShiftClick(row, col);
-  }, [_handleShiftClick]);
+  const handleShiftClick = useCallback(
+    (row: number, col: number) => {
+      setFocusedCell({ row, col });
+      _handleShiftClick(row, col);
+    },
+    [_handleShiftClick]
+  );
 
   // オートフィル機能
-  const {
-    isFilling,
-    handleFillStart,
-    handleFillMove,
-    handleFillEnd,
-    isInFillRange,
-  } = useAutoFill(data, _updateCells);
+  const { isFilling, handleFillStart, handleFillMove, handleFillEnd, isInFillRange } = useAutoFill(
+    data,
+    _updateCells
+  );
 
   // コンテキストメニュー機能
   const {
@@ -229,7 +236,6 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
         enableResizing: false,
         enableSorting: false,
         cell: (props) => {
-           
           const rowIndex = props.row.index;
           const isSelected = props.table.options.meta?.selectedRowIndex === rowIndex;
           const onSelect = () => {
@@ -246,7 +252,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
           const onContextMenu = (e: React.MouseEvent, rowIdx: number) => {
             openRowContextMenu(rowIdx, e.clientY, e.clientX);
           };
-           
+
           return (
             <RowIndexCell
               {...props}
@@ -508,14 +514,14 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
       if (!cellButton) continue;
 
       // セルの位置から判断する
-      const parentRow = gridCell.closest('tr');
+      const parentRow = gridCell.closest("tr");
       if (!parentRow) continue;
 
       // 行のインデックスを取得（tbodyの中での位置）
-      const tbody = parentRow.closest('tbody');
+      const tbody = parentRow.closest("tbody");
       if (!tbody) continue;
 
-      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const rows = Array.from(tbody.querySelectorAll("tr"));
       const rowIndex = rows.indexOf(parentRow);
 
       if (rowIndex !== focusedCell.row) continue;
@@ -582,9 +588,14 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
 
       setFocusedCell({ row: newRow, col: newCol });
 
-      // セル選択も更新
-      handleCellMouseDown(newRow, newCol);
-      handleCellMouseUp();
+      // Shiftキーが押されている場合は範囲選択
+      if (e.shiftKey) {
+        handleShiftClick(newRow, newCol);
+      } else {
+        // 通常の移動時は単一セル選択
+        handleCellMouseDown(newRow, newCol);
+        handleCellMouseUp();
+      }
     };
 
     document.addEventListener("keydown", handleArrowKeyNavigation);
@@ -598,6 +609,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     csvArray,
     handleCellMouseDown,
     handleCellMouseUp,
+    handleShiftClick,
   ]);
 
   return (
@@ -648,175 +660,27 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
               <thead className={tableStyles.thead}>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id} className={tableStyles.headerRow}>
-                    {headerGroup.headers.map((header, headerIndex) => {
-                      const columnIndex = header.column.id === ROW_IDX_KEY ? null : headerIndex - 1;
-                      const isSelected =
-                        columnIndex !== null && selectedColumnIndex === columnIndex;
-                      const isFocused = columnIndex !== null && focusedColumnIndex === columnIndex;
-                      const isEditing = columnIndex !== null && editingHeaderIndex === columnIndex;
-
-                      // キーボード処理
-                      const handleHeaderKeyDown = (e: React.KeyboardEvent) => {
-                        if (columnIndex === null) return;
-
-                        // 編集モード中の処理
-                        if (isEditing) {
-                          // textareaのonKeyDownで処理されるため、ここでは何もしない
-                          return;
-                        }
-
-                        // 編集モードでない場合の処理
-                        if (e.key === "Delete") {
-                          // ヘッダーの値を削除
-                          _updateCol(columnIndex, "");
-                        } else if (e.key === "Backspace") {
-                          // ヘッダーの値を削除して編集モードに移行
-                          _updateCol(columnIndex, "");
-                          startEditing(columnIndex, "");
-                        } else if (e.key === "F2") {
-                          // 編集モードに移行
-                          const renderedHeader = flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          );
-                          let headerValue = "";
-                          if (typeof renderedHeader === "string") {
-                            headerValue = renderedHeader;
-                          } else if (
-                            typeof renderedHeader === "number" ||
-                            typeof renderedHeader === "boolean"
-                          ) {
-                            headerValue = String(renderedHeader);
-                          }
-                          startEditing(columnIndex, headerValue);
-                        } else if (
-                          !e.ctrlKey &&
-                          !e.altKey &&
-                          !e.metaKey &&
-                          !e.repeat &&
-                          e.key.length === 1
-                        ) {
-                          // 通常の文字入力で編集モードに移行
-                          e.preventDefault();
-                          startEditing(columnIndex, e.key);
-                        }
-                      };
-
-                      const handleHeaderContextMenu = (e: React.MouseEvent) => {
-                        if (columnIndex !== null) {
-                          e.preventDefault();
-                          openColumnContextMenu(columnIndex, e.clientY, e.clientX);
-                        }
-                      };
-
-                      const handleHeaderEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          finishEditing();
-                        } else if (e.key === "Escape") {
-                          cancelEditing();
-                        } else if (e.key === "Tab") {
-                          e.preventDefault();
-                          finishEditing();
-                        }
-                      };
-
-                      const handleHeaderEditBlur = () => {
-                        finishEditing();
-                      };
-
-                      const handleHeaderFocusChange = (focused: boolean) => {
-                        if (columnIndex !== null) {
-                          setFocusedColumnIndex(focused ? columnIndex : null);
-                        }
-                      };
-
-                      const handleHeaderDoubleClick = () => {
-                        if (columnIndex !== null) {
-                          const renderedHeader = flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          );
-                          let headerValue = "";
-                          if (typeof renderedHeader === "string") {
-                            headerValue = renderedHeader;
-                          } else if (
-                            typeof renderedHeader === "number" ||
-                            typeof renderedHeader === "boolean"
-                          ) {
-                            headerValue = String(renderedHeader);
-                          }
-                          startEditing(columnIndex, headerValue);
-                        }
-                      };
-
-                      return (
-                        <th
-                          key={header.id}
-                          tabIndex={-1}
-                          className={tableStyles.headerCell}
-                          onKeyDown={handleHeaderKeyDown}
-                          onContextMenu={handleHeaderContextMenu}
-                          style={{
-                            width: `${header.getSize()}px`,
-                            minWidth: `${header.getSize()}px`,
-                            maxWidth: `${header.getSize()}px`,
-                            backgroundColor: isFocused
-                              ? "var(--vscode-list-hoverBackground)"
-                              : isSelected
-                                ? "var(--vscode-list-activeSelectionBackground)"
-                                : "var(--vscode-editor-background)",
-                            color: isSelected
-                              ? "var(--vscode-list-activeSelectionForeground)"
-                              : "inherit",
-                            cursor: header.column.getCanSort() ? "pointer" : "default",
-                            outline: isFocused ? "2px solid var(--vscode-focusBorder)" : "none",
-                          }}>
-                          {header.isPlaceholder ? null : columnIndex !== null ? (
-                            isEditing ? (
-                              <textarea
-                                ref={(el) => {
-                                  if (el) {
-                                    el.focus();
-                                    el.setSelectionRange(el.value.length, el.value.length);
-                                  }
-                                }}
-                                value={editingHeaderValue}
-                                onChange={(e) => changeEditingValue(e.target.value)}
-                                onKeyDown={handleHeaderEditKeyDown}
-                                onBlur={handleHeaderEditBlur}
-                                className={tableStyles.headerEditTextarea}
-                              />
-                            ) : (
-                              <DraggableHeaderCell
-                                columnIndex={columnIndex}
-                                isSelected={isSelected}
-                                onColumnReorder={handleColumnReorder}
-                                onColumnSelect={setSelectedColumnIndex}
-                                onFocusChange={handleHeaderFocusChange}
-                                onDoubleClick={handleHeaderDoubleClick}
-                                onSort={
-                                  header.column.getCanSort()
-                                    ? header.column.getToggleSortingHandler()
-                                    : undefined
-                                }>
-                                <div className={tableStyles.headerContent}>
-                                  {flexRender(header.column.columnDef.header, header.getContext())}
-                                  {{
-                                    asc: " 🔼",
-                                    desc: " 🔽",
-                                  }[header.column.getIsSorted() as string] ?? null}
-                                </div>
-                              </DraggableHeaderCell>
-                            )
-                          ) : (
-                            <div className={tableStyles.headerContent}>
-                              {flexRender(header.column.columnDef.header, header.getContext())}
-                            </div>
-                          )}
-                        </th>
-                      );
-                    })}
+                    {headerGroup.headers.map((header, headerIndex) => (
+                      <HeaderCell
+                        key={header.id}
+                        header={header}
+                        headerIndex={headerIndex}
+                        rowIdxKey={ROW_IDX_KEY}
+                        selectedColumnIndex={selectedColumnIndex}
+                        focusedColumnIndex={focusedColumnIndex}
+                        editingHeaderIndex={editingHeaderIndex}
+                        editingHeaderValue={editingHeaderValue}
+                        updateCol={_updateCol}
+                        startEditing={startEditing}
+                        finishEditing={finishEditing}
+                        cancelEditing={cancelEditing}
+                        changeEditingValue={changeEditingValue}
+                        setSelectedColumnIndex={setSelectedColumnIndex}
+                        setFocusedColumnIndex={setFocusedColumnIndex}
+                        openColumnContextMenu={openColumnContextMenu}
+                        handleColumnReorder={handleColumnReorder}
+                      />
+                    ))}
                   </tr>
                 ))}
                 {showFilters &&
