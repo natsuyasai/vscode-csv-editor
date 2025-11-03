@@ -129,7 +129,9 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     );
   }
 
-  const isInFillRangeFn = props.table.options.meta?.isInFillRange as ((row: number, col: number) => boolean) | undefined;
+  const isInFillRangeFn = props.table.options.meta?.isInFillRange as
+    | ((row: number, col: number) => boolean)
+    | undefined;
   const isFillRange = isInFillRangeFn ? isInFillRangeFn(rowIndex, columnIndex) : false;
 
   return (
@@ -188,6 +190,7 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
         width: "100%",
         height: "100%",
         cursor: "cell",
+        userSelect: "none",
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
@@ -213,7 +216,9 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
           onMouseDown={(e) => {
             e.stopPropagation();
             if (columnIndex >= 0) {
-              const handleFillStartFn = props.table.options.meta?.handleFillStart as ((row: number, col: number) => void) | undefined;
+              const handleFillStartFn = props.table.options.meta?.handleFillStart as
+                | ((row: number, col: number) => void)
+                | undefined;
               handleFillStartFn?.(rowIndex, columnIndex);
             }
           }}
