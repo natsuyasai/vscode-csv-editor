@@ -178,7 +178,14 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
       onFocus={() => {
         // Tab移動などでフォーカスを受け取った時にfocusedCellを更新
         if (columnIndex >= 0) {
-          const setFocusedCellFn = props.table.options.meta?.setFocusedCell as ((cell: { row: number; col: number } | null) => void) | undefined;
+          // 以前の選択をクリア
+          const clearSelectionFn = props.table.options.meta?.clearSelection as (() => void) | undefined;
+          clearSelectionFn?.();
+
+          // 新しいフォーカスセルを設定
+          const setFocusedCellFn = props.table.options.meta?.setFocusedCell as
+            | ((cell: { row: number; col: number } | null) => void)
+            | undefined;
           setFocusedCellFn?.({ row: rowIndex, col: columnIndex });
         }
       }}

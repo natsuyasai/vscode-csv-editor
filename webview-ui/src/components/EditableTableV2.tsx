@@ -299,6 +299,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
       selectedCells,
       focusedCell,
       setFocusedCell,
+      clearSelection,
       handleCellMouseDown,
       handleCellMouseEnter,
       handleCellMouseUp,
