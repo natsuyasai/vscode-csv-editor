@@ -167,6 +167,13 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
       onMouseUp={() => {
         props.table.options.meta?.handleCellMouseUp?.();
       }}
+      onFocus={() => {
+        // Tab移動などでフォーカスを受け取った時にfocusedCellを更新
+        if (columnIndex >= 0) {
+          const setFocusedCellFn = props.table.options.meta?.setFocusedCell as ((cell: { row: number; col: number } | null) => void) | undefined;
+          setFocusedCellFn?.({ row: rowIndex, col: columnIndex });
+        }
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           setIsEditing(true);
