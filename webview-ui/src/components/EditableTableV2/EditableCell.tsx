@@ -133,9 +133,14 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     <div
       ref={cellRef}
       onClick={handleClick}
-      onMouseDown={() => {
+      onMouseDown={(e) => {
         if (columnIndex >= 0) {
-          props.table.options.meta?.handleCellMouseDown?.(rowIndex, columnIndex);
+          // Shiftキーが押されている場合は範囲選択
+          if (e.shiftKey) {
+            props.table.options.meta?.handleShiftClick?.(rowIndex, columnIndex);
+          } else {
+            props.table.options.meta?.handleCellMouseDown?.(rowIndex, columnIndex);
+          }
         }
       }}
       onMouseEnter={() => {

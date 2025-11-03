@@ -49,6 +49,33 @@ export const useCellSelectionV2 = <TData extends Record<string, unknown>>(
     setIsSelecting(false);
   }, []);
 
+  // Shiftクリック時のハンドラー（範囲選択）
+  const handleShiftClick = useCallback(
+    (row: number, col: number) => {
+      if (!selectionStart) {
+        // 選択開始位置がない場合は通常のクリックと同じ
+        setSelectionStart({ row, col });
+        setSelectedCells(new Set([getCellKey(row, col)]));
+        return;
+      }
+
+      // 選択開始位置から現在のセルまでの範囲を選択
+      const minRow = Math.min(selectionStart.row, row);
+      const maxRow = Math.max(selectionStart.row, row);
+      const minCol = Math.min(selectionStart.col, col);
+      const maxCol = Math.max(selectionStart.col, col);
+
+      const newSelection = new Set<string>();
+      for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+          newSelection.add(getCellKey(r, c));
+        }
+      }
+      setSelectedCells(newSelection);
+    },
+    [selectionStart]
+  );
+
   // ドキュメント全体でのマウスアップイベントを監視
   useEffect(() => {
     const handleDocumentMouseUp = () => {
@@ -234,6 +261,7 @@ export const useCellSelectionV2 = <TData extends Record<string, unknown>>(
     handleCellMouseDown,
     handleCellMouseEnter,
     handleCellMouseUp,
+    handleShiftClick,
     handleBulkEdit,
     handleCopy,
     handlePaste,

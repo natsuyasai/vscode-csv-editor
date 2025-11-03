@@ -28,6 +28,7 @@ declare module "@tanstack/react-table" {
     handleCellMouseDown?: (row: number, col: number) => void;
     handleCellMouseEnter?: (row: number, col: number) => void;
     handleCellMouseUp?: () => void;
+    handleShiftClick?: (row: number, col: number) => void;
     applyValueToSelectedCells?: (value: string) => void;
   }
 }

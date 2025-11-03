@@ -73,6 +73,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     handleCellMouseDown,
     handleCellMouseEnter,
     handleCellMouseUp,
+    handleShiftClick,
     handleBulkEdit,
     handleCopy,
     handlePaste,
@@ -274,6 +275,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
       handleCellMouseDown,
       handleCellMouseEnter,
       handleCellMouseUp,
+      handleShiftClick,
       applyValueToSelectedCells: (value: string) => {
         // 選択中のセルすべてに値を適用
         const cellUpdates = Array.from(selectedCells).map((cellKey) => {
