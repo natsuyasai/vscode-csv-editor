@@ -16,11 +16,13 @@ export interface SearchPosition {
  * @param data - 検索対象のデータ配列
  * @param rowHeight - 行の高さ（スクロール計算用）
  * @param tableContainerRef - テーブルコンテナの参照
+ * @param onSelectCell - セル選択時のコールバック関数（オプショナル）
  */
 export const useTableSearchV2 = <TData extends Record<string, unknown>>(
   data: TData[],
   rowHeight: number,
-  tableContainerRef: React.RefObject<HTMLDivElement | null>
+  tableContainerRef: React.RefObject<HTMLDivElement | null>,
+  onSelectCell?: (row: number, col: number) => void
 ) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [matchedItemPositions, setMatchedItemPositions] = useState<SearchPosition[]>([]);
@@ -64,8 +66,13 @@ export const useTableSearchV2 = <TData extends Record<string, unknown>>(
         top: firstMatch.rowIdx * rowHeight,
         behavior: "smooth",
       });
+
+      // セルを選択状態にする
+      if (onSelectCell) {
+        onSelectCell(firstMatch.rowIdx, firstMatch.colIdx);
+      }
     },
-    [data, rowHeight, tableContainerRef]
+    [data, rowHeight, tableContainerRef, onSelectCell]
   );
 
   const handleNextSearch = useCallback(() => {
@@ -81,7 +88,12 @@ export const useTableSearchV2 = <TData extends Record<string, unknown>>(
       top: position.rowIdx * rowHeight,
       behavior: "smooth",
     });
-  }, [matchedItemPositions, searchedSelectedItemIdx, rowHeight, tableContainerRef]);
+
+    // セルを選択状態にする
+    if (onSelectCell) {
+      onSelectCell(position.rowIdx, position.colIdx);
+    }
+  }, [matchedItemPositions, searchedSelectedItemIdx, rowHeight, tableContainerRef, onSelectCell]);
 
   const handlePreviousSearch = useCallback(() => {
     if (matchedItemPositions.length === 0) {
@@ -98,7 +110,12 @@ export const useTableSearchV2 = <TData extends Record<string, unknown>>(
       top: position.rowIdx * rowHeight,
       behavior: "smooth",
     });
-  }, [matchedItemPositions, searchedSelectedItemIdx, rowHeight, tableContainerRef]);
+
+    // セルを選択状態にする
+    if (onSelectCell) {
+      onSelectCell(position.rowIdx, position.colIdx);
+    }
+  }, [matchedItemPositions, searchedSelectedItemIdx, rowHeight, tableContainerRef, onSelectCell]);
 
   const handleCloseSearch = useCallback(() => {
     setMatchedItemPositions([]);

@@ -305,7 +305,11 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     handlePreviousSearch,
     handleCloseSearch,
     openSearch,
-  } = useTableSearchV2(data, rowHeight, tableContainerRef);
+  } = useTableSearchV2(data, rowHeight, tableContainerRef, (row, col) => {
+    // 検索結果のセルを選択状態にする
+    handleCellMouseDown(row, col);
+    handleCellMouseUp();
+  });
 
   // 行の仮想化
   const rowVirtualizer = useVirtualizer({
