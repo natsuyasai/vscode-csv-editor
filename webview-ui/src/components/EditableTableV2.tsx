@@ -75,6 +75,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     handleCopy,
     handlePaste,
     clearSelection,
+    applyValueToSelectedCells,
   } = useCellSelectionV2(data, setData);
 
   // コンテキストメニュー機能
@@ -280,6 +281,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
       handleCellMouseDown,
       handleCellMouseEnter,
       handleCellMouseUp,
+      applyValueToSelectedCells,
     },
   });
 

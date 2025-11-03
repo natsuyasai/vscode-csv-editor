@@ -194,6 +194,38 @@ export const useCellSelectionV2 = <TData extends Record<string, unknown>>(
     setSelectedCells(new Set());
   }, []);
 
+  // 選択中のセルすべてに指定した値を適用（Ctrl+Enter用）
+  const applyValueToSelectedCells = useCallback(
+    (value: string) => {
+      if (selectedCells.size === 0) {
+        return;
+      }
+
+      // 選択中のセルを更新
+      setData((old) => {
+        const newData = [...old];
+        selectedCells.forEach((cellKey) => {
+          const [rowStr, colStr] = cellKey.split("-");
+          const rowIndex = parseInt(rowStr);
+          const colIndex = parseInt(colStr);
+          const columnId = `col${colIndex}`;
+
+          if (newData[rowIndex]) {
+            newData[rowIndex] = {
+              ...newData[rowIndex],
+              [columnId]: value,
+            };
+          }
+        });
+        return newData;
+      });
+
+      // 選択をクリア
+      setSelectedCells(new Set());
+    },
+    [selectedCells, setData]
+  );
+
   return {
     selectedCells,
     handleCellMouseDown,
@@ -203,5 +235,6 @@ export const useCellSelectionV2 = <TData extends Record<string, unknown>>(
     handleCopy,
     handlePaste,
     clearSelection,
+    applyValueToSelectedCells,
   };
 };

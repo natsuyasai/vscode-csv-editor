@@ -77,7 +77,21 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       setIsEditing(false);
-      props.table.options.meta?.updateData?.(props.row.index, props.column.id, value);
+
+      // Ctrl+Enter: 選択中のすべてのセルに同じ値を適用
+      if (e.ctrlKey || e.metaKey) {
+        const selectedCells = props.table.options.meta?.selectedCells;
+        if (selectedCells && selectedCells.size > 1) {
+          // 複数セルが選択されている場合は一括適用
+          props.table.options.meta?.applyValueToSelectedCells?.(value);
+        } else {
+          // 単一セルの場合は通常の更新
+          props.table.options.meta?.updateData?.(props.row.index, props.column.id, value);
+        }
+      } else {
+        // 通常のEnter: 現在のセルのみ更新
+        props.table.options.meta?.updateData?.(props.row.index, props.column.id, value);
+      }
     } else if (e.key === "Escape") {
       e.preventDefault();
       setValue(initialValue);
