@@ -25,6 +25,7 @@ declare module "@tanstack/react-table" {
     selectedRowIndex?: number | null;
     setSelectedRowIndex?: (index: number | null) => void;
     selectedCells?: Set<string>;
+    focusedCell?: { row: number; col: number } | null;
     handleCellMouseDown?: (row: number, col: number) => void;
     handleCellMouseEnter?: (row: number, col: number) => void;
     handleCellMouseUp?: () => void;

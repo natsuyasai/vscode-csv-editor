@@ -31,7 +31,10 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
   const columnId = props.column.id;
   const columnIndex = columnId.startsWith("col") ? parseInt(columnId.substring(3)) : -1;
   const cellKey = `${rowIndex}-${columnIndex}`;
-  const isSelected = props.table.options.meta?.selectedCells?.has(cellKey) ?? false;
+  const isInSelectedCells = props.table.options.meta?.selectedCells?.has(cellKey) ?? false;
+  const focusedCell = props.table.options.meta?.focusedCell as { row: number; col: number } | null | undefined;
+  const isFocused = focusedCell ? focusedCell.row === rowIndex && focusedCell.col === columnIndex : false;
+  const isSelected = isInSelectedCells || isFocused;
 
   useEffect(() => {
     setValue(initialValue);
