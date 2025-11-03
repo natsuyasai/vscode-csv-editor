@@ -361,6 +361,41 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     void handlePaste();
   }, [handlePaste]);
 
+  // コンテキストメニュー外クリック時にメニューを閉じる
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // 行コンテキストメニューが開いている場合
+      if (isRowContextMenuOpen) {
+        const menuElement = rowContextMenuRef.current;
+        if (menuElement && !menuElement.contains(target)) {
+          handleCloseRowContextMenu();
+        }
+      }
+
+      // 列コンテキストメニューが開いている場合
+      if (isColumnContextMenuOpen) {
+        const menuElement = columnContextMenuRef.current;
+        if (menuElement && !menuElement.contains(target)) {
+          handleCloseColumnContextMenu();
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [
+    isRowContextMenuOpen,
+    isColumnContextMenuOpen,
+    rowContextMenuRef,
+    columnContextMenuRef,
+    handleCloseRowContextMenu,
+    handleCloseColumnContextMenu,
+  ]);
+
   // キーボードショートカット（Ctrl+Z、Ctrl+Y）
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
