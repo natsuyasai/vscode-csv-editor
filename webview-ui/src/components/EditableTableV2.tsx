@@ -410,15 +410,32 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     handleCloseColumnContextMenu,
   ]);
 
-  // キーボードショートカット（Ctrl+Z、Ctrl+Y）
+  // キーボードショートカット（Ctrl+Z、Ctrl+Y、Ctrl+F、Escape）
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Z: Undo
       if (e.ctrlKey && e.key === "z") {
         e.preventDefault();
         undo();
-      } else if (e.ctrlKey && e.key === "y") {
+      }
+      // Ctrl+Y: Redo
+      else if (e.ctrlKey && e.key === "y") {
         e.preventDefault();
         redo();
+      }
+      // Ctrl+F: 検索フォームの表示/非表示
+      else if (e.ctrlKey && e.key === "f") {
+        e.preventDefault();
+        if (searchOpen) {
+          handleCloseSearch();
+        } else {
+          openSearch();
+        }
+      }
+      // Escape: 検索フォームを閉じる
+      else if (e.key === "Escape" && searchOpen) {
+        e.preventDefault();
+        handleCloseSearch();
       }
     };
 
@@ -426,7 +443,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [undo, redo]);
+  }, [undo, redo, searchOpen, openSearch, handleCloseSearch]);
 
   // focusedCellが変更されたときに該当セルにフォーカスを当てる
   useEffect(() => {
