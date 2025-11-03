@@ -129,6 +129,9 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     );
   }
 
+  const isInFillRangeFn = props.table.options.meta?.isInFillRange as ((row: number, col: number) => boolean) | undefined;
+  const isFillRange = isInFillRangeFn ? isInFillRangeFn(rowIndex, columnIndex) : false;
+
   return (
     <div
       ref={cellRef}
@@ -149,6 +152,11 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
       onMouseEnter={() => {
         if (columnIndex >= 0) {
           props.table.options.meta?.handleCellMouseEnter?.(rowIndex, columnIndex);
+
+          // オートフィル中の場合は、フィル範囲を更新
+          if (props.table.options.meta?.isFilling) {
+            props.table.options.meta?.handleFillMove?.(rowIndex, columnIndex);
+          }
         }
       }}
       onMouseUp={() => {
@@ -179,21 +187,48 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
       style={{
         width: "100%",
         height: "100%",
-        cursor: "default",
-        userSelect: "none",
+        cursor: "cell",
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
         padding: "8px",
         boxSizing: "border-box",
-        backgroundColor: isSelected
-          ? "var(--vscode-list-inactiveSelectionBackground)"
-          : "transparent",
+        position: "relative",
+        backgroundColor: isFillRange
+          ? "var(--vscode-list-hoverBackground)"
+          : isSelected
+            ? "var(--vscode-list-inactiveSelectionBackground)"
+            : "transparent",
         border: isSelected
           ? "1px solid var(--vscode-list-activeSelectionBackground)"
           : "1px solid transparent",
       }}>
       {value}
+      {/* フィルハンドル（選択中のセルにのみ表示） */}
+      {isSelected && !isEditing && (
+        <div
+          role="button"
+          aria-label="Auto fill handle"
+          tabIndex={-1}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            if (columnIndex >= 0) {
+              const handleFillStartFn = props.table.options.meta?.handleFillStart as ((row: number, col: number) => void) | undefined;
+              handleFillStartFn?.(rowIndex, columnIndex);
+            }
+          }}
+          style={{
+            position: "absolute",
+            bottom: 0,
+            right: 0,
+            width: "6px",
+            height: "6px",
+            backgroundColor: "var(--vscode-list-activeSelectionBackground)",
+            cursor: "crosshair",
+            zIndex: 10,
+          }}
+        />
+      )}
     </div>
   );
 };

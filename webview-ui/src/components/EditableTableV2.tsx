@@ -13,6 +13,7 @@ import { VscodeDivider } from "@vscode-elements/react-elements";
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { useAutoFill } from "@/hooks/useAutoFill";
 import { useCellSelectionV2 } from "@/hooks/useCellSelectionV2";
 import { useColumnAlignment } from "@/hooks/useColumnAlignment";
 import { useContextMenusV2 } from "@/hooks/useContextMenusV2";
@@ -79,6 +80,15 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     handlePaste,
     clearSelection,
   } = useCellSelectionV2(data, setData, _updateCells);
+
+  // オートフィル機能
+  const {
+    isFilling,
+    handleFillStart,
+    handleFillMove,
+    handleFillEnd,
+    isInFillRange,
+  } = useAutoFill(data, _updateCells);
 
   // コンテキストメニュー機能
   const {
@@ -292,6 +302,12 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
         _updateCells(cellUpdates);
         clearSelection();
       },
+      // オートフィル関連
+      isFilling,
+      isInFillRange,
+      handleFillStart,
+      handleFillMove,
+      handleFillEnd,
     },
   });
 
@@ -447,6 +463,20 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [undo, redo, searchOpen, openSearch, handleCloseSearch]);
+
+  // オートフィルのmouseupイベント
+  useEffect(() => {
+    const handleMouseUp = () => {
+      if (isFilling) {
+        handleFillEnd();
+      }
+    };
+
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isFilling, handleFillEnd]);
 
   // focusedCellが変更されたときに該当セルにフォーカスを当てる
   useEffect(() => {

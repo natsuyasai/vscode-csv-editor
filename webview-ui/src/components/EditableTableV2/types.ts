@@ -30,6 +30,12 @@ declare module "@tanstack/react-table" {
     handleCellMouseUp?: () => void;
     handleShiftClick?: (row: number, col: number) => void;
     applyValueToSelectedCells?: (value: string) => void;
+    // オートフィル関連
+    isFilling?: boolean;
+    isInFillRange?: (row: number, col: number) => boolean;
+    handleFillStart?: (row: number, col: number) => void;
+    handleFillMove?: (row: number, col: number) => void;
+    handleFillEnd?: () => void;
   }
 }
 
