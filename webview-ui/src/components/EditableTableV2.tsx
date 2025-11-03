@@ -71,15 +71,27 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
   // セル選択機能
   const {
     selectedCells,
-    handleCellMouseDown,
+    handleCellMouseDown: _handleCellMouseDown,
     handleCellMouseEnter,
     handleCellMouseUp,
-    handleShiftClick,
+    handleShiftClick: _handleShiftClick,
     handleBulkEdit,
     handleCopy,
     handlePaste,
     clearSelection,
   } = useCellSelectionV2(data, setData, _updateCells);
+
+  // セルクリック時にfocusedCellも更新
+  const handleCellMouseDown = useCallback((row: number, col: number) => {
+    setFocusedCell({ row, col });
+    _handleCellMouseDown(row, col);
+  }, [_handleCellMouseDown]);
+
+  // Shift+クリック時にもfocusedCellを更新
+  const handleShiftClick = useCallback((row: number, col: number) => {
+    setFocusedCell({ row, col });
+    _handleShiftClick(row, col);
+  }, [_handleShiftClick]);
 
   // オートフィル機能
   const {
