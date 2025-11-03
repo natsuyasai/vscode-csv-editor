@@ -1,0 +1,29 @@
+// ドラッグ可能なヘッダーセル
+.headerCell {
+  cursor: grab;
+  padding: 4px;
+}
+
+// 通常の状態
+.headerCellNormal {
+  background-color: transparent;
+  border: none;
+  outline: none;
+}
+
+// ホバー中の状態
+.headerCellHover {
+  background-color: var(--vscode-list-hoverBackground);
+  border: 2px solid var(--vscode-focusBorder);
+}
+
+// フォーカス中の状態
+.headerCellFocused {
+  outline: 2px solid var(--vscode-focusBorder);
+  outline-offset: -2px;
+}
+
+// ドラッグ中の状態
+.headerCellDragging {
+  opacity: 0.5;
+}

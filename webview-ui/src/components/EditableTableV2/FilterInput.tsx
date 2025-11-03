@@ -1,4 +1,5 @@
 import { FC } from "react";
+import styles from "./FilterInput.module.scss";
 import { FilterInputProps } from "./types";
 
 /**
@@ -13,21 +14,12 @@ export const FilterInput: FC<FilterInputProps> = ({ column }) => {
   return (
     <input
       type="text"
+      className={styles.filterInput}
       value={columnFilterValue ?? ""}
       onChange={(e) => {
         column.setFilterValue(e.target.value);
       }}
       placeholder="フィルター..."
-      style={{
-        width: "100%",
-        padding: "4px",
-        boxSizing: "border-box",
-        border: "1px solid var(--vscode-input-border)",
-        backgroundColor: "var(--vscode-input-background)",
-        color: "var(--vscode-input-foreground)",
-        fontSize: "12px",
-        fontFamily: "var(--vscode-font-family)",
-      }}
     />
   );
 };

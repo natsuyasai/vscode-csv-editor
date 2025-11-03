@@ -1,6 +1,6 @@
 import { CellContext } from "@tanstack/react-table";
 import { FC, useEffect, useRef, useState } from "react";
-import cellEditStyles from "../Row/TextAreaEditor.module.scss";
+import styles from "./EditableCell.module.scss";
 import { RowData } from "./types";
 
 /**
@@ -114,28 +114,12 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     return (
       <textarea
         ref={textareaRef}
-        className={cellEditStyles.textArea}
+        className={styles.textArea}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         rows={1}
-        style={{
-          width: "100%",
-          height: "100%",
-          minHeight: "0",
-          boxSizing: "border-box",
-          padding: "8px",
-          margin: 0,
-          border: "1px solid var(--vscode-focusBorder)",
-          backgroundColor: "var(--vscode-input-background)",
-          color: "var(--vscode-input-foreground)",
-          resize: "none",
-          lineHeight: "1.5",
-          fontSize: "13px",
-          fontFamily: "var(--vscode-font-family)",
-          overflow: "auto",
-        }}
       />
     );
   }
@@ -145,9 +129,15 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     | undefined;
   const isFillRange = isInFillRangeFn ? isInFillRangeFn(rowIndex, columnIndex) : false;
 
+  // セルのクラス名を決定
+  const cellClassName = `${styles.cell} ${
+    isFillRange ? styles.cellFillRange : isSelected ? styles.cellSelected : styles.cellNormal
+  }`;
+
   return (
     <div
       ref={cellRef}
+      className={cellClassName}
       onClick={handleClick}
       onMouseDown={(e) => {
         if (columnIndex >= 0) {
@@ -210,31 +200,12 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
         }
       }}
       role="button"
-      tabIndex={0}
-      style={{
-        width: "100%",
-        height: "100%",
-        cursor: "cell",
-        userSelect: "none",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        padding: "8px",
-        boxSizing: "border-box",
-        position: "relative",
-        backgroundColor: isFillRange
-          ? "var(--vscode-list-hoverBackground)"
-          : isSelected
-            ? "var(--vscode-list-inactiveSelectionBackground)"
-            : "transparent",
-        border: isSelected
-          ? "1px solid var(--vscode-list-activeSelectionBackground)"
-          : "1px solid transparent",
-      }}>
+      tabIndex={0}>
       {value}
       {/* フィルハンドル（選択中のセルにのみ表示） */}
       {isSelected && !isEditing && (
         <div
+          className={styles.fillHandle}
           role="button"
           aria-label="Auto fill handle"
           tabIndex={-1}
@@ -246,16 +217,6 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
                 | undefined;
               handleFillStartFn?.(rowIndex, columnIndex);
             }
-          }}
-          style={{
-            position: "absolute",
-            bottom: 0,
-            right: 0,
-            width: "6px",
-            height: "6px",
-            backgroundColor: "var(--vscode-list-activeSelectionBackground)",
-            cursor: "crosshair",
-            zIndex: 10,
           }}
         />
       )}

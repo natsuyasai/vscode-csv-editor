@@ -1,5 +1,6 @@
 import { FC, useCallback } from "react";
 import { useDrag, useDrop } from "react-dnd";
+import styles from "./RowIndexCell.module.scss";
 import { RowIndexCellProps } from "./types";
 
 /**
@@ -38,9 +39,21 @@ export const RowIndexCell: FC<RowIndexCellProps> = (props) => {
     [drag, drop]
   );
 
+  // クラス名を決定
+  const cellClassName = `${styles.rowIndexCell} ${
+    props.isSelected
+      ? styles.rowIndexCellSelected
+      : isOver
+        ? styles.rowIndexCellHover
+        : styles.rowIndexCellNormal
+  } ${isDragging ? styles.rowIndexCellDragging : ""} ${
+    isDragging ? styles.cursorGrabbing : styles.cursorGrab
+  }`;
+
   return (
     <div
       ref={combinedRef}
+      className={cellClassName}
       onClick={props.onSelect}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -52,24 +65,6 @@ export const RowIndexCell: FC<RowIndexCellProps> = (props) => {
         if (e.key === "Enter" || e.key === " ") {
           props.onSelect();
         }
-      }}
-      style={{
-        width: "100%",
-        height: "100%",
-        padding: "8px",
-        boxSizing: "border-box",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: isDragging ? "grabbing" : "grab",
-        backgroundColor: props.isSelected
-          ? "var(--vscode-list-activeSelectionBackground)"
-          : isOver
-            ? "var(--vscode-list-hoverBackground)"
-            : "transparent",
-        color: props.isSelected ? "var(--vscode-list-activeSelectionForeground)" : "inherit",
-        opacity: isDragging ? 0.5 : 1,
-        border: isOver ? "2px solid var(--vscode-focusBorder)" : "none",
       }}>
       {props.getValue() as string}
     </div>

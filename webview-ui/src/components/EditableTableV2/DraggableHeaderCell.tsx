@@ -1,5 +1,6 @@
 import { FC, useState, useRef, useCallback, useEffect } from "react";
 import { useDrag, useDrop } from "react-dnd";
+import styles from "./DraggableHeaderCell.module.scss";
 import { DraggableHeaderCellProps } from "./types";
 
 /**
@@ -129,25 +130,22 @@ export const DraggableHeaderCell: FC<DraggableHeaderCellProps> = ({
     }
   }, [onFocusChange]);
 
+  // クラス名を決定
+  const cellClassName = `${styles.headerCell} ${
+    isOver ? styles.headerCellHover : styles.headerCellNormal
+  } ${isFocused ? styles.headerCellFocused : ""} ${isDragging ? styles.headerCellDragging : ""}`;
+
   return (
     <div
       ref={combinedRef}
+      className={cellClassName}
       role="button"
       tabIndex={0}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
-      onBlur={handleBlur}
-      style={{
-        opacity: isDragging ? 0.5 : 1,
-        cursor: "grab",
-        backgroundColor: isOver ? "var(--vscode-list-hoverBackground)" : "transparent",
-        border: isOver ? "2px solid var(--vscode-focusBorder)" : "none",
-        padding: "4px",
-        outline: isFocused ? "2px solid var(--vscode-focusBorder)" : "none",
-        outlineOffset: "-2px",
-      }}>
+      onBlur={handleBlur}>
       {children}
     </div>
   );
