@@ -415,6 +415,44 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     };
   }, [undo, redo]);
 
+  // focusedCellが変更されたときに該当セルにフォーカスを当てる
+  useEffect(() => {
+    if (focusedCell === null) {
+      return;
+    }
+
+    // セルのDOM要素を取得してフォーカスを当てる
+    // TanStack Tableのセル構造: td[role="gridcell"] > div[role="button"]
+    const allGridCells = document.querySelectorAll('td[role="gridcell"]');
+
+    for (const gridCell of Array.from(allGridCells)) {
+      const cellButton = gridCell.querySelector<HTMLElement>('div[role="button"]');
+      if (!cellButton) continue;
+
+      // セルの位置から判断する
+      const parentRow = gridCell.closest('tr');
+      if (!parentRow) continue;
+
+      // 行のインデックスを取得（tbodyの中での位置）
+      const tbody = parentRow.closest('tbody');
+      if (!tbody) continue;
+
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const rowIndex = rows.indexOf(parentRow);
+
+      if (rowIndex !== focusedCell.row) continue;
+
+      // セルのインデックスを取得（行番号列を除く）
+      const cells = Array.from(parentRow.querySelectorAll('td[role="gridcell"]'));
+      const colIndex = cells.indexOf(gridCell) - 1; // -1 for row index column
+
+      if (colIndex === focusedCell.col) {
+        cellButton.focus();
+        return;
+      }
+    }
+  }, [focusedCell]);
+
   // 矢印キーでセル選択を移動
   useEffect(() => {
     const handleArrowKeyNavigation = (e: KeyboardEvent) => {
