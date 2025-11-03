@@ -164,13 +164,7 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
           e.preventDefault();
           setValue("");
           setIsEditing(true);
-        } else if (
-          !e.ctrlKey &&
-          !e.altKey &&
-          !e.metaKey &&
-          !e.repeat &&
-          e.key.length === 1
-        ) {
+        } else if (!e.ctrlKey && !e.altKey && !e.metaKey && !e.repeat && e.key.length === 1) {
           // 通常の文字入力: 内容をクリアして入力した文字から編集モードに移行
           e.preventDefault();
           setValue(e.key);
@@ -182,7 +176,7 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
       style={{
         width: "100%",
         height: "100%",
-        cursor: "text",
+        cursor: "default",
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
