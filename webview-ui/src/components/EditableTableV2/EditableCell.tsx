@@ -135,6 +135,9 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
       onClick={handleClick}
       onMouseDown={(e) => {
         if (columnIndex >= 0) {
+          // 行選択を解除
+          props.table.options.meta?.setSelectedRowIndex?.(null);
+
           // Shiftキーが押されている場合は範囲選択
           if (e.shiftKey) {
             props.table.options.meta?.handleShiftClick?.(rowIndex, columnIndex);
