@@ -41,6 +41,8 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     insertCol: _insertCol,
     deleteCol: _deleteCol,
     updateCol: _updateCol,
+    updateCell: _updateCell,
+    updateCells: _updateCells,
     moveColumns: _moveColumns,
     moveRows: _moveRows,
     undo,
@@ -75,8 +77,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     handleCopy,
     handlePaste,
     clearSelection,
-    applyValueToSelectedCells,
-  } = useCellSelectionV2(data, setData);
+  } = useCellSelectionV2(data, setData, _updateCells);
 
   // コンテキストメニュー機能
   const {
@@ -263,17 +264,9 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     getFilteredRowModel: getFilteredRowModel(),
     meta: {
       updateData: (rowIndex: number, columnId: string, value: string) => {
-        setData((old) =>
-          old.map((row, index) => {
-            if (index === rowIndex) {
-              return {
-                ...row,
-                [columnId]: value,
-              };
-            }
-            return row;
-          })
-        );
+        // columnIdから列インデックスを取得（例: "col0" -> 0）
+        const colIndex = parseInt(columnId.replace("col", ""));
+        _updateCell(rowIndex, colIndex, value);
       },
       selectedRowIndex,
       setSelectedRowIndex,
@@ -281,7 +274,19 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
       handleCellMouseDown,
       handleCellMouseEnter,
       handleCellMouseUp,
-      applyValueToSelectedCells,
+      applyValueToSelectedCells: (value: string) => {
+        // 選択中のセルすべてに値を適用
+        const cellUpdates = Array.from(selectedCells).map((cellKey) => {
+          const [rowStr, colStr] = cellKey.split("-");
+          return {
+            rowIdx: parseInt(rowStr),
+            colIdx: parseInt(colStr),
+            value,
+          };
+        });
+        _updateCells(cellUpdates);
+        clearSelection();
+      },
     },
   });
 

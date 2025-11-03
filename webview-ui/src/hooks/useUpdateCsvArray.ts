@@ -174,6 +174,26 @@ export function useUpdateCsvArray(
     setCSVArrayAndPushHistory(newCsvArray);
   }
 
+  function updateCells(cells: Array<{ rowIdx: number; colIdx: number; value: string }>) {
+    if (csvArray.length === 0 || cells.length === 0) {
+      return;
+    }
+
+    const updatedCSVArray = csvArray.map((row) => [...row]);
+
+    cells.forEach(({ rowIdx, colIdx, value }) => {
+      let correctionRowIdx = rowIdx;
+      if (!isIgnoreHeaderRow) {
+        correctionRowIdx += 1;
+      }
+      if (correctionRowIdx >= 0 && correctionRowIdx < updatedCSVArray.length) {
+        updatedCSVArray[correctionRowIdx][colIdx] = value;
+      }
+    });
+
+    setCSVArrayAndPushHistory(updatedCSVArray);
+  }
+
   return {
     insertRow,
     deleteRow,
@@ -182,6 +202,7 @@ export function useUpdateCsvArray(
     deleteCol,
     updateCol,
     updateCell,
+    updateCells,
     moveColumns,
     moveRows,
     undo,

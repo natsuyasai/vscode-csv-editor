@@ -6,7 +6,8 @@ import { useCallback, useEffect, useState } from "react";
  */
 export const useCellSelectionV2 = <TData extends Record<string, unknown>>(
   data: TData[],
-  setData: React.Dispatch<React.SetStateAction<TData[]>>
+  setData: React.Dispatch<React.SetStateAction<TData[]>>,
+  updateCellsCallback?: (cells: Array<{ rowIdx: number; colIdx: number; value: string }>) => void
 ) => {
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
   const [isSelecting, setIsSelecting] = useState(false);
@@ -71,27 +72,41 @@ export const useCellSelectionV2 = <TData extends Record<string, unknown>>(
     }
 
     // 選択中のセルを更新
-    setData((old) => {
-      const newData = [...old];
-      selectedCells.forEach((cellKey) => {
+    if (updateCellsCallback) {
+      // updateCellsCallbackがある場合はそれを使用（履歴管理あり）
+      const cellUpdates = Array.from(selectedCells).map((cellKey) => {
         const [rowStr, colStr] = cellKey.split("-");
-        const rowIndex = parseInt(rowStr);
-        const colIndex = parseInt(colStr);
-        const columnId = `col${colIndex}`;
-
-        if (newData[rowIndex]) {
-          newData[rowIndex] = {
-            ...newData[rowIndex],
-            [columnId]: value,
-          };
-        }
+        return {
+          rowIdx: parseInt(rowStr),
+          colIdx: parseInt(colStr),
+          value,
+        };
       });
-      return newData;
-    });
+      updateCellsCallback(cellUpdates);
+    } else {
+      // フォールバック: 直接setDataを使用（履歴管理なし）
+      setData((old) => {
+        const newData = [...old];
+        selectedCells.forEach((cellKey) => {
+          const [rowStr, colStr] = cellKey.split("-");
+          const rowIndex = parseInt(rowStr);
+          const colIndex = parseInt(colStr);
+          const columnId = `col${colIndex}`;
+
+          if (newData[rowIndex]) {
+            newData[rowIndex] = {
+              ...newData[rowIndex],
+              [columnId]: value,
+            };
+          }
+        });
+        return newData;
+      });
+    }
 
     // 選択をクリア
     setSelectedCells(new Set());
-  }, [selectedCells, setData]);
+  }, [selectedCells, setData, updateCellsCallback]);
 
   // 選択中のセルをコピー
   const handleCopy = useCallback(async () => {
@@ -163,68 +178,56 @@ export const useCellSelectionV2 = <TData extends Record<string, unknown>>(
       const minCol = Math.min(...cellsArray.map((c) => c.col));
 
       // データを更新
-      setData((old) => {
-        const newData = [...old];
+      if (updateCellsCallback) {
+        // updateCellsCallbackがある場合はそれを使用（履歴管理あり）
+        const cellUpdates: Array<{ rowIdx: number; colIdx: number; value: string }> = [];
         rows.forEach((rowData, rowOffset) => {
           rowData.forEach((cellValue, colOffset) => {
             const targetRow = minRow + rowOffset;
             const targetCol = minCol + colOffset;
-            const columnId = `col${targetCol}`;
-
-            if (newData[targetRow] && targetCol >= 0) {
-              newData[targetRow] = {
-                ...newData[targetRow],
-                [columnId]: cellValue,
-              };
+            if (targetCol >= 0) {
+              cellUpdates.push({
+                rowIdx: targetRow,
+                colIdx: targetCol,
+                value: cellValue,
+              });
             }
           });
         });
-        return newData;
-      });
+        updateCellsCallback(cellUpdates);
+      } else {
+        // フォールバック: 直接setDataを使用（履歴管理なし）
+        setData((old) => {
+          const newData = [...old];
+          rows.forEach((rowData, rowOffset) => {
+            rowData.forEach((cellValue, colOffset) => {
+              const targetRow = minRow + rowOffset;
+              const targetCol = minCol + colOffset;
+              const columnId = `col${targetCol}`;
+
+              if (newData[targetRow] && targetCol >= 0) {
+                newData[targetRow] = {
+                  ...newData[targetRow],
+                  [columnId]: cellValue,
+                };
+              }
+            });
+          });
+          return newData;
+        });
+      }
 
       // 選択をクリア
       setSelectedCells(new Set());
     } catch (err) {
       console.error("クリップボードからの読み取りに失敗しました:", err);
     }
-  }, [selectedCells, setData]);
+  }, [selectedCells, setData, updateCellsCallback]);
 
   // 選択をクリア
   const clearSelection = useCallback(() => {
     setSelectedCells(new Set());
   }, []);
-
-  // 選択中のセルすべてに指定した値を適用（Ctrl+Enter用）
-  const applyValueToSelectedCells = useCallback(
-    (value: string) => {
-      if (selectedCells.size === 0) {
-        return;
-      }
-
-      // 選択中のセルを更新
-      setData((old) => {
-        const newData = [...old];
-        selectedCells.forEach((cellKey) => {
-          const [rowStr, colStr] = cellKey.split("-");
-          const rowIndex = parseInt(rowStr);
-          const colIndex = parseInt(colStr);
-          const columnId = `col${colIndex}`;
-
-          if (newData[rowIndex]) {
-            newData[rowIndex] = {
-              ...newData[rowIndex],
-              [columnId]: value,
-            };
-          }
-        });
-        return newData;
-      });
-
-      // 選択をクリア
-      setSelectedCells(new Set());
-    },
-    [selectedCells, setData]
-  );
 
   return {
     selectedCells,
@@ -235,6 +238,5 @@ export const useCellSelectionV2 = <TData extends Record<string, unknown>>(
     handleCopy,
     handlePaste,
     clearSelection,
-    applyValueToSelectedCells,
   };
 };
