@@ -553,8 +553,8 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
   ]);
 
   return (
-    <>
-      <div>
+    <div className={tableStyles.root}>
+      <div className={tableStyles.headerWrapper}>
         <Header
           isIgnoreHeaderRow={isIgnoreHeaderRow}
           onUpdateIgnoreHeaderRow={setIsIgnoreHeaderRow}
@@ -587,7 +587,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
         />
         <VscodeDivider className={styles.divider} />
       </div>
-      <div>
+      <div className={tableStyles.tableWrapper}>
         <DndProvider backend={HTML5Backend}>
           <div
             ref={tableContainerRef}
@@ -868,6 +868,6 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
           />
         </DndProvider>
       </div>
-    </>
+    </div>
   );
 };

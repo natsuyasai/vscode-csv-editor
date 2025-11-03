@@ -1,5 +1,5 @@
 .root {
-  height: 100%;
+  height: 100vh;
   display: grid;
   grid-template-rows: 100%;
   grid-template-columns: 100%;
@@ -10,4 +10,7 @@
   grid-area: content;
   height: 100%;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }

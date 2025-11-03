@@ -1,10 +1,31 @@
-// ÆüÖë³óÆÊ
+// ãƒ«ãƒ¼ãƒˆã‚³ãƒ³ãƒ†ãƒŠï¼ˆç”»é¢å…¨ä½“ï¼‰
+.root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// ãƒ˜ãƒƒãƒ€ãƒ¼ãƒ©ãƒƒãƒ‘ãƒ¼
+.headerWrapper {
+  flex-shrink: 0;
+}
+
+// ãƒ†ãƒ¼ãƒ–ãƒ«ãƒ©ãƒƒãƒ‘ãƒ¼ï¼ˆæ®‹ã‚Šã®é«˜ã•å…¨éƒ¨ï¼‰
+.tableWrapper {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// ãƒ†ãƒ¼ãƒ–ãƒ«ã‚³ãƒ³ãƒ†ãƒŠ
 .tableContainer {
-  height: 600px;
+  height: 100%;
   overflow: auto;
 }
 
-// ÆüÖë,S
+// ï¿½ï¿½ï¿½ï¿½,S
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -12,7 +33,7 @@
   display: block;
 }
 
-// ÆüÖëØÃÀü
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 .thead {
   display: table;
   width: 100%;
@@ -23,12 +44,12 @@
   background-color: var(--vscode-editor-background);
 }
 
-// ØÃÀüL
+// ï¿½ï¿½ï¿½ï¿½L
 .headerRow {
   display: table-row;
 }
 
-// ØÃÀü»ëú,¹¿¤ë	
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½,ï¿½ï¿½ï¿½ï¿½	
 .headerCell {
   display: table-cell;
   padding: 8px;
@@ -39,7 +60,7 @@
   outline-offset: -2px;
 }
 
-// ØÃÀüèÆ(textarea
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(textarea
 .headerEditTextarea {
   width: 100%;
   min-height: 20px;
@@ -52,19 +73,19 @@
   color: var(--vscode-input-foreground);
 }
 
-// ØÃÀü³óÆóÄÕìÃ¯¹Mn	
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¯ï¿½Mn	
 .headerContent {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-// Õ£ë¿üL
+// Õ£ï¿½ï¿½L
 .filterRow {
   display: table-row;
 }
 
-// Õ£ë¿ü»ë
+// Õ£ï¿½ï¿½ï¿½ï¿½
 .filterCell {
   display: table-cell;
   padding: 4px 8px;
@@ -73,13 +94,13 @@
   box-sizing: border-box;
 }
 
-// ÆüÖëÜÇ£
+// ï¿½ï¿½ï¿½ï¿½ï¿½Ç£
 .tbody {
   display: block;
   position: relative;
 }
 
-// Çü¿L
+// ï¿½ï¿½ï¿½L
 .dataRow {
   display: table;
   width: 100%;
@@ -89,7 +110,7 @@
   left: 0;
 }
 
-// Çü¿»ë
+// ï¿½ï¿½ï¿½ï¿½ï¿½
 .dataCell {
   display: table-cell;
   padding: 0;
