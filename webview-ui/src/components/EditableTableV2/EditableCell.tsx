@@ -177,6 +177,7 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
         width: "100%",
         height: "100%",
         cursor: "default",
+        userSelect: "none",
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
