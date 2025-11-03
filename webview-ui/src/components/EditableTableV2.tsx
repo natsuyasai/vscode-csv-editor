@@ -702,18 +702,61 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                         }
                       };
 
+                      const handleHeaderContextMenu = (e: React.MouseEvent) => {
+                        if (columnIndex !== null) {
+                          e.preventDefault();
+                          openColumnContextMenu(columnIndex, e.clientY, e.clientX);
+                        }
+                      };
+
+                      const handleHeaderEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          finishEditing();
+                        } else if (e.key === "Escape") {
+                          cancelEditing();
+                        } else if (e.key === "Tab") {
+                          e.preventDefault();
+                          finishEditing();
+                        }
+                      };
+
+                      const handleHeaderEditBlur = () => {
+                        finishEditing();
+                      };
+
+                      const handleHeaderFocusChange = (focused: boolean) => {
+                        if (columnIndex !== null) {
+                          setFocusedColumnIndex(focused ? columnIndex : null);
+                        }
+                      };
+
+                      const handleHeaderDoubleClick = () => {
+                        if (columnIndex !== null) {
+                          const renderedHeader = flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          );
+                          let headerValue = "";
+                          if (typeof renderedHeader === "string") {
+                            headerValue = renderedHeader;
+                          } else if (
+                            typeof renderedHeader === "number" ||
+                            typeof renderedHeader === "boolean"
+                          ) {
+                            headerValue = String(renderedHeader);
+                          }
+                          startEditing(columnIndex, headerValue);
+                        }
+                      };
+
                       return (
                         <th
                           key={header.id}
                           tabIndex={-1}
                           className={tableStyles.headerCell}
                           onKeyDown={handleHeaderKeyDown}
-                          onContextMenu={(e) => {
-                            if (columnIndex !== null) {
-                              e.preventDefault();
-                              openColumnContextMenu(columnIndex, e.clientY, e.clientX);
-                            }
-                          }}
+                          onContextMenu={handleHeaderContextMenu}
                           style={{
                             width: `${header.getSize()}px`,
                             minWidth: `${header.getSize()}px`,
@@ -740,20 +783,8 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                                 }}
                                 value={editingHeaderValue}
                                 onChange={(e) => changeEditingValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    finishEditing();
-                                  } else if (e.key === "Escape") {
-                                    cancelEditing();
-                                  } else if (e.key === "Tab") {
-                                    e.preventDefault();
-                                    finishEditing();
-                                  }
-                                }}
-                                onBlur={() => {
-                                  finishEditing();
-                                }}
+                                onKeyDown={handleHeaderEditKeyDown}
+                                onBlur={handleHeaderEditBlur}
                                 className={tableStyles.headerEditTextarea}
                               />
                             ) : (
@@ -762,29 +793,8 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                                 isSelected={isSelected}
                                 onColumnReorder={handleColumnReorder}
                                 onColumnSelect={setSelectedColumnIndex}
-                                onFocusChange={(focused) => {
-                                  if (columnIndex !== null) {
-                                    setFocusedColumnIndex(focused ? columnIndex : null);
-                                  }
-                                }}
-                                onDoubleClick={() => {
-                                  if (columnIndex !== null) {
-                                    const renderedHeader = flexRender(
-                                      header.column.columnDef.header,
-                                      header.getContext()
-                                    );
-                                    let headerValue = "";
-                                    if (typeof renderedHeader === "string") {
-                                      headerValue = renderedHeader;
-                                    } else if (
-                                      typeof renderedHeader === "number" ||
-                                      typeof renderedHeader === "boolean"
-                                    ) {
-                                      headerValue = String(renderedHeader);
-                                    }
-                                    startEditing(columnIndex, headerValue);
-                                  }
-                                }}
+                                onFocusChange={handleHeaderFocusChange}
+                                onDoubleClick={handleHeaderDoubleClick}
                                 onSort={
                                   header.column.getCanSort()
                                     ? header.column.getToggleSortingHandler()
@@ -851,19 +861,19 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
                         const alignment = colIndex >= 0 ? getColumnAlignment(colIndex) : undefined;
                         const isRowIndexCell = cell.column.id === ROW_IDX_KEY;
 
+                        const handleCellContextMenu = isRowIndexCell
+                          ? (e: React.MouseEvent) => {
+                              e.preventDefault();
+                              openRowContextMenu(row.index, e.clientY, e.clientX);
+                            }
+                          : undefined;
+
                         return (
                           <td
                             key={cell.id}
                             role="gridcell"
                             className={tableStyles.dataCell}
-                            onContextMenu={
-                              isRowIndexCell
-                                ? (e) => {
-                                    e.preventDefault();
-                                    openRowContextMenu(row.index, e.clientY, e.clientX);
-                                  }
-                                : undefined
-                            }
+                            onContextMenu={handleCellContextMenu}
                             style={{
                               width: `${cell.column.getSize()}px`,
                               minWidth: `${cell.column.getSize()}px`,
