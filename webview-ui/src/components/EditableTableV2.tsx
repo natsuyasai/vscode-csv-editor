@@ -106,6 +106,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
   const [focusedColumnIndex, setFocusedColumnIndex] = useState<number | null>(null);
+  const [focusedCell, setFocusedCell] = useState<{ row: number; col: number } | null>(null);
 
   // 列の配置調整機能
   const { handleAlignmentChange, getCurrentAlignment, getColumnAlignment } =
@@ -413,6 +414,75 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [undo, redo]);
+
+  // 矢印キーでセル選択を移動
+  useEffect(() => {
+    const handleArrowKeyNavigation = (e: KeyboardEvent) => {
+      // 編集中（ヘッダー編集またはセル編集中）の場合は移動しない
+      if (editingHeaderIndex !== null) {
+        return;
+      }
+
+      // input, textarea, select要素内では動作しない
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT"
+      ) {
+        return;
+      }
+
+      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        return;
+      }
+
+      e.preventDefault();
+
+      const totalRows = data.length;
+      const totalCols = csvArray[0]?.length || 0;
+
+      if (totalRows === 0 || totalCols === 0) {
+        return;
+      }
+
+      let newRow = focusedCell?.row ?? 0;
+      let newCol = focusedCell?.col ?? 0;
+
+      switch (e.key) {
+        case "ArrowUp":
+          newRow = Math.max(0, newRow - 1);
+          break;
+        case "ArrowDown":
+          newRow = Math.min(totalRows - 1, newRow + 1);
+          break;
+        case "ArrowLeft":
+          newCol = Math.max(0, newCol - 1);
+          break;
+        case "ArrowRight":
+          newCol = Math.min(totalCols - 1, newCol + 1);
+          break;
+      }
+
+      setFocusedCell({ row: newRow, col: newCol });
+
+      // セル選択も更新
+      handleCellMouseDown(newRow, newCol);
+      handleCellMouseUp();
+    };
+
+    document.addEventListener("keydown", handleArrowKeyNavigation);
+    return () => {
+      document.removeEventListener("keydown", handleArrowKeyNavigation);
+    };
+  }, [
+    editingHeaderIndex,
+    focusedCell,
+    data.length,
+    csvArray,
+    handleCellMouseDown,
+    handleCellMouseUp,
+  ]);
 
   return (
     <>
