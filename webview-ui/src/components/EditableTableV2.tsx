@@ -211,6 +211,9 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
           const rowIndex = props.row.index;
           const isSelected = props.table.options.meta?.selectedRowIndex === rowIndex;
           const onSelect = () => {
+            // セル選択を解除
+            clearSelection();
+
             const currentSelected = props.table.options.meta?.selectedRowIndex;
             if (currentSelected === rowIndex) {
               props.table.options.meta?.setSelectedRowIndex?.(null);
@@ -248,7 +251,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({ csvArray, theme, set
     });
 
     return cols;
-  }, [csvArray, isIgnoreHeaderRow, handleRowReorder, openRowContextMenu]);
+  }, [csvArray, isIgnoreHeaderRow, handleRowReorder, openRowContextMenu, clearSelection]);
 
   // TanStack Tableのインスタンスを作成
   const table = useReactTable({
