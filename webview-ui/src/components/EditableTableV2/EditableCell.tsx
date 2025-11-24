@@ -235,7 +235,7 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
       onFocus={handleFocus}
       onKeyDown={handleCellKeyDown}
       role="button"
-      tabIndex={0}>
+      tabIndex={columnIndex === -1 ? -1 : 0}>
       {value}
       {/* フィルハンドル（選択中のセルにのみ表示） */}
       {isSelected && !isEditing && (
