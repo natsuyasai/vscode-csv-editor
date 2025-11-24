@@ -118,11 +118,11 @@ describe("RowIndexCell", () => {
     expect(cell).toBeInTheDocument();
   });
 
-  it("should be keyboard accessible", () => {
+  it("should not be keyboard accessible", () => {
     const props = createMockProps();
     render(<RowIndexCellWithDnd {...props} />);
 
     const cell = screen.getByRole("button");
-    expect(cell).toHaveAttribute("tabIndex", "0");
+    expect(cell).toHaveAttribute("tabIndex", "-1");
   });
 });
