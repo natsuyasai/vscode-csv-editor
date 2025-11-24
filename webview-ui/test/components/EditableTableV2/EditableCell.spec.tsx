@@ -246,7 +246,7 @@ describe("EditableCell", () => {
 
     render(<EditableCell {...props} />);
 
-    const cell = screen.getByRole("button");
+    const cell = screen.getByLabelText("Auto fill handle");
     expect(cell).toBeInTheDocument();
   });
 
