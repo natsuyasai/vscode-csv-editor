@@ -60,7 +60,7 @@ export const RowIndexCell: FC<RowIndexCellProps> = (props) => {
         props.onContextMenu?.(e, props.rowIndex);
       }}
       role="button"
-      tabIndex={0}
+      tabIndex={-1}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           props.onSelect();
