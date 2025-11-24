@@ -1,5 +1,3 @@
-import { Column } from "react-data-grid";
-
 export type RowSizeType = "small" | "normal" | "large" | "extra large";
 
 export type VerticalAlignment = "top" | "center" | "bottom";

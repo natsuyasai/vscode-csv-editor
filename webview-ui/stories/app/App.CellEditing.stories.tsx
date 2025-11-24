@@ -39,7 +39,7 @@ export const CellEditingFunctionality: Story = {
     await userEvent.dblClick(aliceCell);
 
     // 編集可能な入力フィールドが表示されることを確認
-    // react-data-gridでは編集中にinput要素が作成される
+    // 編集中にtextarea要素が作成される
     const input = canvas.queryByDisplayValue("Alice") as HTMLTextAreaElement;
     await expect(input).toBeInTheDocument();
     await expect(input?.type).toBe("textarea");
@@ -62,7 +62,7 @@ export const CellEditingFunctionality_Backspace: Story = {
     await userEvent.keyboard("{Backspace}");
 
     // 編集モードに入り、入力フィールドが表示される（内容はクリアされている）
-    // react-data-gridでは編集中にinput要素が作成される
+    // 編集中にtextarea要素が作成される
     const input = canvas.queryByRole("textbox") as HTMLTextAreaElement;
     await expect(input).toBeInTheDocument();
     await expect(input?.type).toBe("textarea");
@@ -114,7 +114,7 @@ async function insertTextTest(canvasElement: HTMLElement, key: string) {
   await userEvent.keyboard(key);
 
   // 編集モードに入り、入力した文字が表示される（元の内容はクリアされている）
-  // react-data-gridでは編集中にinput要素が作成される
+  // 編集中にtextarea要素が作成される
   const input = canvas.queryByRole("textbox") as HTMLTextAreaElement;
   await expect(input).toBeInTheDocument();
   await expect(input?.type).toBe("textarea");

@@ -21,7 +21,7 @@ This is a VSCode extension that provides a custom CSV editor with a React-based 
 
 Key components:
 - `CSVEditorProvider` implements VSCode's CustomTextEditorProvider interface
-- React app uses `react-data-grid` for the editable table interface
+- React app uses `tanstack/react-table` for the editable table interface
 - Communication between extension and webview via postMessage API
 - Uses Zustand for state management and custom hooks for data operations
 
@@ -95,7 +95,7 @@ npm run lint
 The extension registers a custom editor for CSV files that:
 1. Creates a webview panel with React UI
 2. Parses CSV content using `csv-parse` library  
-3. Renders editable table using `react-data-grid`
+3. Renders editable table using `tanstack/react-table`
 4. Supports features like sorting, searching, row/column operations, drag & drop
 5. Updates the underlying VSCode document when changes are made
 6. Handles theme changes and VS Code integration

@@ -40,7 +40,7 @@ CSV簡易エディタ
 ### 🛠️ 技術仕様
 - **フレームワーク**: React + TypeScript
 - **状態管理**: Zustand
-- **データグリッド**: react-data-grid
+- **データグリッド**: @tanstack/react-table
 - **ドラッグ&ドロップ**: react-dnd
 - **テスト**: Vitest + React Testing Library + Storybook
 - **アーキテクチャ**: カスタムフック + 共通コンポーネントによるモジュラー設計
