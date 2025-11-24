@@ -1,8 +1,8 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { useCellSelectionV2 } from "@/hooks/useCellSelectionV2";
+import { useCellSelection } from "@/hooks/useCellSelection";
 
-describe("useCellSelectionV2", () => {
+describe("useCellSelection", () => {
   let mockData: Array<Record<string, unknown>>;
   let mockSetData: React.Dispatch<React.SetStateAction<Array<Record<string, unknown>>>>;
 
@@ -28,13 +28,13 @@ describe("useCellSelectionV2", () => {
   });
 
   it("初期状態では選択セルが空", () => {
-    const { result } = renderHook(() => useCellSelectionV2(mockData, mockSetData));
+    const { result } = renderHook(() => useCellSelection(mockData, mockSetData));
 
     expect(result.current.selectedCells.size).toBe(0);
   });
 
   it("handleCellMouseDownで単一セルを選択", () => {
-    const { result } = renderHook(() => useCellSelectionV2(mockData, mockSetData));
+    const { result } = renderHook(() => useCellSelection(mockData, mockSetData));
 
     act(() => {
       result.current.handleCellMouseDown(0, 0);
@@ -45,7 +45,7 @@ describe("useCellSelectionV2", () => {
   });
 
   it("handleCellMouseEnterで範囲選択", () => {
-    const { result } = renderHook(() => useCellSelectionV2(mockData, mockSetData));
+    const { result } = renderHook(() => useCellSelection(mockData, mockSetData));
 
     act(() => {
       result.current.handleCellMouseDown(0, 0);
@@ -64,7 +64,7 @@ describe("useCellSelectionV2", () => {
   });
 
   it("handleCellMouseUpで選択を終了", () => {
-    const { result } = renderHook(() => useCellSelectionV2(mockData, mockSetData));
+    const { result } = renderHook(() => useCellSelection(mockData, mockSetData));
 
     act(() => {
       result.current.handleCellMouseDown(0, 0);
@@ -81,7 +81,7 @@ describe("useCellSelectionV2", () => {
   it("handleBulkEditで選択セルを一括編集（キャンセル時）", () => {
     vi.spyOn(window, "prompt").mockReturnValue(null);
 
-    const { result } = renderHook(() => useCellSelectionV2(mockData, mockSetData));
+    const { result } = renderHook(() => useCellSelection(mockData, mockSetData));
 
     act(() => {
       result.current.handleCellMouseDown(0, 0);
@@ -98,7 +98,7 @@ describe("useCellSelectionV2", () => {
   it("handleBulkEditで選択セルを一括編集（値入力時）", () => {
     vi.spyOn(window, "prompt").mockReturnValue("NewValue");
 
-    const { result } = renderHook(() => useCellSelectionV2(mockData, mockSetData));
+    const { result } = renderHook(() => useCellSelection(mockData, mockSetData));
 
     act(() => {
       result.current.handleCellMouseDown(0, 0);
@@ -124,7 +124,7 @@ describe("useCellSelectionV2", () => {
       },
     });
 
-    const { result } = renderHook(() => useCellSelectionV2(mockData, mockSetData));
+    const { result } = renderHook(() => useCellSelection(mockData, mockSetData));
 
     // マウスダウンで選択開始
     act(() => {
@@ -152,7 +152,7 @@ describe("useCellSelectionV2", () => {
       },
     });
 
-    const { result } = renderHook(() => useCellSelectionV2(mockData, mockSetData));
+    const { result } = renderHook(() => useCellSelection(mockData, mockSetData));
 
     act(() => {
       result.current.handleCellMouseDown(0, 0);
@@ -177,7 +177,7 @@ describe("useCellSelectionV2", () => {
       },
     });
 
-    const { result } = renderHook(() => useCellSelectionV2(mockData, mockSetData));
+    const { result } = renderHook(() => useCellSelection(mockData, mockSetData));
 
     await act(async () => {
       await result.current.handleCopy();
@@ -194,7 +194,7 @@ describe("useCellSelectionV2", () => {
       },
     });
 
-    const { result } = renderHook(() => useCellSelectionV2(mockData, mockSetData));
+    const { result } = renderHook(() => useCellSelection(mockData, mockSetData));
 
     await act(async () => {
       await result.current.handlePaste();

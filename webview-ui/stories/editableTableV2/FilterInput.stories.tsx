@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { FilterInput } from "@/components/EditableTableV2/FilterInput";
+import { FilterInput } from "@/components/EditableTable/FilterInput";
 
 const meta: Meta<typeof FilterInput> = {
-  title: "EditableTableV2/FilterInput",
+  title: "EditableTable/FilterInput",
   component: FilterInput,
   parameters: {
     layout: "centered",

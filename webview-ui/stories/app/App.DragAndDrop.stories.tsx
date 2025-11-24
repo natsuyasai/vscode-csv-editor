@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import AppV2 from "../../src/AppV2";
+import App from "../../src/App";
 import { setInitData } from "../app/utils";
 
-const meta: Meta<typeof AppV2> = {
-  title: "AppV2/DragAndDrop",
-  component: AppV2,
+const meta: Meta<typeof App> = {
+  title: "App/DragAndDrop",
+  component: App,
   parameters: {
     layout: "fullscreen",
     docs: {
       description: {
-        component: "EditableTableV2のドラッグ&ドロップとコンテキストメニュー機能のテスト",
+        component: "EditableTableのドラッグ&ドロップとコンテキストメニュー機能のテスト",
       },
     },
   },

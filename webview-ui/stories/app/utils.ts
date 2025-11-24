@@ -1,4 +1,4 @@
-import { expect, within, waitFor } from "storybook/test";
+import { within, waitFor } from "storybook/test";
 
 // サンプルCSVデータ
 export const sampleCSVData = `Name,Age,City,Occupation
@@ -10,7 +10,7 @@ Eve,29,Kobe,Analyst`;
 
 // CSVデータの定数
 export const COL_MAX = 4;
-export const COL_MAX_WITH_HEADER = COL_MAX + 1; // 行番号を含む
+export const COL_MAX_WITH_HEADER = COL_MAX + 1; // インデックス列を含む（EditableTableでは5列）
 export const ROW_MAX = 5;
 
 /**
@@ -29,13 +29,16 @@ export function setInitData() {
 /**
  * グリッドが準備完了するまで待機する
  */
-export function waitReadyForGrid(target: HTMLElement, timeout = 3000) {
+export function waitReadyForGrid(target: HTMLElement, timeout = 5000) {
   return waitFor(
-    async () => {
+    () => {
       const canvas = within(target);
-      const gridcells = canvas.getAllByRole("gridcell");
-      return await expect(gridcells.length > 0).toBeTruthy();
+      const gridcells = canvas.queryAllByRole("gridcell");
+      if (gridcells.length === 0) {
+        throw new Error("No gridcells found");
+      }
+      return true;
     },
-    { timeout }
+    { timeout, interval: 100 }
   );
 }

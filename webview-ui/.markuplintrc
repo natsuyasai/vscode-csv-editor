@@ -25,7 +25,7 @@
   ],
   "overrides": [
     {
-      "files": ["src/components/EditableTableV2.tsx"],
+      "files": ["**/EditableTable/index.tsx"],
       "rules": {
         "permitted-contents": false
       }

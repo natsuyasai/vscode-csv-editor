@@ -4,7 +4,7 @@ import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { useCallback, useEffect, useState } from "react";
 import styles from "./App.module.scss";
-import { EditableTableV2 } from "./components/EditableTableV2";
+import { EditableTable } from "./components/EditableTable";
 import { useEventListener } from "./hooks/useEventListener";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { debounce } from "./utilities/debounce";
@@ -92,7 +92,7 @@ export default function App() {
     <>
       <div className={styles.root}>
         <main className={styles.main}>
-          <EditableTableV2
+          <EditableTable
             csvArray={csvArray}
             theme={theme}
             setCSVArray={updateCSVArray}

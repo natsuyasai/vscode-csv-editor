@@ -1,9 +1,9 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { useContextMenusV2 } from "@/hooks/useContextMenusV2";
-import type { RowContextMenuActions, ColumnContextMenuActions } from "@/hooks/useContextMenusV2";
+import { useContextMenus } from "@/hooks/useContextMenus";
+import type { RowContextMenuActions, ColumnContextMenuActions } from "@/hooks/useContextMenus";
 
-describe("useContextMenusV2", () => {
+describe("useContextMenus", () => {
   let mockRowActions: RowContextMenuActions;
   let mockColumnActions: ColumnContextMenuActions;
 
@@ -24,14 +24,14 @@ describe("useContextMenusV2", () => {
 
   describe("行コンテキストメニュー", () => {
     it("初期状態では行コンテキストメニューが閉じている", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       expect(result.current.isRowContextMenuOpen).toBe(false);
       expect(result.current.rowContextMenuProps).toBeNull();
     });
 
     it("openRowContextMenuで行コンテキストメニューを開く", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       act(() => {
         result.current.openRowContextMenu(1, 100, 200);
@@ -46,7 +46,7 @@ describe("useContextMenusV2", () => {
     });
 
     it("handleSelectRowContextMenuで行を削除", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       act(() => {
         result.current.openRowContextMenu(2, 100, 200);
@@ -62,7 +62,7 @@ describe("useContextMenusV2", () => {
     });
 
     it("handleSelectRowContextMenuで行を上に挿入", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       act(() => {
         result.current.openRowContextMenu(2, 100, 200);
@@ -77,7 +77,7 @@ describe("useContextMenusV2", () => {
     });
 
     it("handleSelectRowContextMenuで行を下に挿入", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       act(() => {
         result.current.openRowContextMenu(2, 100, 200);
@@ -92,7 +92,7 @@ describe("useContextMenusV2", () => {
     });
 
     it("handleCloseRowContextMenuで行コンテキストメニューを閉じる", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       act(() => {
         result.current.openRowContextMenu(1, 100, 200);
@@ -107,7 +107,7 @@ describe("useContextMenusV2", () => {
     });
 
     it("rowContextMenuPropsがnullの場合は何もしない", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       act(() => {
         result.current.handleSelectRowContextMenu("deleteRow");
@@ -119,14 +119,14 @@ describe("useContextMenusV2", () => {
 
   describe("列コンテキストメニュー", () => {
     it("初期状態では列コンテキストメニューが閉じている", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       expect(result.current.isColumnContextMenuOpen).toBe(false);
       expect(result.current.columnContextMenuProps).toBeNull();
     });
 
     it("openColumnContextMenuで列コンテキストメニューを開く", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       act(() => {
         result.current.openColumnContextMenu(1, 100, 200);
@@ -141,7 +141,7 @@ describe("useContextMenusV2", () => {
     });
 
     it("handleSelectColumnContextMenuで列を削除", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       act(() => {
         result.current.openColumnContextMenu(2, 100, 200);
@@ -157,7 +157,7 @@ describe("useContextMenusV2", () => {
     });
 
     it("handleSelectColumnContextMenuで列を左に挿入", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       act(() => {
         result.current.openColumnContextMenu(2, 100, 200);
@@ -172,7 +172,7 @@ describe("useContextMenusV2", () => {
     });
 
     it("handleSelectColumnContextMenuで列を右に挿入", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       act(() => {
         result.current.openColumnContextMenu(2, 100, 200);
@@ -187,7 +187,7 @@ describe("useContextMenusV2", () => {
     });
 
     it("handleCloseColumnContextMenuで列コンテキストメニューを閉じる", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       act(() => {
         result.current.openColumnContextMenu(1, 100, 200);
@@ -202,7 +202,7 @@ describe("useContextMenusV2", () => {
     });
 
     it("columnContextMenuPropsがnullの場合は何もしない", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       act(() => {
         result.current.handleSelectColumnContextMenu("deleteHeaderCel");
@@ -214,14 +214,14 @@ describe("useContextMenusV2", () => {
 
   describe("rowContextMenuRef と columnContextMenuRef", () => {
     it("rowContextMenuRefが初期化されている", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       expect(result.current.rowContextMenuRef).toBeDefined();
       expect(result.current.rowContextMenuRef.current).toBeNull();
     });
 
     it("columnContextMenuRefが初期化されている", () => {
-      const { result } = renderHook(() => useContextMenusV2(mockRowActions, mockColumnActions));
+      const { result } = renderHook(() => useContextMenus(mockRowActions, mockColumnActions));
 
       expect(result.current.columnContextMenuRef).toBeDefined();
       expect(result.current.columnContextMenuRef.current).toBeNull();

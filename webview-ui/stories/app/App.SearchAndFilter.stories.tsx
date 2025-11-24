@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import AppV2 from "../../src/AppV2";
+import App from "../../src/App";
 import { setInitData } from "../app/utils";
 
-const meta: Meta<typeof AppV2> = {
-  title: "AppV2/SearchAndFilter",
-  component: AppV2,
+const meta: Meta<typeof App> = {
+  title: "App/SearchAndFilter",
+  component: App,
   parameters: {
     layout: "fullscreen",
     docs: {
       description: {
-        component: "EditableTableV2の検索とフィルター機能のテスト",
+        component: "EditableTableの検索とフィルター機能のテスト",
       },
     },
   },

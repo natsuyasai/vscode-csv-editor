@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
  * セル選択機能のカスタムフック
  * 複数セルの選択、一括編集、コピー&ペースト機能を提供
  */
-export const useCellSelectionV2 = <TData extends Record<string, unknown>>(
+export const useCellSelection = <TData extends Record<string, unknown>>(
   data: TData[],
   setData: React.Dispatch<React.SetStateAction<TData[]>>,
   updateCellsCallback?: (cells: Array<{ rowIdx: number; colIdx: number; value: string }>) => void

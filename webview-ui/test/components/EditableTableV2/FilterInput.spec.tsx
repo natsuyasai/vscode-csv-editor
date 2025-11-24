@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { FilterInput } from "@/components/EditableTableV2/FilterInput";
+import { FilterInput } from "@/components/EditableTable/FilterInput";
 
 describe("FilterInput", () => {
   it("should render input field with placeholder", () => {

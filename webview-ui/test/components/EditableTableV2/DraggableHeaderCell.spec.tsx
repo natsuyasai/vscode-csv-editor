@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { describe, expect, it, vi } from "vitest";
-import { DraggableHeaderCell } from "../../../src/components/EditableTableV2/DraggableHeaderCell";
+import { DraggableHeaderCell } from "../../../src/components/EditableTable/DraggableHeaderCell";
 
 describe("DraggableHeaderCell", () => {
   const defaultProps = {

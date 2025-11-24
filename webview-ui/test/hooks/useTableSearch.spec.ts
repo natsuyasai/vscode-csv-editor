@@ -1,9 +1,9 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { useTableSearchV2 } from "@/hooks/useTableSearchV2";
+import { useTableSearch } from "@/hooks/useTableSearch";
 import { ROW_IDX_KEY, ROW_ID_KEY } from "@/types";
 
-describe("useTableSearchV2", () => {
+describe("useTableSearch", () => {
   let mockData: Array<Record<string, unknown>>;
   let mockTableContainerRef: React.RefObject<HTMLDivElement>;
   let mockScrollTo: ReturnType<typeof vi.fn>;
@@ -30,7 +30,7 @@ describe("useTableSearchV2", () => {
 
   it("初期状態では検索が閉じられている", () => {
     const { result } = renderHook(() =>
-      useTableSearchV2(mockData, rowHeight, mockTableContainerRef)
+      useTableSearch(mockData, rowHeight, mockTableContainerRef)
     );
 
     expect(result.current.searchOpen).toBe(false);
@@ -40,7 +40,7 @@ describe("useTableSearchV2", () => {
 
   it("openSearchで検索を開く", () => {
     const { result } = renderHook(() =>
-      useTableSearchV2(mockData, rowHeight, mockTableContainerRef)
+      useTableSearch(mockData, rowHeight, mockTableContainerRef)
     );
 
     act(() => {
@@ -52,7 +52,7 @@ describe("useTableSearchV2", () => {
 
   it("handleSearchで検索結果を取得", () => {
     const { result } = renderHook(() =>
-      useTableSearchV2(mockData, rowHeight, mockTableContainerRef)
+      useTableSearch(mockData, rowHeight, mockTableContainerRef)
     );
 
     act(() => {
@@ -74,7 +74,7 @@ describe("useTableSearchV2", () => {
 
   it("handleSearchで大文字小文字を区別しない", () => {
     const { result } = renderHook(() =>
-      useTableSearchV2(mockData, rowHeight, mockTableContainerRef)
+      useTableSearch(mockData, rowHeight, mockTableContainerRef)
     );
 
     act(() => {
@@ -87,7 +87,7 @@ describe("useTableSearchV2", () => {
 
   it("handleSearchで空文字列を検索しても何もしない", () => {
     const { result } = renderHook(() =>
-      useTableSearchV2(mockData, rowHeight, mockTableContainerRef)
+      useTableSearch(mockData, rowHeight, mockTableContainerRef)
     );
 
     act(() => {
@@ -99,7 +99,7 @@ describe("useTableSearchV2", () => {
 
   it("handleSearchでマッチがない場合は何もしない", () => {
     const { result } = renderHook(() =>
-      useTableSearchV2(mockData, rowHeight, mockTableContainerRef)
+      useTableSearch(mockData, rowHeight, mockTableContainerRef)
     );
 
     act(() => {
@@ -111,7 +111,7 @@ describe("useTableSearchV2", () => {
 
   it("handleNextSearchで次の検索結果に移動", () => {
     const { result } = renderHook(() =>
-      useTableSearchV2(mockData, rowHeight, mockTableContainerRef)
+      useTableSearch(mockData, rowHeight, mockTableContainerRef)
     );
 
     // 検索実行
@@ -133,7 +133,7 @@ describe("useTableSearchV2", () => {
 
   it("handleNextSearchで最後の検索結果から最初に戻る", () => {
     const { result } = renderHook(() =>
-      useTableSearchV2(mockData, rowHeight, mockTableContainerRef)
+      useTableSearch(mockData, rowHeight, mockTableContainerRef)
     );
 
     // 検索実行
@@ -160,7 +160,7 @@ describe("useTableSearchV2", () => {
 
   it("handlePreviousSearchで前の検索結果に移動", () => {
     const { result } = renderHook(() =>
-      useTableSearchV2(mockData, rowHeight, mockTableContainerRef)
+      useTableSearch(mockData, rowHeight, mockTableContainerRef)
     );
 
     // 検索実行
@@ -187,7 +187,7 @@ describe("useTableSearchV2", () => {
 
   it("handlePreviousSearchで最初の検索結果から最後に戻る", () => {
     const { result } = renderHook(() =>
-      useTableSearchV2(mockData, rowHeight, mockTableContainerRef)
+      useTableSearch(mockData, rowHeight, mockTableContainerRef)
     );
 
     // 検索実行
@@ -209,7 +209,7 @@ describe("useTableSearchV2", () => {
 
   it("handleCloseSearchで検索状態をリセット", () => {
     const { result } = renderHook(() =>
-      useTableSearchV2(mockData, rowHeight, mockTableContainerRef)
+      useTableSearch(mockData, rowHeight, mockTableContainerRef)
     );
 
     // 検索を開いて実行
@@ -232,7 +232,7 @@ describe("useTableSearchV2", () => {
 
   it("ROW_IDX_KEYとROW_ID_KEYは検索対象外", () => {
     const { result } = renderHook(() =>
-      useTableSearchV2(mockData, rowHeight, mockTableContainerRef)
+      useTableSearch(mockData, rowHeight, mockTableContainerRef)
     );
 
     // ROW_IDX_KEYの値を検索

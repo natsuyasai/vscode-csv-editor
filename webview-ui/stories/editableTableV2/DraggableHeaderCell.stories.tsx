@@ -3,10 +3,10 @@ import { useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { expect, userEvent, within } from "storybook/test";
-import { DraggableHeaderCell } from "@/components/EditableTableV2/DraggableHeaderCell";
+import { DraggableHeaderCell } from "@/components/EditableTable/DraggableHeaderCell";
 
 const meta = {
-  title: "EditableTableV2/DraggableHeaderCell",
+  title: "EditableTable/DraggableHeaderCell",
   component: DraggableHeaderCell,
   decorators: [
     (Story) => (

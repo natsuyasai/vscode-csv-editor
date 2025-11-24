@@ -32,7 +32,7 @@ export interface ColumnContextMenuActions {
  * @param rowActions - 行に対するアクション（削除、挿入）
  * @param columnActions - 列に対するアクション（削除、挿入）
  */
-export const useContextMenusV2 = (
+export const useContextMenus = (
   rowActions: RowContextMenuActions,
   columnActions: ColumnContextMenuActions
 ) => {

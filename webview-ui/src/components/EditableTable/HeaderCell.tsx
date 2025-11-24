@@ -1,7 +1,7 @@
 import { flexRender, Header as TanStackHeader } from "@tanstack/react-table";
 import { FC } from "react";
-import tableStyles from "../EditableTableV2.module.scss";
 import { DraggableHeaderCell } from "./DraggableHeaderCell";
+import tableStyles from "./index.module.scss";
 import { RowData } from "./types";
 
 interface HeaderCellProps {

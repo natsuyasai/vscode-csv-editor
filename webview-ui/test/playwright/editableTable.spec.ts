@@ -1,14 +1,14 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("EditableTableV2", () => {
+test.describe("EditableTable", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("http://localhost:6007/");
     await page.waitForLoadState("networkidle");
   });
 
   test("基本的な表示ができること", async ({ page }) => {
-    // EditableTableV2 > Default ストーリーに移動
-    await page.getByRole("button", { name: "EditableTableV2" }).click();
+    // EditableTable > Default ストーリーに移動
+    await page.getByRole("button", { name: "EditableTable" }).click();
     await page.getByRole("link", { name: "Default" }).click();
 
     // テーブルが表示されることを確認
@@ -23,7 +23,7 @@ test.describe("EditableTableV2", () => {
   });
 
   test("ライトテーマで表示できること", async ({ page }) => {
-    await page.getByRole("button", { name: "EditableTableV2" }).click();
+    await page.getByRole("button", { name: "EditableTable" }).click();
     await page.getByRole("link", { name: "Light" }).click();
 
     const iframe = page.frameLocator('iframe[title="storybook-preview-iframe"]');
@@ -32,7 +32,7 @@ test.describe("EditableTableV2", () => {
   });
 
   test("ダークテーマで表示できること", async ({ page }) => {
-    await page.getByRole("button", { name: "EditableTableV2" }).click();
+    await page.getByRole("button", { name: "EditableTable" }).click();
     await page.getByRole("link", { name: "Dark" }).click();
 
     const iframe = page.frameLocator('iframe[title="storybook-preview-iframe"]');
@@ -41,7 +41,7 @@ test.describe("EditableTableV2", () => {
   });
 
   test("大量データでスクロールできること", async ({ page }) => {
-    await page.getByRole("button", { name: "EditableTableV2" }).click();
+    await page.getByRole("button", { name: "EditableTable" }).click();
     await page.getByRole("link", { name: "Large Dataset" }).click();
 
     const iframe = page.frameLocator('iframe[title="storybook-preview-iframe"]');
@@ -61,7 +61,7 @@ test.describe("EditableTableV2", () => {
   });
 
   test("空データでもエラーが発生しないこと", async ({ page }) => {
-    await page.getByRole("button", { name: "EditableTableV2" }).click();
+    await page.getByRole("button", { name: "EditableTable" }).click();
     await page.getByRole("link", { name: "Empty", exact: true }).click();
 
     const iframe = page.frameLocator('iframe[title="storybook-preview-iframe"]');
@@ -72,7 +72,7 @@ test.describe("EditableTableV2", () => {
   });
 
   test("日本語データが正しく表示されること", async ({ page }) => {
-    await page.getByRole("button", { name: "EditableTableV2" }).click();
+    await page.getByRole("button", { name: "EditableTable" }).click();
     await page.getByRole("link", { name: "Japanese Data" }).click();
 
     const iframe = page.frameLocator('iframe[title="storybook-preview-iframe"]');
@@ -85,7 +85,7 @@ test.describe("EditableTableV2", () => {
   });
 
   test("セルをダブルクリックで編集できること", async ({ page }) => {
-    await page.getByRole("button", { name: "EditableTableV2" }).click();
+    await page.getByRole("button", { name: "EditableTable" }).click();
     await page.getByRole("link", { name: "Default" }).click();
 
     const iframe = page.frameLocator('iframe[title="storybook-preview-iframe"]');
@@ -114,7 +114,7 @@ test.describe("EditableTableV2", () => {
   });
 
   test("セル編集時のテキストエリアサイズがセルサイズと一致すること", async ({ page }) => {
-    await page.getByRole("button", { name: "EditableTableV2" }).click();
+    await page.getByRole("button", { name: "EditableTable" }).click();
     await page.getByRole("link", { name: "Default" }).click();
 
     const iframe = page.frameLocator('iframe[title="storybook-preview-iframe"]');
@@ -148,7 +148,7 @@ test.describe("EditableTableV2", () => {
   });
 
   test.skip("列ヘッダーをクリックしてソートできること", async ({ page }) => {
-    await page.getByRole("button", { name: "EditableTableV2" }).click();
+    await page.getByRole("button", { name: "EditableTable" }).click();
     await page.getByRole("link", { name: "Default" }).click();
 
     const iframe = page.frameLocator('iframe[title="storybook-preview-iframe"]');

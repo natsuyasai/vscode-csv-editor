@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import AppV2 from "../../src/AppV2";
+import App from "../../src/App";
 import { setInitData } from "../app/utils";
 
-const meta: Meta<typeof AppV2> = {
-  title: "AppV2/MultiCellSelection",
-  component: AppV2,
+const meta: Meta<typeof App> = {
+  title: "App/MultiCellSelection",
+  component: App,
   parameters: {
     layout: "fullscreen",
     docs: {
       description: {
-        component: "EditableTableV2の複数セル選択機能のテスト",
+        component: "EditableTableの複数セル選択機能のテスト",
       },
     },
   },

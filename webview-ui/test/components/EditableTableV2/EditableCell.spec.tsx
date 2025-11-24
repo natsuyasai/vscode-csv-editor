@@ -2,8 +2,8 @@ import { CellContext } from "@tanstack/react-table";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { EditableCell } from "@/components/EditableTableV2/EditableCell";
-import { RowData } from "@/components/EditableTableV2/types";
+import { EditableCell } from "@/components/EditableTable/EditableCell";
+import { RowData } from "@/components/EditableTable/types";
 
 // モックのpropsを作成するヘルパー関数
 const createMockProps = (

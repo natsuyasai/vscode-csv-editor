@@ -1,16 +1,16 @@
 import { describe, it, expect } from "vitest";
 import type {
-  EditableTableV2Props,
+  EditableTableProps,
   RowData,
   FilterInputProps,
   DraggableHeaderCellProps,
   ContextMenuPosition,
-} from "@/components/EditableTableV2/types";
+} from "@/components/EditableTable/types";
 
-describe("EditableTableV2/types", () => {
-  describe("EditableTableV2Props", () => {
+describe("EditableTable/types", () => {
+  describe("EditableTableProps", () => {
     it("should have correct property types", () => {
-      const props: EditableTableV2Props = {
+      const props: EditableTableProps = {
         csvArray: [["header1", "header2"]],
         theme: "light",
         setCSVArray: () => {},
@@ -24,7 +24,7 @@ describe("EditableTableV2/types", () => {
     });
 
     it("should accept dark theme", () => {
-      const props: EditableTableV2Props = {
+      const props: EditableTableProps = {
         csvArray: [],
         theme: "dark",
         setCSVArray: () => {},

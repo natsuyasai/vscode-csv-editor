@@ -28,23 +28,60 @@ type Story = StoryObj<typeof meta>;
 
 async function triggerRowContextMenu(canvasElement: HTMLElement, targetValue: string) {
   const canvas = within(canvasElement);
-  // データ行の行番号セルを右クリックしてコンテキストメニューを表示
-  const rows = await canvas.findAllByRole("row");
-  // 最初のデータ行（インデックス1）の行番号セル（最初のgridcell）を取得
-  const dataRow = rows[1];
+  // EditableTableでは行番号セルを右クリックしてコンテキストメニューを表示
+  // 仮想スクロールのため、表示されている行を取得
+  const rows = canvas.queryAllByRole("row");
+  if (rows.length === 0) {
+    throw new Error("No rows found");
+  }
+  // ヘッダー行以外の最初のデータ行を取得
+  const dataRow = rows.find((row) => {
+    const cells = within(row).queryAllByRole("gridcell");
+    return cells.length > 0;
+  });
+  if (!dataRow) {
+    throw new Error("No data row found");
+  }
   const rowNumberCell = within(dataRow).getAllByRole("gridcell")[0];
-  await userEvent.click(rowNumberCell);
+  // 行番号セルの中のボタンを取得（RowIndexCellはrole="button"のdiv）
+  const rowNumberButton = rowNumberCell.querySelector('[role="button"]') as HTMLElement;
+  if (!rowNumberButton) {
+    throw new Error("Row number button not found");
+  }
+  await userEvent.click(rowNumberButton);
+
+  // 右クリックでコンテキストメニューを表示
+  // onContextMenuはtd要素に設定されているので、td要素を対象にする
   await userEvent.pointer({
     keys: "[MouseRight]",
     target: rowNumberCell,
   });
-  const contextMenu = document.body.getElementsByTagName("vscode-context-menu");
-  await expect(contextMenu).toHaveLength(1);
-  const menuItem = contextMenu[0].shadowRoot?.querySelectorAll(
-    `vscode-context-menu-item[value='${targetValue}']`
+
+  // VscodeContextMenuを使用しているため、vscode-context-menu要素を探す
+  await waitFor(
+    async () => {
+      const contextMenu = document.body.querySelector("vscode-context-menu");
+      await expect(contextMenu).toBeInTheDocument();
+      return true;
+    },
+    { timeout: 2000 }
   );
-  const atag = menuItem?.[0].shadowRoot?.querySelector("a");
-  await userEvent.click(atag as HTMLElement);
+
+  // メニューアイテムをクリック（Shadow DOMを通じてアクセス）
+  const contextMenu = document.body.querySelector("vscode-context-menu");
+  const menuItem = contextMenu?.shadowRoot?.querySelector(
+    `vscode-context-menu-item[value="${targetValue}"]`
+  );
+  if (menuItem) {
+    const link = menuItem.shadowRoot?.querySelector("a");
+    if (link) {
+      await userEvent.click(link as HTMLElement);
+    } else {
+      throw new Error(`Link not found in menu item "${targetValue}"`);
+    }
+  } else {
+    throw new Error(`Menu item with value "${targetValue}" not found`);
+  }
 }
 
 export const AddRowAbove: Story = {

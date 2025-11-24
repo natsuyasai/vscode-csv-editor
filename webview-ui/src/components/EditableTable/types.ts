@@ -1,9 +1,9 @@
 import { CellContext } from "@tanstack/react-table";
 
 /**
- * EditableTableV2のProps型
+ * EditableTableのProps型
  */
-export interface EditableTableV2Props {
+export interface EditableTableProps {
   csvArray: Array<Array<string>>;
   theme: "light" | "dark";
   setCSVArray: (csv: Array<Array<string>>) => void;

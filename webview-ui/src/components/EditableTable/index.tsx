@@ -14,25 +14,24 @@ import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useAutoFill } from "@/hooks/useAutoFill";
-import { useCellSelectionV2 } from "@/hooks/useCellSelectionV2";
+import { useCellSelection } from "@/hooks/useCellSelection";
 import { useColumnAlignment } from "@/hooks/useColumnAlignment";
-import { useContextMenusV2 } from "@/hooks/useContextMenusV2";
+import { useContextMenus } from "@/hooks/useContextMenus";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useHeaderEditing } from "@/hooks/useHeaderEditing";
-import { useTableSearchV2 } from "@/hooks/useTableSearchV2";
+import { useTableSearch } from "@/hooks/useTableSearch";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType } from "@/types";
-import { PortalManager } from "./EditableTable/PortalManager";
-import styles from "./EditableTable.module.scss";
-import { EditableCell } from "./EditableTableV2/EditableCell";
-import { FilterInput } from "./EditableTableV2/FilterInput";
-import { HeaderCell } from "./EditableTableV2/HeaderCell";
-import { RowIndexCell } from "./EditableTableV2/RowIndexCell";
-import type { EditableTableV2Props, RowData } from "./EditableTableV2/types";
-import tableStyles from "./EditableTableV2.module.scss";
-import { Header } from "./Header";
+import { PortalManager } from "../EditableTable/PortalManager";
+import { Header } from "../Header";
+import { EditableCell } from "./EditableCell";
+import { FilterInput } from "./FilterInput";
+import { HeaderCell } from "./HeaderCell";
+import tableStyles from "./index.module.scss";
+import { RowIndexCell } from "./RowIndexCell";
+import type { EditableTableProps, RowData } from "./types";
 
-export const EditableTableV2: FC<EditableTableV2Props> = ({
+export const EditableTable: FC<EditableTableProps> = ({
   csvArray,
   theme,
   setCSVArray,
@@ -83,7 +82,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({
     handleCopy,
     handlePaste,
     clearSelection,
-  } = useCellSelectionV2(data, setData, _updateCells);
+  } = useCellSelection(data, setData, _updateCells);
 
   // セルクリック時にfocusedCellも更新
   const handleCellMouseDown = useCallback(
@@ -123,7 +122,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({
     openColumnContextMenu,
     handleSelectColumnContextMenu,
     handleCloseColumnContextMenu,
-  } = useContextMenusV2(
+  } = useContextMenus(
     {
       deleteRow: _deleteRow,
       insertRow: _insertRow,
@@ -345,7 +344,7 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({
     handlePreviousSearch,
     handleCloseSearch,
     openSearch,
-  } = useTableSearchV2(data, rowHeight, tableContainerRef, (row, col) => {
+  } = useTableSearch(data, rowHeight, tableContainerRef, (row, col) => {
     // 検索結果のセルを選択状態にする
     handleCellMouseDown(row, col);
     handleCellMouseUp();
@@ -645,14 +644,14 @@ export const EditableTableV2: FC<EditableTableV2Props> = ({
           onPaste={handlePasteWrapper}
           selectedCellsCount={selectedCells.size}
         />
-        <VscodeDivider className={styles.divider} />
+        <VscodeDivider className={tableStyles.divider} />
       </div>
       <div className={tableStyles.tableWrapper}>
         <DndProvider backend={HTML5Backend}>
           <div
             ref={tableContainerRef}
             className={[
-              styles.dataGrid,
+              tableStyles.dataGrid,
               tableStyles.tableContainer,
               `${theme === "light" ? "rdg-light" : "rdg-dark"}`,
             ].join(" ")}>

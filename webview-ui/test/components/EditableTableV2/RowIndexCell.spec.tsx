@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { describe, expect, it, vi } from "vitest";
-import { RowIndexCell } from "@/components/EditableTableV2/RowIndexCell";
-import type { RowIndexCellProps } from "@/components/EditableTableV2/types";
+import { RowIndexCell } from "@/components/EditableTable/RowIndexCell";
+import type { RowIndexCellProps } from "@/components/EditableTable/types";
 
 // モックのpropsを作成するヘルパー関数
 const createMockProps = (overrides?: Partial<RowIndexCellProps>): RowIndexCellProps => ({

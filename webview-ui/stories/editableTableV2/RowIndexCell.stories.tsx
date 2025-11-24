@@ -3,11 +3,11 @@ import React from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { expect, userEvent, within } from "storybook/test";
-import { RowIndexCell } from "@/components/EditableTableV2/RowIndexCell";
-import type { RowIndexCellProps } from "@/components/EditableTableV2/types";
+import { RowIndexCell } from "@/components/EditableTable/RowIndexCell";
+import type { RowIndexCellProps } from "@/components/EditableTable/types";
 
 const meta: Meta<typeof RowIndexCell> = {
-  title: "EditableTableV2/RowIndexCell",
+  title: "EditableTable/RowIndexCell",
   component: RowIndexCell,
   parameters: {
     layout: "centered",

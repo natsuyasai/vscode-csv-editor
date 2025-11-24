@@ -18,7 +18,7 @@ export interface SearchPosition {
  * @param tableContainerRef - テーブルコンテナの参照
  * @param onSelectCell - セル選択時のコールバック関数（オプショナル）
  */
-export const useTableSearchV2 = <TData extends Record<string, unknown>>(
+export const useTableSearch = <TData extends Record<string, unknown>>(
   data: TData[],
   rowHeight: number,
   tableContainerRef: React.RefObject<HTMLDivElement | null>,

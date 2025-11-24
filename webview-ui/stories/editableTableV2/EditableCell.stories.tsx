@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { CellContext } from "@tanstack/react-table";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { EditableCell } from "@/components/EditableTableV2/EditableCell";
-import { RowData } from "@/components/EditableTableV2/types";
+import { EditableCell } from "@/components/EditableTable/EditableCell";
+import { RowData } from "@/components/EditableTable/types";
 
 const meta: Meta<typeof EditableCell> = {
-  title: "EditableTableV2/EditableCell",
+  title: "EditableTable/EditableCell",
   component: EditableCell,
   parameters: {
     layout: "centered",
