@@ -159,7 +159,13 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
 
   const handleCellKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (e.key === "Enter" || e.key === " ") {
+      if (e.key === "Tab") {
+        // Tabキー: 選択をクリア（ブラウザのデフォルト動作でフォーカス移動）
+        const clearSelectionFn = props.table.options.meta?.clearSelection as (() => void) | undefined;
+        clearSelectionFn?.();
+        // デフォルト動作を許可（次のセルへフォーカス移動）
+        return;
+      } else if (e.key === "Enter" || e.key === " ") {
         setIsEditing(true);
       } else if (e.key === "Delete") {
         // Deleteキー: 内容をクリアするが、編集モードには移行しない
