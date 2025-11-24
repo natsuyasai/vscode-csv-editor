@@ -17,18 +17,19 @@
       "rules": {
         "invalid-attr": {
           "options": {
-            "allowAttrs": ["onDoubleClick"]
+            "allowAttrs": [
+              "onDoubleClick"
+            ]
           }
         }
       }
     }
   ],
-  "overrides": [
-    {
-      "files": ["**/EditableTable/index.tsx"],
+  "overrides": {
+    "./**/EditableTable/index.tsx": {
       "rules": {
         "permitted-contents": false
       }
     }
-  ]
+  }
 }
