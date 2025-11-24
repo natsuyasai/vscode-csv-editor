@@ -30,6 +30,19 @@ interface Props {
   selectedColumnKey?: string | null;
   currentAlignment?: CellAlignment;
   onAlignmentChange?: (alignment: CellAlignment) => void;
+  // 行/列操作
+  onInsertRow?: () => void;
+  onDeleteRow?: () => void;
+  isRowSelected?: boolean;
+  onInsertColumn?: () => void;
+  onDeleteColumn?: () => void;
+  isColumnSelected?: boolean;
+  // セル操作
+  onBulkEdit?: () => void;
+  onClearSelection?: () => void;
+  onCopy?: () => void;
+  onPaste?: () => void;
+  selectedCellsCount?: number;
 }
 
 export const Header: FC<Props> = ({
@@ -50,6 +63,17 @@ export const Header: FC<Props> = ({
   selectedColumnKey,
   currentAlignment,
   onAlignmentChange,
+  onInsertRow,
+  onDeleteRow,
+  isRowSelected = false,
+  onInsertColumn,
+  onDeleteColumn,
+  isColumnSelected = false,
+  onBulkEdit,
+  onClearSelection,
+  onCopy,
+  onPaste,
+  selectedCellsCount = 0,
 }) => {
   // Zustandの状態を分割して取得（再レンダリングを確実にするため）
   const isAlignmentModeEnabled = useAlignmentModeStore((state) => state.isAlignmentModeEnabled);
@@ -140,6 +164,99 @@ export const Header: FC<Props> = ({
               secondary
               onClick={() => onClearFilters()}>
               <VscodeIcon name="clear-all" action-icon />
+            </VscodeButton>
+          )}
+          {onInsertRow && (
+            <VscodeButton
+              tabIndex={0}
+              aria-label="insert row"
+              aria-description="Insert row"
+              secondary
+              onClick={() => onInsertRow()}>
+              <VscodeIcon name="add" action-icon />
+              行を追加
+            </VscodeButton>
+          )}
+          {onDeleteRow && (
+            <VscodeButton
+              tabIndex={0}
+              aria-label="delete row"
+              aria-description="Delete selected row"
+              secondary
+              disabled={!isRowSelected}
+              onClick={() => onDeleteRow()}>
+              <VscodeIcon name="trash" action-icon />
+              行を削除
+            </VscodeButton>
+          )}
+          {onInsertColumn && (
+            <VscodeButton
+              tabIndex={0}
+              aria-label="insert column"
+              aria-description="Insert column"
+              secondary
+              onClick={() => onInsertColumn()}>
+              <VscodeIcon name="add" action-icon />
+              列を追加
+            </VscodeButton>
+          )}
+          {onDeleteColumn && (
+            <VscodeButton
+              tabIndex={0}
+              aria-label="delete column"
+              aria-description="Delete selected column"
+              secondary
+              disabled={!isColumnSelected}
+              onClick={() => onDeleteColumn()}>
+              <VscodeIcon name="trash" action-icon />
+              列を削除
+            </VscodeButton>
+          )}
+          {onBulkEdit && (
+            <VscodeButton
+              tabIndex={0}
+              aria-label="bulk edit"
+              aria-description={`Bulk edit ${selectedCellsCount} cells`}
+              secondary
+              disabled={selectedCellsCount === 0}
+              onClick={() => onBulkEdit()}>
+              <VscodeIcon name="edit" action-icon />
+              一括編集 ({selectedCellsCount})
+            </VscodeButton>
+          )}
+          {onClearSelection && (
+            <VscodeButton
+              tabIndex={0}
+              aria-label="clear selection"
+              aria-description="Clear cell selection"
+              secondary
+              disabled={selectedCellsCount === 0}
+              onClick={() => onClearSelection()}>
+              <VscodeIcon name="close" action-icon />
+            </VscodeButton>
+          )}
+          {onCopy && (
+            <VscodeButton
+              tabIndex={0}
+              aria-label="copy"
+              aria-description={`Copy ${selectedCellsCount} cells`}
+              secondary
+              disabled={selectedCellsCount === 0}
+              onClick={() => onCopy()}>
+              <VscodeIcon name="copy" action-icon />
+              コピー ({selectedCellsCount}セル)
+            </VscodeButton>
+          )}
+          {onPaste && (
+            <VscodeButton
+              tabIndex={0}
+              aria-label="paste"
+              aria-description="Paste cells"
+              secondary
+              disabled={selectedCellsCount === 0}
+              onClick={() => onPaste()}>
+              <VscodeIcon name="clippy" action-icon />
+              ペースト
             </VscodeButton>
           )}
           <VscodeButton

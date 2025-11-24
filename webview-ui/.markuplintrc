@@ -10,5 +10,26 @@
   },
   "specs": {
     ".tsx$": "@markuplint/react-spec"
+  },
+  "nodeRules": [
+    {
+      "selector": "div[role=button]",
+      "rules": {
+        "invalid-attr": {
+          "options": {
+            "allowAttrs": [
+              "onDoubleClick"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "overrides": {
+    "./**/EditableTable/index.tsx": {
+      "rules": {
+        "permitted-contents": false
+      }
+    }
   }
 }

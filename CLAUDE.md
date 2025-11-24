@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 必ず日本語で回答してください。
 - ユーザーからの指示や仕様に疑問などがあれば作業を中断し、質問すること。
-- コードエクセレンスの原則に基づき、テスト駆動開発を必須で実施すること。
+- Robert C. Martinが提唱する原則に従ってコードを作成してください。
 - TDDおよびテスト駆動開発で実装する際は、すべてt-wadaの推奨する進め方に従ってください。
 - リファクタリングはMartin Fowloerが推奨する進め方に従ってください。
 - セキュリティルールに従うこと。
 - 実装完了時に必ず「npm run check-types」と「npm run lint」を実行し、エラーや警告がない状態としてください。
+- エラーや警告が発生する場合は、必ず修正してください。
+- Before doing any UI, frontend or React development, ALWAYS call the storybook MCP server to get further instructions.
 
 ## Project Structure
 
@@ -19,7 +21,7 @@ This is a VSCode extension that provides a custom CSV editor with a React-based 
 
 Key components:
 - `CSVEditorProvider` implements VSCode's CustomTextEditorProvider interface
-- React app uses `react-data-grid` for the editable table interface
+- React app uses `tanstack/react-table` for the editable table interface
 - Communication between extension and webview via postMessage API
 - Uses Zustand for state management and custom hooks for data operations
 
@@ -93,7 +95,7 @@ npm run lint
 The extension registers a custom editor for CSV files that:
 1. Creates a webview panel with React UI
 2. Parses CSV content using `csv-parse` library  
-3. Renders editable table using `react-data-grid`
+3. Renders editable table using `tanstack/react-table`
 4. Supports features like sorting, searching, row/column operations, drag & drop
 5. Updates the underlying VSCode document when changes are made
 6. Handles theme changes and VS Code integration

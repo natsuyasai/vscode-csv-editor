@@ -3,6 +3,7 @@
   align-items: center;
   width: 100%;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .apply {
@@ -34,4 +35,5 @@
 .buttons {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }

@@ -1,5 +1,6 @@
 import { VscodeContextMenu } from "@vscode-elements/react-elements";
 import { FC, Ref } from "react";
+import styles from "./BaseContextMenu.module.scss";
 
 export interface ContextMenuItem {
   label: string;
@@ -32,16 +33,16 @@ export const BaseContextMenu: FC<BaseContextMenuProps> = ({
   return (
     <VscodeContextMenu
       ref={menuRef as never}
-      show={isContextMenuOpen}
-      className={className}
+      show={true}
+      className={`${styles.contextMenu} ${className || ""}`}
       data={data}
       onVscContextMenuSelect={(item) => {
         onSelect(item.detail.value);
         onClose();
       }}
       style={{
-        top: contextMenuProps.top,
-        left: contextMenuProps.left,
+        top: `${contextMenuProps.top}px`,
+        left: `${contextMenuProps.left}px`,
       }}
     />
   );
