@@ -475,6 +475,14 @@ export const EditableTable: FC<EditableTableProps> = ({
       else if (e.key === "Escape" && searchOpen) {
         e.preventDefault();
         handleCloseSearch();
+        // Ctrl+C: コピー
+      } else if (e.ctrlKey && e.key === "c") {
+        e.preventDefault();
+        handleCopy().catch(() => {});
+        // Ctrl+V: ペースト
+      } else if (e.ctrlKey && e.key === "v") {
+        e.preventDefault();
+        handlePaste().catch(() => {});
       }
     };
 
@@ -482,7 +490,7 @@ export const EditableTable: FC<EditableTableProps> = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [undo, redo, searchOpen, openSearch, handleCloseSearch]);
+  }, [undo, redo, searchOpen, openSearch, handleCloseSearch, handleCopy, handlePaste]);
 
   // オートフィルのmouseupイベント
   useEffect(() => {
