@@ -39,6 +39,8 @@ declare module "@tanstack/react-table" {
     handleFillStart?: (row: number, col: number) => void;
     handleFillMove?: (row: number, col: number) => void;
     handleFillEnd?: () => void;
+    // 行の高さ取得
+    getRowHeight?: (rowIndex: number) => number;
   }
 }
 
@@ -75,6 +77,9 @@ export interface RowIndexCellProps extends CellContext<RowData, unknown> {
   onRowReorder?: (sourceIndex: number, targetIndex: number) => void;
   onContextMenu?: (e: React.MouseEvent, rowIndex: number) => void;
   rowIndex: number;
+  onRowResizeStart?: (rowIndex: number) => void;
+  onRowResize?: (rowIndex: number, deltaY: number) => void;
+  onRowResizeEnd?: () => void;
 }
 
 /**

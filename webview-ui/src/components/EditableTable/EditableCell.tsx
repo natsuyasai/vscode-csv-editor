@@ -219,6 +219,12 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     | undefined;
   const isFillRange = isInFillRangeFn ? isInFillRangeFn(rowIndex, columnIndex) : false;
 
+  // 行の高さを取得
+  const getRowHeightFn = props.table.options.meta?.getRowHeight as
+    | ((rowIndex: number) => number)
+    | undefined;
+  const rowHeight = getRowHeightFn ? getRowHeightFn(rowIndex) : undefined;
+
   // セルのクラス名を決定
   const cellClassName = `${styles.cell} ${
     isFillRange ? styles.cellFillRange : isSelected ? styles.cellSelected : styles.cellNormal
@@ -235,7 +241,16 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
       onFocus={handleFocus}
       onKeyDown={handleCellKeyDown}
       role="button"
-      tabIndex={columnIndex === -1 ? -1 : 0}>
+      tabIndex={columnIndex === -1 ? -1 : 0}
+      style={
+        rowHeight
+          ? {
+              height: `${rowHeight}px`,
+              minHeight: `${rowHeight}px`,
+              maxHeight: `${rowHeight}px`,
+            }
+          : undefined
+      }>
       {value}
       {/* フィルハンドル（選択中のセルにのみ表示） */}
       {isSelected && !isEditing && (

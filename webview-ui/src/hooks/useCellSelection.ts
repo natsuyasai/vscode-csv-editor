@@ -142,6 +142,19 @@ export const useCellSelection = <TData extends Record<string, unknown>>(
       return;
     }
 
+    // TSV形式のセル値をエスケープするヘルパー関数
+    const escapeTsvCell = (value: string): string => {
+      // 値が空の場合はそのまま返す
+      if (!value) return value;
+
+      // 改行、タブ、ダブルクォートが含まれている場合はダブルクォートで囲む
+      if (value.includes("\n") || value.includes("\t") || value.includes('"')) {
+        // ダブルクォートを2つ重ねてエスケープ
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+
     // 選択されたセルを行と列でグループ化
     const cellsArray = Array.from(selectedCells).map((cellKey) => {
       const [rowStr, colStr] = cellKey.split("-");
@@ -169,7 +182,7 @@ export const useCellSelection = <TData extends Record<string, unknown>>(
       for (let col = minCol; col <= maxCol; col++) {
         const columnId = `col${col}`;
         const value = (data[row]?.[columnId] as string) ?? "";
-        cols.push(value);
+        cols.push(escapeTsvCell(value));
       }
       rows.push(cols.join("\t"));
     }
@@ -190,9 +203,86 @@ export const useCellSelection = <TData extends Record<string, unknown>>(
       return;
     }
 
+    // TSV形式の文字列を解析するヘルパー関数
+    const parseTsv = (text: string): string[][] => {
+      const rows: string[][] = [];
+      let currentRow: string[] = [];
+      let currentCell = "";
+      let inQuotes = false;
+      let i = 0;
+
+      while (i < text.length) {
+        const char = text[i];
+        const nextChar = text[i + 1];
+
+        if (inQuotes) {
+          if (char === '"') {
+            if (nextChar === '"') {
+              // エスケープされたダブルクォート
+              currentCell += '"';
+              i += 2;
+              continue;
+            } else {
+              // クォートの終了
+              inQuotes = false;
+              i++;
+              continue;
+            }
+          } else {
+            // クォート内の文字
+            currentCell += char;
+            i++;
+            continue;
+          }
+        } else {
+          if (char === '"') {
+            // クォートの開始
+            inQuotes = true;
+            i++;
+            continue;
+          } else if (char === "\t") {
+            // セルの区切り
+            currentRow.push(currentCell);
+            currentCell = "";
+            i++;
+            continue;
+          } else if (char === "\n") {
+            // 行の区切り
+            currentRow.push(currentCell);
+            rows.push(currentRow);
+            currentRow = [];
+            currentCell = "";
+            i++;
+            continue;
+          } else if (char === "\r" && nextChar === "\n") {
+            // Windows形式の改行
+            currentRow.push(currentCell);
+            rows.push(currentRow);
+            currentRow = [];
+            currentCell = "";
+            i += 2;
+            continue;
+          } else {
+            // 通常の文字
+            currentCell += char;
+            i++;
+            continue;
+          }
+        }
+      }
+
+      // 最後のセルと行を追加
+      if (currentCell || currentRow.length > 0) {
+        currentRow.push(currentCell);
+        rows.push(currentRow);
+      }
+
+      return rows;
+    };
+
     try {
       const text = await navigator.clipboard.readText();
-      const rows = text.split("\n").map((row) => row.split("\t"));
+      const rows = parseTsv(text);
 
       // 選択範囲の左上のセルを取得
       const cellsArray = Array.from(selectedCells).map((cellKey) => {

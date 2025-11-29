@@ -1,5 +1,5 @@
 import { flexRender, Header as TanStackHeader } from "@tanstack/react-table";
-import { FC } from "react";
+import { FC, useCallback, useRef, useState } from "react";
 import { DraggableHeaderCell } from "./DraggableHeaderCell";
 import tableStyles from "./index.module.scss";
 import { RowData } from "./types";
@@ -21,6 +21,9 @@ interface HeaderCellProps {
   setFocusedColumnIndex: (index: number | null) => void;
   openColumnContextMenu: (columnIndex: number, top: number, left: number) => void;
   handleColumnReorder: (sourceIndex: number, targetIndex: number) => void;
+  onColumnResizeStart?: (columnIndex: number) => void;
+  onColumnResize?: (columnIndex: number, deltaX: number) => void;
+  onColumnResizeEnd?: () => void;
 }
 
 /**
@@ -32,6 +35,7 @@ interface HeaderCellProps {
  * - ソート機能
  * - 列の並び替え
  * - コンテキストメニュー
+ * - 列幅のリサイズ
  */
 export const HeaderCell: FC<HeaderCellProps> = ({
   header,
@@ -50,7 +54,12 @@ export const HeaderCell: FC<HeaderCellProps> = ({
   setFocusedColumnIndex,
   openColumnContextMenu,
   handleColumnReorder,
+  onColumnResizeStart,
+  onColumnResize,
+  onColumnResizeEnd,
 }) => {
+  const [isResizeHover, setIsResizeHover] = useState(false);
+  const resizeStartX = useRef<number>(0);
   const columnIndex = header.column.id === rowIdxKey ? null : headerIndex - 1;
   const isSelected = columnIndex !== null && selectedColumnIndex === columnIndex;
   const isFocused = columnIndex !== null && focusedColumnIndex === columnIndex;
@@ -133,6 +142,43 @@ export const HeaderCell: FC<HeaderCellProps> = ({
     }
   };
 
+  // リサイズハンドラーのマウスダウン
+  const handleResizeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (columnIndex === null) return;
+
+      // ドラッグ操作を妨げないよう、イベントの伝播を停止
+      e.preventDefault();
+      e.stopPropagation();
+
+      resizeStartX.current = e.clientX;
+      onColumnResizeStart?.(columnIndex);
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        moveEvent.preventDefault();
+        // 累積的なdeltaXを計算（開始位置からの差分）
+        const deltaX = moveEvent.clientX - resizeStartX.current;
+        onColumnResize?.(columnIndex, deltaX);
+      };
+
+      const handleMouseUp = () => {
+        onColumnResizeEnd?.();
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [columnIndex, onColumnResizeStart, onColumnResize, onColumnResizeEnd]
+  );
+
+  // リサイズハンドラーのクリックイベントを停止して、セル選択を妨げないようにする
+  const handleResizeClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
   return (
     <th
       key={header.id}
@@ -152,6 +198,7 @@ export const HeaderCell: FC<HeaderCellProps> = ({
         color: isSelected ? "var(--vscode-list-activeSelectionForeground)" : "inherit",
         cursor: header.column.getCanSort() ? "pointer" : "default",
         outline: isFocused ? "2px solid var(--vscode-focusBorder)" : "none",
+        position: "relative",
       }}>
       {header.isPlaceholder ? null : columnIndex !== null ? (
         isEditing ? (
@@ -169,22 +216,33 @@ export const HeaderCell: FC<HeaderCellProps> = ({
             className={tableStyles.headerEditTextarea}
           />
         ) : (
-          <DraggableHeaderCell
-            columnIndex={columnIndex}
-            isSelected={isSelected}
-            onColumnReorder={handleColumnReorder}
-            onColumnSelect={setSelectedColumnIndex}
-            onFocusChange={handleHeaderFocusChange}
-            onDoubleClick={handleHeaderDoubleClick}
-            onSort={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}>
-            <div className={tableStyles.headerContent}>
-              {flexRender(header.column.columnDef.header, header.getContext())}
-              {{
-                asc: " 🔼",
-                desc: " 🔽",
-              }[header.column.getIsSorted() as string] ?? null}
-            </div>
-          </DraggableHeaderCell>
+          <>
+            <DraggableHeaderCell
+              columnIndex={columnIndex}
+              isSelected={isSelected}
+              onColumnReorder={handleColumnReorder}
+              onColumnSelect={setSelectedColumnIndex}
+              onFocusChange={handleHeaderFocusChange}
+              onDoubleClick={handleHeaderDoubleClick}
+              onSort={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}>
+              <div className={tableStyles.headerContent}>
+                {flexRender(header.column.columnDef.header, header.getContext())}
+                {{
+                  asc: " 🔼",
+                  desc: " 🔽",
+                }[header.column.getIsSorted() as string] ?? null}
+              </div>
+            </DraggableHeaderCell>
+            <button
+              type="button"
+              className={`${tableStyles.headerResizeHandle} ${isResizeHover ? tableStyles.headerResizeHandleHover : ""}`}
+              onMouseDown={handleResizeMouseDown}
+              onClick={handleResizeClick}
+              onMouseEnter={() => setIsResizeHover(true)}
+              onMouseLeave={() => setIsResizeHover(false)}
+              aria-label="列の幅を調整"
+            />
+          </>
         )
       ) : (
         <div className={tableStyles.headerContent}>

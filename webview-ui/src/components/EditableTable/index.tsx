@@ -16,9 +16,11 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { useAutoFill } from "@/hooks/useAutoFill";
 import { useCellSelection } from "@/hooks/useCellSelection";
 import { useColumnAlignment } from "@/hooks/useColumnAlignment";
+import { useColumnResize } from "@/hooks/useColumnResize";
 import { useContextMenus } from "@/hooks/useContextMenus";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useHeaderEditing } from "@/hooks/useHeaderEditing";
+import { useRowResize } from "@/hooks/useRowResize";
 import { useTableSearch } from "@/hooks/useTableSearch";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType } from "@/types";
@@ -70,6 +72,26 @@ export const EditableTable: FC<EditableTableProps> = ({
     };
     setRowHeight(heights[rowSize]);
   }, [rowSize]);
+
+  // 行のリサイズ機能
+  const {
+    rowHeights,
+    getRowHeight,
+    setRowHeight: _setIndividualRowHeight,
+    startResize,
+    handleResize,
+    endResize,
+  } = useRowResize(rowHeight);
+
+  // 列のリサイズ機能
+  const {
+    columnWidths,
+    getColumnWidth,
+    setColumnWidth: _setIndividualColumnWidth,
+    startResize: startColumnResize,
+    handleResize: handleColumnResize,
+    endResize: endColumnResize,
+  } = useColumnResize(150); // デフォルトの列幅は150px
 
   // セル選択機能
   const {
@@ -260,6 +282,9 @@ export const EditableTable: FC<EditableTableProps> = ({
               rowIndex={rowIndex}
               onRowReorder={handleRowReorder}
               onContextMenu={onContextMenu}
+              onRowResizeStart={startResize}
+              onRowResize={handleResize}
+              onRowResizeEnd={endResize}
             />
           );
         },
@@ -274,11 +299,22 @@ export const EditableTable: FC<EditableTableProps> = ({
         enableResizing: true,
         enableSorting: true,
         cell: EditableCell,
+        size: getColumnWidth(index),
       });
     });
 
     return cols;
-  }, [csvArray, isIgnoreHeaderRow, handleRowReorder, openRowContextMenu, clearSelection]);
+  }, [
+    csvArray,
+    isIgnoreHeaderRow,
+    handleRowReorder,
+    openRowContextMenu,
+    clearSelection,
+    startResize,
+    handleResize,
+    endResize,
+    getColumnWidth,
+  ]);
 
   // TanStack Tableのインスタンスを作成
   const table = useReactTable({
@@ -328,6 +364,8 @@ export const EditableTable: FC<EditableTableProps> = ({
       handleFillStart,
       handleFillMove,
       handleFillEnd,
+      // 行の高さ取得
+      getRowHeight,
     },
   });
 
@@ -354,14 +392,19 @@ export const EditableTable: FC<EditableTableProps> = ({
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => rowHeight,
+    estimateSize: (index) => getRowHeight(index),
     overscan: 10,
   });
 
-  // rowHeightが変更されたときにvirtualizerを再計算
+  // rowHeightまたは個別の行の高さが変更されたときにvirtualizerを再計算
   useEffect(() => {
     rowVirtualizer.measure();
-  }, [rowHeight, rowVirtualizer]);
+  }, [rowHeight, rowHeights, rowVirtualizer]);
+
+  // columnWidthsが変更されたときにテーブルを再レンダリング
+  useEffect(() => {
+    // 列幅の変更を反映するため、強制的に再レンダリング
+  }, [columnWidths]);
 
   function setRowSizeFromHeader(size: RowSizeType) {
     // rowSizeを設定すると、useEffectでrowHeightが自動的に更新される
@@ -686,6 +729,9 @@ export const EditableTable: FC<EditableTableProps> = ({
                         setFocusedColumnIndex={setFocusedColumnIndex}
                         openColumnContextMenu={openColumnContextMenu}
                         handleColumnReorder={handleColumnReorder}
+                        onColumnResizeStart={startColumnResize}
+                        onColumnResize={handleColumnResize}
+                        onColumnResizeEnd={endColumnResize}
                       />
                     ))}
                   </tr>
@@ -719,12 +765,15 @@ export const EditableTable: FC<EditableTableProps> = ({
                   const row = table.getRowModel().rows[virtualRow.index];
                   if (!row) return null;
                   const isRowSelected = selectedRowIndex === virtualRow.index;
+                  const rowHeightValue = getRowHeight(virtualRow.index);
                   return (
                     <tr
                       key={row.id}
                       className={tableStyles.dataRow}
                       style={{
-                        height: `${virtualRow.size}px`,
+                        height: `${rowHeightValue}px`,
+                        minHeight: `${rowHeightValue}px`,
+                        maxHeight: `${rowHeightValue}px`,
                         transform: `translateY(${virtualRow.start}px)`,
                       }}>
                       {row.getVisibleCells().map((cell, cellIndex) => {

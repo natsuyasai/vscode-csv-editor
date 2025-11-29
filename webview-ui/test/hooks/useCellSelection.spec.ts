@@ -202,4 +202,171 @@ describe("useCellSelection", () => {
 
     expect(mockReadText).not.toHaveBeenCalled();
   });
+
+  it("改行を含むセルをコピー＆ペーストできる", async () => {
+    // 改行を含むデータを作成
+    const dataWithNewlines = [
+      { col0: "A1\nA2", col1: "B1", col2: "C1" },
+      { col0: "A3", col1: "B2\nB3", col2: "C2" },
+    ];
+
+    const mockWriteText = vi.fn().mockResolvedValue(undefined);
+    const mockReadText = vi.fn();
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: mockWriteText,
+        readText: mockReadText,
+      },
+    });
+
+    const setData: React.Dispatch<React.SetStateAction<typeof dataWithNewlines>> = vi.fn(
+      (updater: React.SetStateAction<typeof dataWithNewlines>) => {
+        if (typeof updater === "function") {
+          return updater(dataWithNewlines);
+        }
+        return updater;
+      }
+    ) as React.Dispatch<React.SetStateAction<typeof dataWithNewlines>>;
+
+    const { result } = renderHook(() => useCellSelection(dataWithNewlines, setData));
+
+    // セルを選択してコピー（0,0）から（1,1）の範囲
+    act(() => {
+      result.current.handleCellMouseDown(0, 0);
+    });
+
+    act(() => {
+      result.current.handleCellMouseEnter(1, 1);
+    });
+
+    // 4つのセルが選択されているはず（2x2の範囲）
+    expect(result.current.selectedCells.size).toBe(4);
+
+    await act(async () => {
+      await result.current.handleCopy();
+    });
+
+    // エスケープされた形式でコピーされる
+    // 0行目: "A1\nA2"（エスケープ）, B1（通常）
+    // 1行目: A3（通常）, "B2\nB3"（エスケープ）
+    const expectedText = `"A1\nA2"\tB1\nA3\t"B2\nB3"`;
+    expect(mockWriteText).toHaveBeenCalledWith(expectedText);
+
+    // コピーした内容をペーストする準備
+    const copiedText = mockWriteText.mock.calls[0][0] as string;
+    mockReadText.mockResolvedValue(copiedText);
+
+    // 新しいデータセットでペーストをテスト
+    const emptyData = [
+      { col0: "", col1: "", col2: "" },
+      { col0: "", col1: "", col2: "" },
+    ];
+    const emptySetData: React.Dispatch<React.SetStateAction<typeof emptyData>> = vi.fn(
+      (updater: React.SetStateAction<typeof emptyData>) => {
+        if (typeof updater === "function") {
+          return updater(emptyData);
+        }
+        return updater;
+      }
+    ) as React.Dispatch<React.SetStateAction<typeof emptyData>>;
+
+    const { result: pasteResult } = renderHook(() => useCellSelection(emptyData, emptySetData));
+
+    act(() => {
+      pasteResult.current.handleCellMouseDown(0, 0);
+    });
+
+    await act(async () => {
+      await pasteResult.current.handlePaste();
+    });
+
+    // setDataが呼ばれ、正しいデータがペーストされる
+    expect(emptySetData).toHaveBeenCalled();
+    const mockFn = emptySetData as unknown as ReturnType<typeof vi.fn>;
+    const updateFunction = mockFn.mock.calls[0][0] as (
+      old: typeof emptyData
+    ) => typeof emptyData;
+    const updatedData = updateFunction(emptyData);
+
+    expect(updatedData[0].col0).toBe("A1\nA2");
+    expect(updatedData[0].col1).toBe("B1");
+    expect(updatedData[1].col0).toBe("A3");
+    expect(updatedData[1].col1).toBe("B2\nB3");
+  });
+
+  it("タブを含むセルをコピー＆ペーストできる", async () => {
+    const dataWithTabs = [{ col0: "A\tB", col1: "C\tD" }];
+
+    const mockWriteText = vi.fn().mockResolvedValue(undefined);
+    const mockReadText = vi.fn();
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: mockWriteText,
+        readText: mockReadText,
+      },
+    });
+
+    const setData: React.Dispatch<React.SetStateAction<typeof dataWithTabs>> = vi.fn(
+      (updater: React.SetStateAction<typeof dataWithTabs>) => {
+        if (typeof updater === "function") {
+          return updater(dataWithTabs);
+        }
+        return updater;
+      }
+    ) as React.Dispatch<React.SetStateAction<typeof dataWithTabs>>;
+
+    const { result } = renderHook(() => useCellSelection(dataWithTabs, setData));
+
+    act(() => {
+      result.current.handleCellMouseDown(0, 0);
+    });
+
+    act(() => {
+      result.current.handleCellMouseEnter(0, 1);
+    });
+
+    await act(async () => {
+      await result.current.handleCopy();
+    });
+
+    // エスケープされた形式でコピーされる
+    expect(mockWriteText).toHaveBeenCalledWith('"A\tB"\t"C\tD"');
+  });
+
+  it("ダブルクォートを含むセルをコピー＆ペーストできる", async () => {
+    const dataWithQuotes = [{ col0: 'A"B', col1: 'C"D"E' }];
+
+    const mockWriteText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: mockWriteText,
+      },
+    });
+
+    const setData: React.Dispatch<React.SetStateAction<typeof dataWithQuotes>> = vi.fn(
+      (updater: React.SetStateAction<typeof dataWithQuotes>) => {
+        if (typeof updater === "function") {
+          return updater(dataWithQuotes);
+        }
+        return updater;
+      }
+    ) as React.Dispatch<React.SetStateAction<typeof dataWithQuotes>>;
+
+    const { result } = renderHook(() => useCellSelection(dataWithQuotes, setData));
+
+    act(() => {
+      result.current.handleCellMouseDown(0, 0);
+    });
+
+    act(() => {
+      result.current.handleCellMouseEnter(0, 1);
+    });
+
+    await act(async () => {
+      await result.current.handleCopy();
+    });
+
+    // ダブルクォートがエスケープされた形式でコピーされる
+    expect(mockWriteText).toHaveBeenCalledWith('"A""B"\t"C""D""E"');
+  });
 });

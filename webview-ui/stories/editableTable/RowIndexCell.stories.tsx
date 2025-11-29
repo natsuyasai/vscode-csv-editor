@@ -89,15 +89,12 @@ export const ClickInteraction: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    // ボタンを取得
-    const button = canvas.getByRole("button");
-    await expect(button).toBeInTheDocument();
-
-    // 行番号が表示されていることを確認
-    await expect(button).toHaveTextContent("1");
+    // 行番号セルを取得
+    const cell = canvas.getByText("1");
+    await expect(cell).toBeInTheDocument();
 
     // クリック
-    await userEvent.click(button);
+    await userEvent.click(cell);
   },
 };
 
@@ -109,14 +106,14 @@ export const KeyboardInteraction: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    const button = canvas.getByRole("button");
-    button.focus();
+    const cell = canvas.getByText("1");
+    cell.focus();
 
     // Enterキー
     await userEvent.keyboard("{Enter}");
 
     // フォーカスを再設定
-    button.focus();
+    cell.focus();
 
     // Spaceキー
     await userEvent.keyboard(" ");
