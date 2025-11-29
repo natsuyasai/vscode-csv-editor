@@ -39,6 +39,8 @@ declare module "@tanstack/react-table" {
     handleFillStart?: (row: number, col: number) => void;
     handleFillMove?: (row: number, col: number) => void;
     handleFillEnd?: () => void;
+    // 行の高さ取得
+    getRowHeight?: (rowIndex: number) => number;
   }
 }
 

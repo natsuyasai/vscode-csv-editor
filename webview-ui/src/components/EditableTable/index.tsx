@@ -351,6 +351,8 @@ export const EditableTable: FC<EditableTableProps> = ({
       handleFillStart,
       handleFillMove,
       handleFillEnd,
+      // 行の高さ取得
+      getRowHeight,
     },
   });
 
@@ -742,12 +744,15 @@ export const EditableTable: FC<EditableTableProps> = ({
                   const row = table.getRowModel().rows[virtualRow.index];
                   if (!row) return null;
                   const isRowSelected = selectedRowIndex === virtualRow.index;
+                  const rowHeightValue = getRowHeight(virtualRow.index);
                   return (
                     <tr
                       key={row.id}
                       className={tableStyles.dataRow}
                       style={{
-                        height: `${virtualRow.size}px`,
+                        height: `${rowHeightValue}px`,
+                        minHeight: `${rowHeightValue}px`,
+                        maxHeight: `${rowHeightValue}px`,
                         transform: `translateY(${virtualRow.start}px)`,
                       }}>
                       {row.getVisibleCells().map((cell, cellIndex) => {
