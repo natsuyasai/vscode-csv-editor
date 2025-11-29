@@ -120,3 +120,38 @@
   white-space: pre-wrap; // 改行を表示できるようにする
   word-wrap: break-word;
 }
+
+// ヘッダーリサイズハンドル
+.headerResizeHandle {
+  position: absolute;
+  right: -2px; // 中心を右端に配置
+  top: 0;
+  bottom: 0;
+  width: 6px; // 操作しやすいよう少し大きめに
+  cursor: col-resize;
+  z-index: 10;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  pointer-events: auto;
+
+  &:hover {
+    background-color: var(--vscode-focusBorder);
+  }
+
+  &:focus-visible {
+    background-color: var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: -2px;
+  }
+
+  &:active {
+    background-color: var(--vscode-focusBorder);
+  }
+}
+
+.headerResizeHandleHover {
+  background-color: var(--vscode-focusBorder);
+}

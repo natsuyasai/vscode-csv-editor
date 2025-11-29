@@ -16,6 +16,7 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { useAutoFill } from "@/hooks/useAutoFill";
 import { useCellSelection } from "@/hooks/useCellSelection";
 import { useColumnAlignment } from "@/hooks/useColumnAlignment";
+import { useColumnResize } from "@/hooks/useColumnResize";
 import { useContextMenus } from "@/hooks/useContextMenus";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useHeaderEditing } from "@/hooks/useHeaderEditing";
@@ -81,6 +82,16 @@ export const EditableTable: FC<EditableTableProps> = ({
     handleResize,
     endResize,
   } = useRowResize(rowHeight);
+
+  // 列のリサイズ機能
+  const {
+    columnWidths,
+    getColumnWidth,
+    setColumnWidth: _setIndividualColumnWidth,
+    startResize: startColumnResize,
+    handleResize: handleColumnResize,
+    endResize: endColumnResize,
+  } = useColumnResize(150); // デフォルトの列幅は150px
 
   // セル選択機能
   const {
@@ -288,6 +299,7 @@ export const EditableTable: FC<EditableTableProps> = ({
         enableResizing: true,
         enableSorting: true,
         cell: EditableCell,
+        size: getColumnWidth(index),
       });
     });
 
@@ -301,6 +313,7 @@ export const EditableTable: FC<EditableTableProps> = ({
     startResize,
     handleResize,
     endResize,
+    getColumnWidth,
   ]);
 
   // TanStack Tableのインスタンスを作成
@@ -387,6 +400,11 @@ export const EditableTable: FC<EditableTableProps> = ({
   useEffect(() => {
     rowVirtualizer.measure();
   }, [rowHeight, rowHeights, rowVirtualizer]);
+
+  // columnWidthsが変更されたときにテーブルを再レンダリング
+  useEffect(() => {
+    // 列幅の変更を反映するため、強制的に再レンダリング
+  }, [columnWidths]);
 
   function setRowSizeFromHeader(size: RowSizeType) {
     // rowSizeを設定すると、useEffectでrowHeightが自動的に更新される
@@ -711,6 +729,9 @@ export const EditableTable: FC<EditableTableProps> = ({
                         setFocusedColumnIndex={setFocusedColumnIndex}
                         openColumnContextMenu={openColumnContextMenu}
                         handleColumnReorder={handleColumnReorder}
+                        onColumnResizeStart={startColumnResize}
+                        onColumnResize={handleColumnResize}
+                        onColumnResizeEnd={endColumnResize}
                       />
                     ))}
                   </tr>
