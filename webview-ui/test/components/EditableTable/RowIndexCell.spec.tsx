@@ -42,7 +42,7 @@ describe("RowIndexCell", () => {
 
     render(<RowIndexCellWithDnd {...props} />);
 
-    const cell = screen.getByRole("button");
+    const cell = screen.getByText("1");
     await user.click(cell);
 
     expect(mockOnSelect).toHaveBeenCalledTimes(1);
@@ -55,7 +55,7 @@ describe("RowIndexCell", () => {
 
     render(<RowIndexCellWithDnd {...props} />);
 
-    const cell = screen.getByRole("button");
+    const cell = screen.getByText("1");
     cell.focus();
     await user.keyboard("{Enter}");
 
@@ -69,7 +69,7 @@ describe("RowIndexCell", () => {
 
     render(<RowIndexCellWithDnd {...props} />);
 
-    const cell = screen.getByRole("button");
+    const cell = screen.getByText("1");
     cell.focus();
     await user.keyboard(" ");
 
@@ -86,7 +86,7 @@ describe("RowIndexCell", () => {
 
     render(<RowIndexCellWithDnd {...props} />);
 
-    const cell = screen.getByRole("button");
+    const cell = screen.getByText("1");
     await user.pointer({ keys: "[MouseRight]", target: cell });
 
     expect(mockOnContextMenu).toHaveBeenCalledTimes(1);
@@ -97,7 +97,7 @@ describe("RowIndexCell", () => {
     const props = createMockProps({ isSelected: true });
     render(<RowIndexCellWithDnd {...props} />);
 
-    const cell = screen.getByRole("button");
+    const cell = screen.getByText("1");
     // スタイルは実装の詳細なので、要素の存在のみ確認
     expect(cell).toBeInTheDocument();
   });
@@ -106,7 +106,7 @@ describe("RowIndexCell", () => {
     const props = createMockProps({ isSelected: false });
     render(<RowIndexCellWithDnd {...props} />);
 
-    const cell = screen.getByRole("button");
+    const cell = screen.getByText("1");
     expect(cell).toBeInTheDocument();
   });
 
@@ -114,7 +114,7 @@ describe("RowIndexCell", () => {
     const props = createMockProps();
     render(<RowIndexCellWithDnd {...props} />);
 
-    const cell = screen.getByRole("button");
+    const cell = screen.getByText("1");
     expect(cell).toBeInTheDocument();
   });
 
@@ -122,7 +122,7 @@ describe("RowIndexCell", () => {
     const props = createMockProps();
     render(<RowIndexCellWithDnd {...props} />);
 
-    const cell = screen.getByRole("button");
+    const cell = screen.getByText("1");
     expect(cell).toHaveAttribute("tabIndex", "-1");
   });
 });
