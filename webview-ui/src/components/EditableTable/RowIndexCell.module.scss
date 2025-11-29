@@ -1,3 +1,10 @@
+// 行番号セルのコンテナ
+.rowIndexCellContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 // 行番号セル
 .rowIndexCell {
   width: 100%;
@@ -39,4 +46,41 @@
 
 .cursorGrabbing {
   cursor: grabbing;
+}
+
+// リサイズハンドラー
+.resizeHandle {
+  position: absolute;
+  bottom: -2px; // 中心を下端に配置
+  left: 0;
+  right: 0;
+  height: 6px; // 操作しやすいよう少し大きめに
+  cursor: row-resize;
+  z-index: 10;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  // ドラッグ操作時にリサイズハンドラーが反応しないようにする
+  // ホバー時のみポインターイベントを受け付ける
+  pointer-events: auto;
+
+  &:hover {
+    background-color: var(--vscode-focusBorder);
+  }
+
+  &:focus-visible {
+    background-color: var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: -2px;
+  }
+
+  &:active {
+    background-color: var(--vscode-focusBorder);
+  }
+}
+
+.resizeHandleHover {
+  background-color: var(--vscode-focusBorder);
 }

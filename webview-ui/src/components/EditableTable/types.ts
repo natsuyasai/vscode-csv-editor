@@ -75,6 +75,9 @@ export interface RowIndexCellProps extends CellContext<RowData, unknown> {
   onRowReorder?: (sourceIndex: number, targetIndex: number) => void;
   onContextMenu?: (e: React.MouseEvent, rowIndex: number) => void;
   rowIndex: number;
+  onRowResizeStart?: (rowIndex: number) => void;
+  onRowResize?: (rowIndex: number, deltaY: number) => void;
+  onRowResizeEnd?: () => void;
 }
 
 /**

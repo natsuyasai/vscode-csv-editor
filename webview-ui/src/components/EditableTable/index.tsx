@@ -19,6 +19,7 @@ import { useColumnAlignment } from "@/hooks/useColumnAlignment";
 import { useContextMenus } from "@/hooks/useContextMenus";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useHeaderEditing } from "@/hooks/useHeaderEditing";
+import { useRowResize } from "@/hooks/useRowResize";
 import { useTableSearch } from "@/hooks/useTableSearch";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 import { ROW_ID_KEY, ROW_IDX_KEY, RowSizeType } from "@/types";
@@ -70,6 +71,16 @@ export const EditableTable: FC<EditableTableProps> = ({
     };
     setRowHeight(heights[rowSize]);
   }, [rowSize]);
+
+  // 行のリサイズ機能
+  const {
+    rowHeights,
+    getRowHeight,
+    setRowHeight: _setIndividualRowHeight,
+    startResize,
+    handleResize,
+    endResize,
+  } = useRowResize(rowHeight);
 
   // セル選択機能
   const {
@@ -260,6 +271,9 @@ export const EditableTable: FC<EditableTableProps> = ({
               rowIndex={rowIndex}
               onRowReorder={handleRowReorder}
               onContextMenu={onContextMenu}
+              onRowResizeStart={startResize}
+              onRowResize={handleResize}
+              onRowResizeEnd={endResize}
             />
           );
         },
@@ -278,7 +292,16 @@ export const EditableTable: FC<EditableTableProps> = ({
     });
 
     return cols;
-  }, [csvArray, isIgnoreHeaderRow, handleRowReorder, openRowContextMenu, clearSelection]);
+  }, [
+    csvArray,
+    isIgnoreHeaderRow,
+    handleRowReorder,
+    openRowContextMenu,
+    clearSelection,
+    startResize,
+    handleResize,
+    endResize,
+  ]);
 
   // TanStack Tableのインスタンスを作成
   const table = useReactTable({
@@ -354,14 +377,14 @@ export const EditableTable: FC<EditableTableProps> = ({
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => rowHeight,
+    estimateSize: (index) => getRowHeight(index),
     overscan: 10,
   });
 
-  // rowHeightが変更されたときにvirtualizerを再計算
+  // rowHeightまたは個別の行の高さが変更されたときにvirtualizerを再計算
   useEffect(() => {
     rowVirtualizer.measure();
-  }, [rowHeight, rowVirtualizer]);
+  }, [rowHeight, rowHeights, rowVirtualizer]);
 
   function setRowSizeFromHeader(size: RowSizeType) {
     // rowSizeを設定すると、useEffectでrowHeightが自動的に更新される
