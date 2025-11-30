@@ -91,7 +91,8 @@ export const Header: FC<Props> = ({
               const target = e.target as HTMLInputElement;
               onUpdateIgnoreHeaderRow(target.checked);
             }
-          }}></VscodeCheckbox>
+          }}
+        ></VscodeCheckbox>
         <div className={styles.rowSize}>
           <VscodeLabel>Row size :</VscodeLabel>
           <VscodeSingleSelect
@@ -103,7 +104,8 @@ export const Header: FC<Props> = ({
                 const target = e.target as HTMLSelectElement;
                 onUpdateRowSize(target.value as RowSizeType);
               }
-            }}>
+            }}
+          >
             <VscodeOption aria-label="small" value="small" selected={rowSize === "small"}>
               small
             </VscodeOption>
@@ -116,7 +118,8 @@ export const Header: FC<Props> = ({
             <VscodeOption
               aria-label="extra large"
               value="extra large"
-              selected={rowSize === "extra large"}>
+              selected={rowSize === "extra large"}
+            >
               extra large
             </VscodeOption>
           </VscodeSingleSelect>
@@ -127,7 +130,8 @@ export const Header: FC<Props> = ({
             aria-label="undo"
             secondary
             disabled={!isEnabledUndo}
-            onClick={() => onUndo()}>
+            onClick={() => onUndo()}
+          >
             <VscodeIcon name="discard" action-icon />
           </VscodeButton>
           <VscodeButton
@@ -135,7 +139,8 @@ export const Header: FC<Props> = ({
             aria-label="redo"
             secondary
             disabled={!isEnabledRedo}
-            onClick={() => onRedo()}>
+            onClick={() => onRedo()}
+          >
             <VscodeIcon name="redo" action-icon />
           </VscodeButton>
           <VscodeButton
@@ -143,7 +148,8 @@ export const Header: FC<Props> = ({
             aria-label="search"
             aria-description="Search text"
             secondary
-            onClick={() => onSearch()}>
+            onClick={() => onSearch()}
+          >
             <VscodeIcon name="search" action-icon />
           </VscodeButton>
           {onToggleFilters && (
@@ -152,7 +158,8 @@ export const Header: FC<Props> = ({
               aria-label="toggle filters"
               aria-description="Toggle column filters"
               secondary
-              onClick={() => onToggleFilters()}>
+              onClick={() => onToggleFilters()}
+            >
               <VscodeIcon name={showFilters ? "filter-filled" : "filter"} action-icon />
             </VscodeButton>
           )}
@@ -162,7 +169,8 @@ export const Header: FC<Props> = ({
               aria-label="clear filters"
               aria-description="Clear all filters"
               secondary
-              onClick={() => onClearFilters()}>
+              onClick={() => onClearFilters()}
+            >
               <VscodeIcon name="clear-all" action-icon />
             </VscodeButton>
           )}
@@ -172,7 +180,8 @@ export const Header: FC<Props> = ({
               aria-label="insert row"
               aria-description="Insert row"
               secondary
-              onClick={() => onInsertRow()}>
+              onClick={() => onInsertRow()}
+            >
               <VscodeIcon name="add" action-icon />
               行を追加
             </VscodeButton>
@@ -184,7 +193,8 @@ export const Header: FC<Props> = ({
               aria-description="Delete selected row"
               secondary
               disabled={!isRowSelected}
-              onClick={() => onDeleteRow()}>
+              onClick={() => onDeleteRow()}
+            >
               <VscodeIcon name="trash" action-icon />
               行を削除
             </VscodeButton>
@@ -195,7 +205,8 @@ export const Header: FC<Props> = ({
               aria-label="insert column"
               aria-description="Insert column"
               secondary
-              onClick={() => onInsertColumn()}>
+              onClick={() => onInsertColumn()}
+            >
               <VscodeIcon name="add" action-icon />
               列を追加
             </VscodeButton>
@@ -207,7 +218,8 @@ export const Header: FC<Props> = ({
               aria-description="Delete selected column"
               secondary
               disabled={!isColumnSelected}
-              onClick={() => onDeleteColumn()}>
+              onClick={() => onDeleteColumn()}
+            >
               <VscodeIcon name="trash" action-icon />
               列を削除
             </VscodeButton>
@@ -219,7 +231,8 @@ export const Header: FC<Props> = ({
               aria-description={`Bulk edit ${selectedCellsCount} cells`}
               secondary
               disabled={selectedCellsCount === 0}
-              onClick={() => onBulkEdit()}>
+              onClick={() => onBulkEdit()}
+            >
               <VscodeIcon name="edit" action-icon />
               一括編集 ({selectedCellsCount})
             </VscodeButton>
@@ -231,7 +244,8 @@ export const Header: FC<Props> = ({
               aria-description="Clear cell selection"
               secondary
               disabled={selectedCellsCount === 0}
-              onClick={() => onClearSelection()}>
+              onClick={() => onClearSelection()}
+            >
               <VscodeIcon name="close" action-icon />
             </VscodeButton>
           )}
@@ -242,7 +256,8 @@ export const Header: FC<Props> = ({
               aria-description={`Copy ${selectedCellsCount} cells`}
               secondary
               disabled={selectedCellsCount === 0}
-              onClick={() => onCopy()}>
+              onClick={() => onCopy()}
+            >
               <VscodeIcon name="copy" action-icon />
               コピー ({selectedCellsCount}セル)
             </VscodeButton>
@@ -254,7 +269,8 @@ export const Header: FC<Props> = ({
               aria-description="Paste cells"
               secondary
               disabled={selectedCellsCount === 0}
-              onClick={() => onPaste()}>
+              onClick={() => onPaste()}
+            >
               <VscodeIcon name="clippy" action-icon />
               ペースト
             </VscodeButton>
@@ -264,7 +280,8 @@ export const Header: FC<Props> = ({
             aria-label="toggle alignment mode"
             aria-description="Toggle cell alignment mode"
             {...(isAlignmentModeEnabled ? {} : { secondary: true })}
-            onClick={() => setAlignmentModeEnabled(!isAlignmentModeEnabled)}>
+            onClick={() => setAlignmentModeEnabled(!isAlignmentModeEnabled)}
+          >
             <VscodeIcon name="layout" action-icon />
           </VscodeButton>
         </div>
@@ -273,7 +290,8 @@ export const Header: FC<Props> = ({
             tabIndex={0}
             aria-label="save"
             className={styles.applyButton}
-            onClick={(_e) => onClickApply()}>
+            onClick={(_e) => onClickApply()}
+          >
             <VscodeIcon name="save" action-icon />
             Save
           </VscodeButton>

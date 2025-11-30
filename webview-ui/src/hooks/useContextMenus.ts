@@ -43,8 +43,9 @@ export const useContextMenus = (
 
   // 列コンテキストメニュー
   const [isColumnContextMenuOpen, setIsColumnContextMenuOpen] = useState(false);
-  const [columnContextMenuProps, setColumnContextMenuProps] =
-    useState<ContextMenuPosition | null>(null);
+  const [columnContextMenuProps, setColumnContextMenuProps] = useState<ContextMenuPosition | null>(
+    null
+  );
   const columnContextMenuRef = useRef<HTMLElement | null>(null);
 
   // 行コンテキストメニューを開く

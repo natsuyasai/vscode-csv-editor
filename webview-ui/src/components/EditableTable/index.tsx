@@ -705,7 +705,8 @@ export const EditableTable: FC<EditableTableProps> = ({
               tableStyles.dataGrid,
               tableStyles.tableContainer,
               `${theme === "light" ? "rdg-light" : "rdg-dark"}`,
-            ].join(" ")}>
+            ].join(" ")}
+          >
             <table className={tableStyles.table}>
               <thead className={tableStyles.thead}>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -747,7 +748,8 @@ export const EditableTable: FC<EditableTableProps> = ({
                             width: `${header.getSize()}px`,
                             minWidth: `${header.getSize()}px`,
                             maxWidth: `${header.getSize()}px`,
-                          }}>
+                          }}
+                        >
                           {header.column.getCanFilter() && header.column.id !== ROW_IDX_KEY ? (
                             <FilterInput column={header.column} />
                           ) : null}
@@ -760,7 +762,8 @@ export const EditableTable: FC<EditableTableProps> = ({
                 className={tableStyles.tbody}
                 style={{
                   height: `${rowVirtualizer.getTotalSize()}px`,
-                }}>
+                }}
+              >
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                   const row = table.getRowModel().rows[virtualRow.index];
                   if (!row) return null;
@@ -775,7 +778,8 @@ export const EditableTable: FC<EditableTableProps> = ({
                         minHeight: `${rowHeightValue}px`,
                         maxHeight: `${rowHeightValue}px`,
                         transform: `translateY(${virtualRow.start}px)`,
-                      }}>
+                      }}
+                    >
                       {row.getVisibleCells().map((cell, cellIndex) => {
                         const colIndex = cellIndex - 1; // 行番号列を除く
                         const alignment = colIndex >= 0 ? getColumnAlignment(colIndex) : undefined;
@@ -803,7 +807,8 @@ export const EditableTable: FC<EditableTableProps> = ({
                               backgroundColor: isRowSelected
                                 ? "var(--vscode-list-activeSelectionBackground)"
                                 : "transparent",
-                            }}>
+                            }}
+                          >
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
                         );

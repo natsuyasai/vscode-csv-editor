@@ -15,7 +15,8 @@ const meta = {
           width: "300px",
           background: "var(--vscode-editor-background)",
           color: "var(--vscode-editor-foreground)",
-        }}>
+        }}
+      >
         <Story />
       </div>
     ),
@@ -168,7 +169,8 @@ export const DarkTheme: Story = {
           background: "#1e1e1e",
           color: "#cccccc",
           border: "1px solid #3c3c3c",
-        }}>
+        }}
+      >
         <Story />
       </div>
     ),

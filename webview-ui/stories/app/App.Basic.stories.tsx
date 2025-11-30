@@ -32,7 +32,7 @@ export const Default: Story = {
     setInitData();
 
     // テーブルが表示されるまで待つ
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // テーブルが存在することを確認
     const tables = canvasElement.querySelectorAll("table");
@@ -54,7 +54,7 @@ export const WithData: Story = {
     setInitData();
 
     // テーブルが表示されるまで待つ
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // Name列のデータを確認
     const nameCell = canvasElement.textContent;

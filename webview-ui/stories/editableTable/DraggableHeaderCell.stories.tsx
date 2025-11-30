@@ -72,7 +72,8 @@ const MultipleHeadersWrapper = () => {
           columnIndex={index}
           onColumnReorder={handleReorder}
           onColumnSelect={setSelectedIndex}
-          isSelected={selectedIndex === index}>
+          isSelected={selectedIndex === index}
+        >
           {col}
         </DraggableHeaderCell>
       ))}
@@ -101,7 +102,8 @@ const ColumnSelectionWrapper = () => {
       columnIndex={0}
       onColumnReorder={() => console.log("Reordered")}
       onColumnSelect={setSelectedIndex}
-      isSelected={selectedIndex === 0}>
+      isSelected={selectedIndex === 0}
+    >
       Click to select
     </DraggableHeaderCell>
   );
@@ -142,7 +144,8 @@ const SortOnClickWrapper = () => {
         columnIndex={0}
         onColumnReorder={() => console.log("Reordered")}
         onSort={() => setSortCalled(true)}
-        isSelected={true}>
+        isSelected={true}
+      >
         Click to sort (500ms delay)
       </DraggableHeaderCell>
       {sortCalled && <div data-testid="sort-indicator">Sorted!</div>}
@@ -190,7 +193,8 @@ const DoubleClickToEditWrapper = () => {
         onColumnReorder={() => console.log("Reordered")}
         onSort={() => setSortCalled(true)}
         onDoubleClick={() => setDoubleClicked(true)}
-        isSelected={true}>
+        isSelected={true}
+      >
         Double-click to edit
       </DraggableHeaderCell>
       {doubleClicked && <div data-testid="double-click-indicator">Double clicked!</div>}
@@ -238,7 +242,8 @@ const KeyboardSortWrapper = () => {
         columnIndex={0}
         onColumnReorder={() => console.log("Reordered")}
         onSort={() => setSortCount((c) => c + 1)}
-        isSelected={true}>
+        isSelected={true}
+      >
         Press Enter or Space to sort
       </DraggableHeaderCell>
       <div data-testid="sort-count">Sort count: {sortCount}</div>
@@ -283,7 +288,8 @@ const FocusChangeWrapper = () => {
         columnIndex={0}
         onColumnReorder={() => console.log("Reordered")}
         onFocusChange={setIsFocused}
-        isSelected={false}>
+        isSelected={false}
+      >
         Focus and blur
       </DraggableHeaderCell>
       <div data-testid="focus-status">Focused: {isFocused ? "Yes" : "No"}</div>

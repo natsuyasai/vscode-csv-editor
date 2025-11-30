@@ -26,7 +26,8 @@ export const FilterCell: FC<Props> = ({ columnKey: _, value, onChange, onClear, 
   return (
     <div
       className={`${styles.filterCell} ${isActive ? styles.active : ""}`}
-      data-filter-cell="true">
+      data-filter-cell="true"
+    >
       <input
         type="text"
         value={value}
@@ -48,7 +49,8 @@ export const FilterCell: FC<Props> = ({ columnKey: _, value, onChange, onClear, 
           }}
           className={styles.clearButton}
           title="Clear Filter"
-          data-filter-button="true">
+          data-filter-button="true"
+        >
           <VscodeIcon tabIndex={-1} name="close" action-icon />
         </button>
       )}

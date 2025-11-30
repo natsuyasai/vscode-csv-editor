@@ -42,11 +42,11 @@ interface Props {
   // Search関連
   isShowSearch: boolean;
   searchProps: SearchProps;
-  
+
   // Row Context Menu関連
   isRowContextMenuOpen: boolean;
   rowContextMenuProps: RowContextMenuComponentProps;
-  
+
   // Header Context Menu関連
   isHeaderContextMenuOpen: boolean;
   headerContextMenuProps: HeaderContextMenuComponentProps;
@@ -62,23 +62,13 @@ export const PortalManager: FC<Props> = ({
 }) => {
   return (
     <>
-      {isShowSearch &&
-        createPortal(
-          <Search {...searchProps} />,
-          document.body
-        )}
-      
+      {isShowSearch && createPortal(<Search {...searchProps} />, document.body)}
+
       {isRowContextMenuOpen &&
-        createPortal(
-          <RowContextMenu {...rowContextMenuProps} />,
-          document.body
-        )}
-      
+        createPortal(<RowContextMenu {...rowContextMenuProps} />, document.body)}
+
       {isHeaderContextMenuOpen &&
-        createPortal(
-          <HeaderCelContextMenu {...headerContextMenuProps} />,
-          document.body
-        )}
+        createPortal(<HeaderCelContextMenu {...headerContextMenuProps} />, document.body)}
     </>
   );
 };

@@ -32,7 +32,7 @@ export const FilterToggle: Story = {
     setInitData();
 
     // テーブルが表示されるまで待つ
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // フィルター関連のボタンが表示されることを確認
     // vscode-button要素を検索
@@ -50,7 +50,7 @@ export const SortingIndicators: Story = {
     setInitData();
 
     // テーブルが表示されるまで待つ
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // テーブルヘッダーが存在することを確認
     const headers = canvasElement.querySelectorAll("th");
@@ -58,7 +58,7 @@ export const SortingIndicators: Story = {
 
     // ヘッダーがクリック可能であることを確認（ソート機能）
     const firstDataHeader = Array.from(headers).find(
-      header => header.textContent && header.textContent.trim() !== ""
+      (header) => header.textContent && header.textContent.trim() !== ""
     );
     await expect(firstDataHeader).toBeTruthy();
   },

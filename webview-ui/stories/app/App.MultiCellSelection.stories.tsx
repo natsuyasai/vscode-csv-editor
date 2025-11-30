@@ -32,14 +32,14 @@ export const MultipleSelection: Story = {
     setInitData();
 
     // テーブルが表示されるまで待つ
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // 複数セル選択のボタンが表示されることを確認
     // vscode-button要素を検索
     const vscodeButtons = canvasElement.querySelectorAll("vscode-button");
-    const buttonTexts = Array.from(vscodeButtons).map(btn => btn.textContent?.trim());
+    const buttonTexts = Array.from(vscodeButtons).map((btn) => btn.textContent?.trim());
 
-    const hasBulkEditButton = buttonTexts.some(text => text?.includes("一括編集"));
+    const hasBulkEditButton = buttonTexts.some((text) => text?.includes("一括編集"));
     await expect(hasBulkEditButton).toBeTruthy();
   },
 };
@@ -50,15 +50,15 @@ export const CopyPasteButtons: Story = {
     setInitData();
 
     // テーブルが表示されるまで待つ
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // コピーとペーストのボタンが表示されることを確認
     // vscode-button要素を検索
     const vscodeButtons = canvasElement.querySelectorAll("vscode-button");
-    const buttonTexts = Array.from(vscodeButtons).map(btn => btn.textContent?.trim());
+    const buttonTexts = Array.from(vscodeButtons).map((btn) => btn.textContent?.trim());
 
-    const hasCopyButton = buttonTexts.some(text => text?.includes("コピー"));
-    const hasPasteButton = buttonTexts.some(text => text?.includes("ペースト"));
+    const hasCopyButton = buttonTexts.some((text) => text?.includes("コピー"));
+    const hasPasteButton = buttonTexts.some((text) => text?.includes("ペースト"));
 
     await expect(hasCopyButton).toBeTruthy();
     await expect(hasPasteButton).toBeTruthy();

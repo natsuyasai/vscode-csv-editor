@@ -103,7 +103,8 @@ export const RowIndexCell: FC<RowIndexCellProps> = (props) => {
           if (e.key === "Enter" || e.key === " ") {
             props.onSelect();
           }
-        }}>
+        }}
+      >
         {props.getValue() as string}
       </div>
       <button

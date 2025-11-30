@@ -18,7 +18,7 @@
 :global(.cell-align-v-top) {
   display: flex !important;
   align-items: flex-start !important;
-  
+
   & > div {
     align-self: flex-start;
   }
@@ -27,7 +27,7 @@
 :global(.cell-align-v-center) {
   display: flex !important;
   align-items: center !important;
-  
+
   & > div {
     align-self: center;
   }
@@ -36,7 +36,7 @@
 :global(.cell-align-v-bottom) {
   display: flex !important;
   align-items: flex-end !important;
-  
+
   & > div {
     align-self: flex-end;
   }
@@ -47,7 +47,7 @@
   display: flex !important;
   justify-content: flex-start !important;
   text-align: left !important;
-  
+
   & > div {
     justify-self: flex-start;
     text-align: left;
@@ -58,7 +58,7 @@
   display: flex !important;
   justify-content: center !important;
   text-align: center !important;
-  
+
   & > div {
     justify-self: center;
     text-align: center;
@@ -69,7 +69,7 @@
   display: flex !important;
   justify-content: flex-end !important;
   text-align: right !important;
-  
+
   & > div {
     justify-self: flex-end;
     text-align: right;
