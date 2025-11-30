@@ -27,10 +27,13 @@ export const useAutoFill = <TData extends Record<string, unknown>>(
   /**
    * フィルハンドルのドラッグ中
    */
-  const handleFillMove = useCallback((row: number, col: number) => {
-    if (!isFilling || !fillStartCell) return;
-    setFillEndCell({ row, col });
-  }, [isFilling, fillStartCell]);
+  const handleFillMove = useCallback(
+    (row: number, col: number) => {
+      if (!isFilling || !fillStartCell) return;
+      setFillEndCell({ row, col });
+    },
+    [isFilling, fillStartCell]
+  );
 
   /**
    * フィルハンドルのドラッグ終了
@@ -145,16 +148,19 @@ export const useAutoFill = <TData extends Record<string, unknown>>(
   /**
    * フィル範囲に含まれるかチェック
    */
-  const isInFillRange = useCallback((row: number, col: number): boolean => {
-    if (!isFilling || !fillStartCell || !fillEndCell) return false;
+  const isInFillRange = useCallback(
+    (row: number, col: number): boolean => {
+      if (!isFilling || !fillStartCell || !fillEndCell) return false;
 
-    const minRow = Math.min(fillStartCell.row, fillEndCell.row);
-    const maxRow = Math.max(fillStartCell.row, fillEndCell.row);
-    const minCol = Math.min(fillStartCell.col, fillEndCell.col);
-    const maxCol = Math.max(fillStartCell.col, fillEndCell.col);
+      const minRow = Math.min(fillStartCell.row, fillEndCell.row);
+      const maxRow = Math.max(fillStartCell.row, fillEndCell.row);
+      const minCol = Math.min(fillStartCell.col, fillEndCell.col);
+      const maxCol = Math.max(fillStartCell.col, fillEndCell.col);
 
-    return row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
-  }, [isFilling, fillStartCell, fillEndCell]);
+      return row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
+    },
+    [isFilling, fillStartCell, fillEndCell]
+  );
 
   return {
     isFilling,

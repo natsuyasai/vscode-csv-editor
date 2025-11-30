@@ -38,10 +38,10 @@ export function useEventListener(
   options: UseEventListenerOptions = {}
 ): void {
   const { enabled = true, capture, passive, once } = options;
-  
+
   // handlerの参照を保持して、依存配列の変更を避ける
   const savedHandler = useRef(handler);
-  
+
   useEffect(() => {
     savedHandler.current = handler;
   }, [handler]);
@@ -52,8 +52,8 @@ export function useEventListener(
     }
 
     // 要素を取得（RefObjectまたは直接の要素）
-    const targetElement = element && 'current' in element ? element.current : element;
-    
+    const targetElement = element && "current" in element ? element.current : element;
+
     if (!targetElement) {
       return;
     }
@@ -64,7 +64,7 @@ export function useEventListener(
     };
 
     // AddEventListenerOptions を構築
-    const listenerOptions: AddEventListenerOptions | boolean | undefined = 
+    const listenerOptions: AddEventListenerOptions | boolean | undefined =
       capture !== undefined || passive !== undefined || once !== undefined
         ? { capture, passive, once }
         : undefined;

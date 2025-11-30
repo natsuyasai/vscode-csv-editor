@@ -2,7 +2,7 @@
   position: relative;
   width: 100%;
   padding: 2px;
-  
+
   &.active {
     .filterInput {
       border-color: var(--vscode-focusBorder);
@@ -22,17 +22,17 @@
   font-size: 11px;
   font-family: var(--vscode-font-family);
   outline: none;
-  
+
   &::placeholder {
     color: var(--vscode-input-placeholderForeground);
   }
-  
+
   &:focus,
   &.focused {
     border-color: var(--vscode-focusBorder);
     box-shadow: 0 0 0 1px var(--vscode-focusBorder);
   }
-  
+
   &:hover {
     border-color: var(--vscode-inputOption-hoverBackground);
   }
@@ -55,11 +55,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:hover {
     background: var(--vscode-button-secondaryHoverBackground);
   }
-  
+
   &:active {
     background: var(--vscode-button-secondaryHoverBackground);
   }

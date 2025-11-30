@@ -12,15 +12,13 @@ describe("useCellSelection", () => {
       { col0: "A2", col1: "B2", col2: "C2" },
       { col0: "A3", col1: "B3", col2: "C3" },
     ];
-    mockSetData = vi.fn(
-      (updater: React.SetStateAction<Array<Record<string, unknown>>>) => {
-        if (typeof updater === "function") {
-          mockData = updater(mockData);
-        } else {
-          mockData = updater;
-        }
+    mockSetData = vi.fn((updater: React.SetStateAction<Array<Record<string, unknown>>>) => {
+      if (typeof updater === "function") {
+        mockData = updater(mockData);
+      } else {
+        mockData = updater;
       }
-    );
+    });
   });
 
   afterEach(() => {
@@ -283,9 +281,7 @@ describe("useCellSelection", () => {
     // setDataが呼ばれ、正しいデータがペーストされる
     expect(emptySetData).toHaveBeenCalled();
     const mockFn = emptySetData as unknown as ReturnType<typeof vi.fn>;
-    const updateFunction = mockFn.mock.calls[0][0] as (
-      old: typeof emptyData
-    ) => typeof emptyData;
+    const updateFunction = mockFn.mock.calls[0][0] as (old: typeof emptyData) => typeof emptyData;
     const updatedData = updateFunction(emptyData);
 
     expect(updatedData[0].col0).toBe("A1\nA2");

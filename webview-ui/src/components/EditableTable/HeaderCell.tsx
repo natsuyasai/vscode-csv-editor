@@ -199,7 +199,8 @@ export const HeaderCell: FC<HeaderCellProps> = ({
         cursor: header.column.getCanSort() ? "pointer" : "default",
         outline: isFocused ? "2px solid var(--vscode-focusBorder)" : "none",
         position: "relative",
-      }}>
+      }}
+    >
       {header.isPlaceholder ? null : columnIndex !== null ? (
         isEditing ? (
           <textarea
@@ -224,7 +225,10 @@ export const HeaderCell: FC<HeaderCellProps> = ({
               onColumnSelect={setSelectedColumnIndex}
               onFocusChange={handleHeaderFocusChange}
               onDoubleClick={handleHeaderDoubleClick}
-              onSort={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}>
+              onSort={
+                header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined
+              }
+            >
               <div className={tableStyles.headerContent}>
                 {flexRender(header.column.columnDef.header, header.getContext())}
                 {{

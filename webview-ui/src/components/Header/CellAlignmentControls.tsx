@@ -57,7 +57,8 @@ export const CellAlignmentControls: FC<Props> = ({
             <VscodeButton
               key={option.value}
               {...(currentAlignment.vertical === option.value ? {} : { secondary: true })}
-              onClick={() => handleVerticalChange(option.value)}>
+              onClick={() => handleVerticalChange(option.value)}
+            >
               {option.label}
             </VscodeButton>
           ))}
@@ -71,7 +72,8 @@ export const CellAlignmentControls: FC<Props> = ({
             <VscodeButton
               key={option.value}
               {...(currentAlignment.horizontal === option.value ? {} : { secondary: true })}
-              onClick={() => handleHorizontalChange(option.value)}>
+              onClick={() => handleHorizontalChange(option.value)}
+            >
               {option.label}
             </VscodeButton>
           ))}

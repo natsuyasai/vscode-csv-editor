@@ -161,7 +161,9 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (e.key === "Tab") {
         // Tabキー: 選択をクリア（ブラウザのデフォルト動作でフォーカス移動）
-        const clearSelectionFn = props.table.options.meta?.clearSelection as (() => void) | undefined;
+        const clearSelectionFn = props.table.options.meta?.clearSelection as
+          | (() => void)
+          | undefined;
         clearSelectionFn?.();
         // デフォルト動作を許可（次のセルへフォーカス移動）
         return;
@@ -250,7 +252,8 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
               maxHeight: `${rowHeight}px`,
             }
           : undefined
-      }>
+      }
+    >
       {value}
       {/* フィルハンドル（選択中のセルにのみ表示） */}
       {isSelected && !isEditing && (

@@ -212,7 +212,7 @@ describe("CellAlignmentControls", () => {
         // 垂直配置の「中」ボタンは複数あるので、最初の要素（垂直配置）を選択
         const buttons = screen.getAllByRole("button", { name: vLabel });
         const verticalButton = vLabel === "Center" ? buttons[0] : buttons[0];
-        
+
         fireEvent.click(verticalButton);
 
         expect(mockOnAlignmentChange).toHaveBeenCalledWith({
@@ -235,7 +235,7 @@ describe("CellAlignmentControls", () => {
         // 水平配置の「中」ボタンは2つあるので（垂直と水平）、適切なものを選択
         const buttons = screen.getAllByRole("button", { name: hLabel });
         const horizontalButton = hLabel === "Center" ? buttons[1] : buttons[0];
-        
+
         fireEvent.click(horizontalButton);
 
         expect(mockOnAlignmentChange).toHaveBeenCalledWith({
@@ -258,9 +258,7 @@ describe("CellAlignmentControls", () => {
 
       const buttons = screen.getAllByRole("button");
       buttons.forEach((button) => {
-        expect(
-          button.getAttribute("aria-label") || button.textContent
-        ).toBeTruthy();
+        expect(button.getAttribute("aria-label") || button.textContent).toBeTruthy();
       });
     });
 

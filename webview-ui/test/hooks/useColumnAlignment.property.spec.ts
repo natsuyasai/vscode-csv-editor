@@ -51,7 +51,10 @@ describe("useColumnAlignment - Property-Based Tests", () => {
         const { result } = renderHook(() => useColumnAlignment(columnIndex));
 
         // 初期状態ではデフォルト配置
-        expect(result.current.getCurrentAlignment()).toEqual({ vertical: "center", horizontal: "left" });
+        expect(result.current.getCurrentAlignment()).toEqual({
+          vertical: "center",
+          horizontal: "left",
+        });
 
         act(() => {
           result.current.handleAlignmentChange(alignment);
@@ -102,9 +105,12 @@ describe("useColumnAlignment - Property-Based Tests", () => {
         ),
         (alignments) => {
           // 最初の列を選択して開始
-          const { result, rerender } = renderHook(({ selectedColumn }) => useColumnAlignment(selectedColumn), {
-            initialProps: { selectedColumn: alignments[0].columnIndex },
-          });
+          const { result, rerender } = renderHook(
+            ({ selectedColumn }) => useColumnAlignment(selectedColumn),
+            {
+              initialProps: { selectedColumn: alignments[0].columnIndex },
+            }
+          );
 
           // 列ごとに最後の配置を記録（同じ列に複数回設定された場合、最後の値が優先される）
           const finalAlignments = new Map<number, CellAlignment>();
@@ -162,7 +168,10 @@ describe("useColumnAlignment - Property-Based Tests", () => {
         const { result } = renderHook(() => useColumnAlignment(null));
 
         // 選択列がnullの場合、デフォルト配置が返される
-        expect(result.current.getCurrentAlignment()).toEqual({ vertical: "center", horizontal: "left" });
+        expect(result.current.getCurrentAlignment()).toEqual({
+          vertical: "center",
+          horizontal: "left",
+        });
       }),
       { numRuns: 20 }
     );
@@ -170,12 +179,16 @@ describe("useColumnAlignment - Property-Based Tests", () => {
 
   it("配置が設定されていない列のgetColumnAlignmentはundefinedを返す", () => {
     fc.assert(
-      fc.property(fc.integer({ min: 0, max: 20 }), fc.integer({ min: 0, max: 20 }), (selectedCol, queryCol) => {
-        const { result } = renderHook(() => useColumnAlignment(selectedCol));
+      fc.property(
+        fc.integer({ min: 0, max: 20 }),
+        fc.integer({ min: 0, max: 20 }),
+        (selectedCol, queryCol) => {
+          const { result } = renderHook(() => useColumnAlignment(selectedCol));
 
-        // 配置を設定していない列はundefined
-        expect(result.current.getColumnAlignment(queryCol)).toBeUndefined();
-      }),
+          // 配置を設定していない列はundefined
+          expect(result.current.getColumnAlignment(queryCol)).toBeUndefined();
+        }
+      ),
       { numRuns: 30 }
     );
   });
@@ -191,9 +204,12 @@ describe("useColumnAlignment - Property-Based Tests", () => {
           // col1とcol2が同じ場合はスキップ
           if (col1 === col2) return;
 
-          const { result, rerender } = renderHook(({ selectedColumn }) => useColumnAlignment(selectedColumn), {
-            initialProps: { selectedColumn: col1 },
-          });
+          const { result, rerender } = renderHook(
+            ({ selectedColumn }) => useColumnAlignment(selectedColumn),
+            {
+              initialProps: { selectedColumn: col1 },
+            }
+          );
 
           // col1に配置を設定
           act(() => {

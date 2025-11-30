@@ -145,7 +145,8 @@ export const DraggableHeaderCell: FC<DraggableHeaderCellProps> = ({
       onDoubleClick={handleDoubleClick}
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
-      onBlur={handleBlur}>
+      onBlur={handleBlur}
+    >
       {children}
     </div>
   );

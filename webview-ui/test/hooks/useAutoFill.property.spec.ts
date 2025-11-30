@@ -23,21 +23,26 @@ describe("useAutoFill - Property-Based Tests", () => {
 
   it("フィル開始と終了が同じセルの場合、何も更新されない", () => {
     fc.assert(
-      fc.property(tableDataArb, fc.integer({ min: 0, max: 10 }), fc.integer({ min: 0, max: 2 }), (data, row, col) => {
-        const validRow = Math.min(row, data.length - 1);
-        const { result } = renderHook(() => useAutoFill(data, mockUpdateCells));
+      fc.property(
+        tableDataArb,
+        fc.integer({ min: 0, max: 10 }),
+        fc.integer({ min: 0, max: 2 }),
+        (data, row, col) => {
+          const validRow = Math.min(row, data.length - 1);
+          const { result } = renderHook(() => useAutoFill(data, mockUpdateCells));
 
-        act(() => {
-          result.current.handleFillStart(validRow, col);
-        });
+          act(() => {
+            result.current.handleFillStart(validRow, col);
+          });
 
-        act(() => {
-          result.current.handleFillEnd();
-        });
+          act(() => {
+            result.current.handleFillEnd();
+          });
 
-        // 同じセルなので更新されない
-        expect(mockUpdateCells).not.toHaveBeenCalled();
-      }),
+          // 同じセルなので更新されない
+          expect(mockUpdateCells).not.toHaveBeenCalled();
+        }
+      ),
       { numRuns: 30 }
     );
   });
@@ -80,7 +85,11 @@ describe("useAutoFill - Property-Based Tests", () => {
 
           expect(mockUpdateCells).toHaveBeenCalledTimes(1);
 
-          const calls = mockUpdateCells.mock.calls[0][0] as Array<{ rowIdx: number; colIdx: number; value: string }>;
+          const calls = mockUpdateCells.mock.calls[0][0] as Array<{
+            rowIdx: number;
+            colIdx: number;
+            value: string;
+          }>;
           // フィル範囲のセル数は validEndRow - validStartRow
           expect(calls.length).toBe(Math.abs(validEndRow - validStartRow));
         }
@@ -129,7 +138,11 @@ describe("useAutoFill - Property-Based Tests", () => {
 
           expect(mockUpdateCells).toHaveBeenCalledTimes(1);
 
-          const calls = mockUpdateCells.mock.calls[0][0] as Array<{ rowIdx: number; colIdx: number; value: string }>;
+          const calls = mockUpdateCells.mock.calls[0][0] as Array<{
+            rowIdx: number;
+            colIdx: number;
+            value: string;
+          }>;
           // フィル範囲のセル数は validEndCol - startCol
           expect(calls.length).toBe(Math.abs(validEndCol - startCol));
         }
@@ -308,27 +321,32 @@ describe("useAutoFill - Property-Based Tests", () => {
 
   it("フィル操作中、isFillingがtrueになる", () => {
     fc.assert(
-      fc.property(tableDataArb, fc.integer({ min: 0, max: 10 }), fc.integer({ min: 0, max: 2 }), (data, row, col) => {
-        const validRow = Math.min(row, data.length - 1);
-        const { result } = renderHook(() => useAutoFill(data, mockUpdateCells));
+      fc.property(
+        tableDataArb,
+        fc.integer({ min: 0, max: 10 }),
+        fc.integer({ min: 0, max: 2 }),
+        (data, row, col) => {
+          const validRow = Math.min(row, data.length - 1);
+          const { result } = renderHook(() => useAutoFill(data, mockUpdateCells));
 
-        // 初期状態ではfalse
-        expect(result.current.isFilling).toBe(false);
+          // 初期状態ではfalse
+          expect(result.current.isFilling).toBe(false);
 
-        act(() => {
-          result.current.handleFillStart(validRow, col);
-        });
+          act(() => {
+            result.current.handleFillStart(validRow, col);
+          });
 
-        // フィル開始後はtrue
-        expect(result.current.isFilling).toBe(true);
+          // フィル開始後はtrue
+          expect(result.current.isFilling).toBe(true);
 
-        act(() => {
-          result.current.handleFillEnd();
-        });
+          act(() => {
+            result.current.handleFillEnd();
+          });
 
-        // フィル終了後はfalse
-        expect(result.current.isFilling).toBe(false);
-      }),
+          // フィル終了後はfalse
+          expect(result.current.isFilling).toBe(false);
+        }
+      ),
       { numRuns: 30 }
     );
   });

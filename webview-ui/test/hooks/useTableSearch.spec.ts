@@ -13,7 +13,13 @@ describe("useTableSearch", () => {
     mockData = [
       { [ROW_IDX_KEY]: "1", [ROW_ID_KEY]: "id1", col0: "Apple", col1: "Red", col2: "Fruit" },
       { [ROW_IDX_KEY]: "2", [ROW_ID_KEY]: "id2", col0: "Banana", col1: "Yellow", col2: "Fruit" },
-      { [ROW_IDX_KEY]: "3", [ROW_ID_KEY]: "id3", col0: "Carrot", col1: "Orange", col2: "Vegetable" },
+      {
+        [ROW_IDX_KEY]: "3",
+        [ROW_ID_KEY]: "id3",
+        col0: "Carrot",
+        col1: "Orange",
+        col2: "Vegetable",
+      },
     ];
 
     mockScrollTo = vi.fn();
@@ -29,9 +35,7 @@ describe("useTableSearch", () => {
   });
 
   it("初期状態では検索が閉じられている", () => {
-    const { result } = renderHook(() =>
-      useTableSearch(mockData, rowHeight, mockTableContainerRef)
-    );
+    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
 
     expect(result.current.searchOpen).toBe(false);
     expect(result.current.matchedItemPositions).toEqual([]);
@@ -39,9 +43,7 @@ describe("useTableSearch", () => {
   });
 
   it("openSearchで検索を開く", () => {
-    const { result } = renderHook(() =>
-      useTableSearch(mockData, rowHeight, mockTableContainerRef)
-    );
+    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
 
     act(() => {
       result.current.openSearch();
@@ -51,9 +53,7 @@ describe("useTableSearch", () => {
   });
 
   it("handleSearchで検索結果を取得", () => {
-    const { result } = renderHook(() =>
-      useTableSearch(mockData, rowHeight, mockTableContainerRef)
-    );
+    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
 
     act(() => {
       result.current.handleSearch("fruit");
@@ -73,9 +73,7 @@ describe("useTableSearch", () => {
   });
 
   it("handleSearchで大文字小文字を区別しない", () => {
-    const { result } = renderHook(() =>
-      useTableSearch(mockData, rowHeight, mockTableContainerRef)
-    );
+    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
 
     act(() => {
       result.current.handleSearch("APPLE");
@@ -86,9 +84,7 @@ describe("useTableSearch", () => {
   });
 
   it("handleSearchで空文字列を検索しても何もしない", () => {
-    const { result } = renderHook(() =>
-      useTableSearch(mockData, rowHeight, mockTableContainerRef)
-    );
+    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
 
     act(() => {
       result.current.handleSearch("");
@@ -98,9 +94,7 @@ describe("useTableSearch", () => {
   });
 
   it("handleSearchでマッチがない場合は何もしない", () => {
-    const { result } = renderHook(() =>
-      useTableSearch(mockData, rowHeight, mockTableContainerRef)
-    );
+    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
 
     act(() => {
       result.current.handleSearch("NotFound");
@@ -110,9 +104,7 @@ describe("useTableSearch", () => {
   });
 
   it("handleNextSearchで次の検索結果に移動", () => {
-    const { result } = renderHook(() =>
-      useTableSearch(mockData, rowHeight, mockTableContainerRef)
-    );
+    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
 
     // 検索実行
     act(() => {
@@ -132,9 +124,7 @@ describe("useTableSearch", () => {
   });
 
   it("handleNextSearchで最後の検索結果から最初に戻る", () => {
-    const { result } = renderHook(() =>
-      useTableSearch(mockData, rowHeight, mockTableContainerRef)
-    );
+    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
 
     // 検索実行
     act(() => {
@@ -159,9 +149,7 @@ describe("useTableSearch", () => {
   });
 
   it("handlePreviousSearchで前の検索結果に移動", () => {
-    const { result } = renderHook(() =>
-      useTableSearch(mockData, rowHeight, mockTableContainerRef)
-    );
+    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
 
     // 検索実行
     act(() => {
@@ -186,9 +174,7 @@ describe("useTableSearch", () => {
   });
 
   it("handlePreviousSearchで最初の検索結果から最後に戻る", () => {
-    const { result } = renderHook(() =>
-      useTableSearch(mockData, rowHeight, mockTableContainerRef)
-    );
+    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
 
     // 検索実行
     act(() => {
@@ -208,9 +194,7 @@ describe("useTableSearch", () => {
   });
 
   it("handleCloseSearchで検索状態をリセット", () => {
-    const { result } = renderHook(() =>
-      useTableSearch(mockData, rowHeight, mockTableContainerRef)
-    );
+    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
 
     // 検索を開いて実行
     act(() => {
@@ -231,9 +215,7 @@ describe("useTableSearch", () => {
   });
 
   it("ROW_IDX_KEYとROW_ID_KEYは検索対象外", () => {
-    const { result } = renderHook(() =>
-      useTableSearch(mockData, rowHeight, mockTableContainerRef)
-    );
+    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
 
     // ROW_IDX_KEYの値を検索
     act(() => {

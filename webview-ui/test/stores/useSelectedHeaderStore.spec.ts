@@ -18,7 +18,7 @@ describe("useSelectedHeaderStore", () => {
   describe("setSelectedColumnKey", () => {
     it("列キーを正しく設定できる", () => {
       const { result } = renderHook(() => useSelectedHeaderStore());
-      
+
       act(() => {
         result.current.setSelectedColumnKey("col0");
       });
@@ -28,7 +28,7 @@ describe("useSelectedHeaderStore", () => {
 
     it("異なる列キーに変更できる", () => {
       const { result } = renderHook(() => useSelectedHeaderStore());
-      
+
       // 最初の列を選択
       act(() => {
         result.current.setSelectedColumnKey("col0");
@@ -44,7 +44,7 @@ describe("useSelectedHeaderStore", () => {
 
     it("nullに戻すことができる", () => {
       const { result } = renderHook(() => useSelectedHeaderStore());
-      
+
       // まず列を選択
       act(() => {
         result.current.setSelectedColumnKey("col0");
@@ -60,7 +60,7 @@ describe("useSelectedHeaderStore", () => {
 
     it("同じ列キーを再設定できる", () => {
       const { result } = renderHook(() => useSelectedHeaderStore());
-      
+
       act(() => {
         result.current.setSelectedColumnKey("col0");
       });
@@ -80,7 +80,7 @@ describe("useSelectedHeaderStore", () => {
     columnKeys.forEach((columnKey) => {
       it(`列キー '${columnKey}' を正しく設定できる`, () => {
         const { result } = renderHook(() => useSelectedHeaderStore());
-        
+
         act(() => {
           result.current.setSelectedColumnKey(columnKey);
         });
@@ -94,7 +94,7 @@ describe("useSelectedHeaderStore", () => {
     it("異なるフックインスタンス間で状態が共有される", () => {
       const { result: result1 } = renderHook(() => useSelectedHeaderStore());
       const { result: result2 } = renderHook(() => useSelectedHeaderStore());
-      
+
       // 最初のインスタンスで値を設定
       act(() => {
         result1.current.setSelectedColumnKey("col0");
@@ -107,7 +107,7 @@ describe("useSelectedHeaderStore", () => {
     it("一方のインスタンスで変更すると他のインスタンスにも反映される", () => {
       const { result: result1 } = renderHook(() => useSelectedHeaderStore());
       const { result: result2 } = renderHook(() => useSelectedHeaderStore());
-      
+
       // result1で設定
       act(() => {
         result1.current.setSelectedColumnKey("col0");
@@ -127,7 +127,7 @@ describe("useSelectedHeaderStore", () => {
   describe("エッジケース", () => {
     it("空文字列を設定できる", () => {
       const { result } = renderHook(() => useSelectedHeaderStore());
-      
+
       act(() => {
         result.current.setSelectedColumnKey("");
       });
@@ -138,7 +138,7 @@ describe("useSelectedHeaderStore", () => {
     it("非常に長い文字列を設定できる", () => {
       const { result } = renderHook(() => useSelectedHeaderStore());
       const longColumnKey = "col".repeat(1000);
-      
+
       act(() => {
         result.current.setSelectedColumnKey(longColumnKey);
       });
@@ -149,7 +149,7 @@ describe("useSelectedHeaderStore", () => {
     it("特殊文字を含む列キーを設定できる", () => {
       const { result } = renderHook(() => useSelectedHeaderStore());
       const specialColumnKey = "col-0_test.name[0]";
-      
+
       act(() => {
         result.current.setSelectedColumnKey(specialColumnKey);
       });
@@ -162,7 +162,7 @@ describe("useSelectedHeaderStore", () => {
     it("複数の列を順次選択できる", () => {
       const { result } = renderHook(() => useSelectedHeaderStore());
       const columns = ["col0", "col1", "col2"];
-      
+
       columns.forEach((columnKey) => {
         act(() => {
           result.current.setSelectedColumnKey(columnKey);
@@ -173,7 +173,7 @@ describe("useSelectedHeaderStore", () => {
 
     it("選択→解除→再選択のパターンが正しく動作する", () => {
       const { result } = renderHook(() => useSelectedHeaderStore());
-      
+
       // 選択
       act(() => {
         result.current.setSelectedColumnKey("col0");
