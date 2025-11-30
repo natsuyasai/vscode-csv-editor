@@ -11,21 +11,24 @@ describe("useHistory", () => {
   });
 
   it("初期状態では履歴が空でundo/redoが無効であること", () => {
-    const { result } = renderHook(() => 
-      useHistory(mockSetData)
-    );
+    const { result } = renderHook(() => useHistory(mockSetData));
 
     expect(result.current.isEnabledUndo).toBe(false);
     expect(result.current.isEnabledRedo).toBe(false);
   });
 
   it("データを変更した後にundoが有効になること", () => {
-    const { result } = renderHook(() => 
-      useHistory(mockSetData)
-    );
+    const { result } = renderHook(() => useHistory(mockSetData));
 
-    const currentData = [["A", "B"], ["1", "2"]];
-    const newData = [["A", "B"], ["1", "2"], ["3", "4"]];
+    const currentData = [
+      ["A", "B"],
+      ["1", "2"],
+    ];
+    const newData = [
+      ["A", "B"],
+      ["1", "2"],
+      ["3", "4"],
+    ];
 
     act(() => {
       result.current.setDataAndPushHistory(newData, currentData);
@@ -37,12 +40,17 @@ describe("useHistory", () => {
   });
 
   it("undoが正しく動作すること", () => {
-    const { result } = renderHook(() => 
-      useHistory(mockSetData)
-    );
+    const { result } = renderHook(() => useHistory(mockSetData));
 
-    const initialData = [["A", "B"], ["1", "2"]];
-    const newData = [["A", "B"], ["1", "2"], ["3", "4"]];
+    const initialData = [
+      ["A", "B"],
+      ["1", "2"],
+    ];
+    const newData = [
+      ["A", "B"],
+      ["1", "2"],
+      ["3", "4"],
+    ];
 
     // データを変更
     act(() => {
@@ -60,12 +68,17 @@ describe("useHistory", () => {
   });
 
   it("redoが正しく動作すること", () => {
-    const { result } = renderHook(() => 
-      useHistory(mockSetData)
-    );
+    const { result } = renderHook(() => useHistory(mockSetData));
 
-    const initialData = [["A", "B"], ["1", "2"]];
-    const newData = [["A", "B"], ["1", "2"], ["3", "4"]];
+    const initialData = [
+      ["A", "B"],
+      ["1", "2"],
+    ];
+    const newData = [
+      ["A", "B"],
+      ["1", "2"],
+      ["3", "4"],
+    ];
 
     // データ変更 → undo → redo
     act(() => {
@@ -88,13 +101,23 @@ describe("useHistory", () => {
   });
 
   it("複数回のundo/redoが正しく動作すること", () => {
-    const { result } = renderHook(() => 
-      useHistory(mockSetData)
-    );
+    const { result } = renderHook(() => useHistory(mockSetData));
 
-    const initialData = [["A", "B"], ["1", "2"]];
-    const data1 = [["A", "B"], ["1", "2"], ["3", "4"]];
-    const data2 = [["A", "B"], ["1", "2"], ["3", "4"], ["5", "6"]];
+    const initialData = [
+      ["A", "B"],
+      ["1", "2"],
+    ];
+    const data1 = [
+      ["A", "B"],
+      ["1", "2"],
+      ["3", "4"],
+    ];
+    const data2 = [
+      ["A", "B"],
+      ["1", "2"],
+      ["3", "4"],
+      ["5", "6"],
+    ];
 
     // 2回データ変更
     act(() => {
@@ -126,13 +149,22 @@ describe("useHistory", () => {
   });
 
   it("新しい変更が行われた後はredo履歴がクリアされること", () => {
-    const { result } = renderHook(() => 
-      useHistory(mockSetData)
-    );
+    const { result } = renderHook(() => useHistory(mockSetData));
 
-    const initialData = [["A", "B"], ["1", "2"]];
-    const data1 = [["A", "B"], ["1", "2"], ["3", "4"]];
-    const data2 = [["A", "B"], ["1", "2"], ["5", "6"]];
+    const initialData = [
+      ["A", "B"],
+      ["1", "2"],
+    ];
+    const data1 = [
+      ["A", "B"],
+      ["1", "2"],
+      ["3", "4"],
+    ];
+    const data2 = [
+      ["A", "B"],
+      ["1", "2"],
+      ["5", "6"],
+    ];
 
     // データ変更 → undo → 新しいデータ変更
     act(() => {
@@ -153,9 +185,7 @@ describe("useHistory", () => {
   });
 
   it("履歴の上限が正しく動作すること", () => {
-    const { result } = renderHook(() => 
-      useHistory(mockSetData, { maxHistorySize: 2 })
-    );
+    const { result } = renderHook(() => useHistory(mockSetData, { maxHistorySize: 2 }));
 
     const initialData = [["initial"]];
     const data1 = [["1"]];
@@ -194,12 +224,17 @@ describe("useHistory", () => {
   });
 
   it("clearHistoryが正しく動作すること", () => {
-    const { result } = renderHook(() => 
-      useHistory(mockSetData)
-    );
+    const { result } = renderHook(() => useHistory(mockSetData));
 
-    const initialData = [["A", "B"], ["1", "2"]];
-    const newData = [["A", "B"], ["1", "2"], ["3", "4"]];
+    const initialData = [
+      ["A", "B"],
+      ["1", "2"],
+    ];
+    const newData = [
+      ["A", "B"],
+      ["1", "2"],
+      ["3", "4"],
+    ];
 
     act(() => {
       result.current.setDataAndPushHistory(newData, initialData);

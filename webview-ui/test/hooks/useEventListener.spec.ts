@@ -21,9 +21,7 @@ describe("useEventListener", () => {
   });
 
   it("基本的なイベントリスナーが動作すること", () => {
-    renderHook(() => 
-      useEventListener("click", mockHandler, mockElement)
-    );
+    renderHook(() => useEventListener("click", mockHandler, mockElement));
 
     const event = new MouseEvent("click");
     mockElement.dispatchEvent(event);
@@ -32,9 +30,7 @@ describe("useEventListener", () => {
   });
 
   it("documentに対してイベントリスナーが動作すること", () => {
-    renderHook(() => 
-      useEventListener("keydown", mockHandler, document)
-    );
+    renderHook(() => useEventListener("keydown", mockHandler, document));
 
     const event = new KeyboardEvent("keydown", { key: "a" });
     document.dispatchEvent(event);
@@ -43,9 +39,7 @@ describe("useEventListener", () => {
   });
 
   it("windowに対してイベントリスナーが動作すること", () => {
-    renderHook(() => 
-      useEventListener("resize", mockHandler, window)
-    );
+    renderHook(() => useEventListener("resize", mockHandler, window));
 
     const event = new Event("resize");
     window.dispatchEvent(event);
@@ -54,9 +48,7 @@ describe("useEventListener", () => {
   });
 
   it("要素がnullの場合は何もしないこと", () => {
-    renderHook(() => 
-      useEventListener("click", mockHandler, null)
-    );
+    renderHook(() => useEventListener("click", mockHandler, null));
 
     // documentにイベントを発火してもハンドラーは呼ばれない
     const event = new MouseEvent("click");
@@ -66,9 +58,7 @@ describe("useEventListener", () => {
   });
 
   it("enabledがfalseの場合はイベントリスナーが無効になること", () => {
-    renderHook(() => 
-      useEventListener("click", mockHandler, mockElement, { enabled: false })
-    );
+    renderHook(() => useEventListener("click", mockHandler, mockElement, { enabled: false }));
 
     const event = new MouseEvent("click");
     mockElement.dispatchEvent(event);
@@ -78,28 +68,25 @@ describe("useEventListener", () => {
 
   it("optionsが渡された場合は正しく適用されること", () => {
     const addEventListenerSpy = vi.spyOn(mockElement, "addEventListener");
-    
-    renderHook(() => 
-      useEventListener("click", mockHandler, mockElement, { 
+
+    renderHook(() =>
+      useEventListener("click", mockHandler, mockElement, {
         enabled: true,
         capture: true,
-        passive: true 
+        passive: true,
       })
     );
 
-    expect(addEventListenerSpy).toHaveBeenCalledWith(
-      "click", 
-      expect.any(Function), 
-      { capture: true, passive: true }
-    );
+    expect(addEventListenerSpy).toHaveBeenCalledWith("click", expect.any(Function), {
+      capture: true,
+      passive: true,
+    });
   });
 
   it("hookがアンマウントされたときにイベントリスナーが削除されること", () => {
     const removeEventListenerSpy = vi.spyOn(mockElement, "removeEventListener");
-    
-    const { unmount } = renderHook(() => 
-      useEventListener("click", mockHandler, mockElement)
-    );
+
+    const { unmount } = renderHook(() => useEventListener("click", mockHandler, mockElement));
 
     // アンマウント前はイベントが処理される
     let event = new MouseEvent("click");
@@ -109,11 +96,7 @@ describe("useEventListener", () => {
     // アンマウント
     unmount();
 
-    expect(removeEventListenerSpy).toHaveBeenCalledWith(
-      "click", 
-      expect.any(Function), 
-      undefined
-    );
+    expect(removeEventListenerSpy).toHaveBeenCalledWith("click", expect.any(Function), undefined);
 
     // アンマウント後はイベントが処理されない
     vi.clearAllMocks();
@@ -125,7 +108,7 @@ describe("useEventListener", () => {
   it("依存配列が変更されたときにイベントリスナーが再登録されること", () => {
     const addEventListenerSpy = vi.spyOn(mockElement, "addEventListener");
     const removeEventListenerSpy = vi.spyOn(mockElement, "removeEventListener");
-    
+
     const { rerender } = renderHook(
       ({ handler }) => useEventListener("click", handler, mockElement),
       { initialProps: { handler: mockHandler } }
@@ -158,7 +141,7 @@ describe("useEventListener", () => {
 
     const clickEvent = new MouseEvent("click");
     const mousedownEvent = new MouseEvent("mousedown");
-    
+
     mockElement.dispatchEvent(clickEvent);
     mockElement.dispatchEvent(mousedownEvent);
 
@@ -168,10 +151,8 @@ describe("useEventListener", () => {
 
   it("RefObjectが渡された場合に正しく動作すること", () => {
     const ref = { current: mockElement };
-    
-    renderHook(() => 
-      useEventListener("click", mockHandler, ref)
-    );
+
+    renderHook(() => useEventListener("click", mockHandler, ref));
 
     const event = new MouseEvent("click");
     mockElement.dispatchEvent(event);
@@ -181,10 +162,8 @@ describe("useEventListener", () => {
 
   it("RefObjectのcurrentがnullの場合は何もしないこと", () => {
     const ref = { current: null };
-    
-    renderHook(() => 
-      useEventListener("click", mockHandler, ref)
-    );
+
+    renderHook(() => useEventListener("click", mockHandler, ref));
 
     const event = new MouseEvent("click");
     document.dispatchEvent(event);

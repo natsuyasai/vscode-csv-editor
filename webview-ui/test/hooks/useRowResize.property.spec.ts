@@ -31,12 +31,16 @@ describe("useRowResize - Property-Based Tests", () => {
 
   it("設定していない行のgetRowHeightはデフォルト高さを返す", () => {
     fc.assert(
-      fc.property(fc.integer({ min: 0, max: 50 }), fc.integer({ min: 20, max: 100 }), (rowIndex, defaultHeight) => {
-        const { result } = renderHook(() => useRowResize(defaultHeight));
+      fc.property(
+        fc.integer({ min: 0, max: 50 }),
+        fc.integer({ min: 20, max: 100 }),
+        (rowIndex, defaultHeight) => {
+          const { result } = renderHook(() => useRowResize(defaultHeight));
 
-        // 設定していない行はデフォルト高さ
-        expect(result.current.getRowHeight(rowIndex)).toBe(defaultHeight);
-      }),
+          // 設定していない行はデフォルト高さ
+          expect(result.current.getRowHeight(rowIndex)).toBe(defaultHeight);
+        }
+      ),
       { numRuns: 30 }
     );
   });
@@ -198,30 +202,38 @@ describe("useRowResize - Property-Based Tests", () => {
 
   it("高さの下限(20px)未満の値を設定すると、20pxに制限される", () => {
     fc.assert(
-      fc.property(fc.integer({ min: 0, max: 20 }), fc.integer({ min: -1000, max: 19 }), (rowIndex, height) => {
-        const { result } = renderHook(() => useRowResize(DEFAULT_ROW_HEIGHT));
+      fc.property(
+        fc.integer({ min: 0, max: 20 }),
+        fc.integer({ min: -1000, max: 19 }),
+        (rowIndex, height) => {
+          const { result } = renderHook(() => useRowResize(DEFAULT_ROW_HEIGHT));
 
-        act(() => {
-          result.current.setRowHeight(rowIndex, height);
-        });
+          act(() => {
+            result.current.setRowHeight(rowIndex, height);
+          });
 
-        expect(result.current.getRowHeight(rowIndex)).toBe(20);
-      }),
+          expect(result.current.getRowHeight(rowIndex)).toBe(20);
+        }
+      ),
       { numRuns: 30 }
     );
   });
 
   it("高さの上限(500px)を超える値を設定すると、500pxに制限される", () => {
     fc.assert(
-      fc.property(fc.integer({ min: 0, max: 20 }), fc.integer({ min: 501, max: 10000 }), (rowIndex, height) => {
-        const { result } = renderHook(() => useRowResize(DEFAULT_ROW_HEIGHT));
+      fc.property(
+        fc.integer({ min: 0, max: 20 }),
+        fc.integer({ min: 501, max: 10000 }),
+        (rowIndex, height) => {
+          const { result } = renderHook(() => useRowResize(DEFAULT_ROW_HEIGHT));
 
-        act(() => {
-          result.current.setRowHeight(rowIndex, height);
-        });
+          act(() => {
+            result.current.setRowHeight(rowIndex, height);
+          });
 
-        expect(result.current.getRowHeight(rowIndex)).toBe(500);
-      }),
+          expect(result.current.getRowHeight(rowIndex)).toBe(500);
+        }
+      ),
       { numRuns: 30 }
     );
   });

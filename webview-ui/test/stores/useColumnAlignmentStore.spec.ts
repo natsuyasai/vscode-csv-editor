@@ -88,7 +88,7 @@ describe("useColumnAlignmentStore", () => {
 
     it("未設定の列に対してデフォルト値を返す", () => {
       const { result } = renderHook(() => useColumnAlignmentStore());
-      
+
       expect(result.current.getColumnAlignment("nonexistent")).toEqual({
         vertical: "center",
         horizontal: "left",
@@ -146,7 +146,7 @@ describe("useColumnAlignmentStore", () => {
     it("異なるフックインスタンス間で状態が共有される", () => {
       const { result: result1 } = renderHook(() => useColumnAlignmentStore());
       const { result: result2 } = renderHook(() => useColumnAlignmentStore());
-      
+
       const alignment: CellAlignment = { vertical: "bottom", horizontal: "right" };
 
       act(() => {

@@ -271,7 +271,9 @@ describe("useFilters - Property-Based Tests", () => {
           });
 
           // appleとpieの両方を含む行のみマッチ
-          const expectedRows = data.filter((row) => row.col0.includes("apple") && row.col0.includes("pie"));
+          const expectedRows = data.filter(
+            (row) => row.col0.includes("apple") && row.col0.includes("pie")
+          );
 
           expect(result.current.filteredRows.length).toBe(expectedRows.length);
         }

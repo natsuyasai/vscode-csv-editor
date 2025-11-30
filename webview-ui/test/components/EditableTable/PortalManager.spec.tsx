@@ -15,7 +15,9 @@ vi.mock("@/components/Row/RowContextMenu", () => ({
 }));
 
 vi.mock("@/components/Header/HeaderCelContextMenu", () => ({
-  HeaderCelContextMenu: vi.fn(() => <div data-testid="header-context-menu">Header Context Menu</div>),
+  HeaderCelContextMenu: vi.fn(() => (
+    <div data-testid="header-context-menu">Header Context Menu</div>
+  )),
 }));
 
 // モックへの参照を取得
@@ -36,7 +38,7 @@ describe("PortalManager", () => {
       onNext: vi.fn(),
       onPrevious: vi.fn(),
     },
-    
+
     // Row Context Menu関連
     isRowContextMenuOpen: false,
     rowContextMenuProps: {
@@ -47,7 +49,7 @@ describe("PortalManager", () => {
       onSelect: vi.fn(),
       onClose: vi.fn(),
     },
-    
+
     // Header Context Menu関連
     isHeaderContextMenuOpen: false,
     headerContextMenuProps: {
@@ -66,7 +68,7 @@ describe("PortalManager", () => {
 
   it("すべてのポータルが非表示の場合は何もレンダリングしないこと", () => {
     render(<PortalManager {...mockProps} />);
-    
+
     expect(screen.queryByTestId("search")).not.toBeInTheDocument();
     expect(screen.queryByTestId("row-context-menu")).not.toBeInTheDocument();
     expect(screen.queryByTestId("header-context-menu")).not.toBeInTheDocument();
@@ -77,9 +79,9 @@ describe("PortalManager", () => {
       ...mockProps,
       isShowSearch: true,
     };
-    
+
     render(<PortalManager {...props} />);
-    
+
     expect(screen.getByTestId("search")).toBeInTheDocument();
     expect(MockSearch).toHaveBeenCalledWith(props.searchProps, undefined);
   });
@@ -89,9 +91,9 @@ describe("PortalManager", () => {
       ...mockProps,
       isRowContextMenuOpen: true,
     };
-    
+
     render(<PortalManager {...props} />);
-    
+
     expect(screen.getByTestId("row-context-menu")).toBeInTheDocument();
     expect(MockRowContextMenu).toHaveBeenCalledWith(props.rowContextMenuProps, undefined);
   });
@@ -101,9 +103,9 @@ describe("PortalManager", () => {
       ...mockProps,
       isHeaderContextMenuOpen: true,
     };
-    
+
     render(<PortalManager {...props} />);
-    
+
     expect(screen.getByTestId("header-context-menu")).toBeInTheDocument();
     expect(MockHeaderContextMenu).toHaveBeenCalledWith(props.headerContextMenuProps, undefined);
   });
@@ -115,9 +117,9 @@ describe("PortalManager", () => {
       isRowContextMenuOpen: true,
       isHeaderContextMenuOpen: true,
     };
-    
+
     render(<PortalManager {...props} />);
-    
+
     expect(screen.getByTestId("search")).toBeInTheDocument();
     expect(screen.getByTestId("row-context-menu")).toBeInTheDocument();
     expect(screen.getByTestId("header-context-menu")).toBeInTheDocument();
@@ -128,9 +130,9 @@ describe("PortalManager", () => {
       ...mockProps,
       isShowSearch: true,
     };
-    
+
     render(<PortalManager {...props} />);
-    
+
     // ポータルはdocument.bodyの直下に作成される
     const portalElements = document.body.querySelectorAll('[data-testid="search"]');
     expect(portalElements).toHaveLength(1);
@@ -147,9 +149,9 @@ describe("PortalManager", () => {
         searchedSelectedItemIdx: 2,
       },
     };
-    
+
     render(<PortalManager {...props} />);
-    
+
     expect(MockSearch).toHaveBeenCalledWith(
       expect.objectContaining({
         isMatching: true,
@@ -163,7 +165,7 @@ describe("PortalManager", () => {
   it("コンテキストメニューのpropsが正しく渡されること", () => {
     const mockMenuRef = { current: document.createElement("div") };
     const mockContextMenuProps = { itemIdx: 0, top: 100, left: 200 };
-    
+
     const props = {
       ...mockProps,
       isRowContextMenuOpen: true,
@@ -174,9 +176,9 @@ describe("PortalManager", () => {
         contextMenuProps: mockContextMenuProps,
       },
     };
-    
+
     render(<PortalManager {...props} />);
-    
+
     expect(MockRowContextMenu).toHaveBeenCalledWith(
       expect.objectContaining({
         isContextMenuOpen: true,

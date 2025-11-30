@@ -14,7 +14,13 @@ describe("useHistory - Property-Based Tests", () => {
   it("任意の数の操作後、undo回数とredo回数の合計は操作回数と一致する", () => {
     fc.assert(
       fc.property(
-        fc.array(fc.array(fc.array(fc.string(), { minLength: 1, maxLength: 5 }), { minLength: 1, maxLength: 5 }), { minLength: 1, maxLength: 20 }),
+        fc.array(
+          fc.array(fc.array(fc.string(), { minLength: 1, maxLength: 5 }), {
+            minLength: 1,
+            maxLength: 5,
+          }),
+          { minLength: 1, maxLength: 20 }
+        ),
         (operations) => {
           const { result } = renderHook(() => useHistory(mockSetData));
           let currentData = operations[0];
@@ -49,7 +55,13 @@ describe("useHistory - Property-Based Tests", () => {
   it("undo → redo を繰り返すと元の状態に戻る", () => {
     fc.assert(
       fc.property(
-        fc.array(fc.array(fc.array(fc.string(), { minLength: 1, maxLength: 3 }), { minLength: 1, maxLength: 3 }), { minLength: 2, maxLength: 10 }),
+        fc.array(
+          fc.array(fc.array(fc.string(), { minLength: 1, maxLength: 3 }), {
+            minLength: 1,
+            maxLength: 3,
+          }),
+          { minLength: 2, maxLength: 10 }
+        ),
         fc.integer({ min: 1, max: 5 }),
         (operations, undoCount) => {
           const { result } = renderHook(() => useHistory(mockSetData));

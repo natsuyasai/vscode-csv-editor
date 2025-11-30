@@ -172,7 +172,7 @@ describe("useKeyboardShortcuts", () => {
       ctrlKey: true,
     });
     const preventDefaultSpy = vi.spyOn(event, "preventDefault");
-    
+
     document.dispatchEvent(event);
 
     expect(preventDefaultSpy).toHaveBeenCalled();
@@ -196,7 +196,7 @@ describe("useKeyboardShortcuts", () => {
       ctrlKey: true,
     });
     const stopPropagationSpy = vi.spyOn(event, "stopPropagation");
-    
+
     document.dispatchEvent(event);
 
     expect(stopPropagationSpy).toHaveBeenCalled();

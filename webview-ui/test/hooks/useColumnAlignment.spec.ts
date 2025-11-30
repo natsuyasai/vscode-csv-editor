@@ -25,10 +25,9 @@ describe("useColumnAlignment", () => {
   });
 
   it("handleAlignmentChangeで列の配置を変更", () => {
-    const { result } = renderHook(
-      ({ columnIndex }) => useColumnAlignment(columnIndex),
-      { initialProps: { columnIndex: 0 } }
-    );
+    const { result } = renderHook(({ columnIndex }) => useColumnAlignment(columnIndex), {
+      initialProps: { columnIndex: 0 },
+    });
 
     const newAlignment: CellAlignment = { vertical: "top", horizontal: "center" };
 
@@ -53,10 +52,9 @@ describe("useColumnAlignment", () => {
   });
 
   it("複数の列に異なる配置を設定", () => {
-    const { result, rerender } = renderHook(
-      ({ columnIndex }) => useColumnAlignment(columnIndex),
-      { initialProps: { columnIndex: 0 } }
-    );
+    const { result, rerender } = renderHook(({ columnIndex }) => useColumnAlignment(columnIndex), {
+      initialProps: { columnIndex: 0 },
+    });
 
     // 列0に配置を設定
     const alignment0: CellAlignment = { vertical: "top", horizontal: "left" };
@@ -77,10 +75,9 @@ describe("useColumnAlignment", () => {
   });
 
   it("getColumnAlignmentで指定列の配置を取得", () => {
-    const { result } = renderHook(
-      ({ columnIndex }) => useColumnAlignment(columnIndex),
-      { initialProps: { columnIndex: 0 } }
-    );
+    const { result } = renderHook(({ columnIndex }) => useColumnAlignment(columnIndex), {
+      initialProps: { columnIndex: 0 },
+    });
 
     const alignment: CellAlignment = { vertical: "top", horizontal: "center" };
 
@@ -93,10 +90,9 @@ describe("useColumnAlignment", () => {
   });
 
   it("選択列を変更してもgetCurrentAlignmentは正しい配置を返す", () => {
-    const { result, rerender } = renderHook(
-      ({ columnIndex }) => useColumnAlignment(columnIndex),
-      { initialProps: { columnIndex: 0 } }
-    );
+    const { result, rerender } = renderHook(({ columnIndex }) => useColumnAlignment(columnIndex), {
+      initialProps: { columnIndex: 0 },
+    });
 
     const alignment0: CellAlignment = { vertical: "top", horizontal: "left" };
     act(() => {
@@ -120,10 +116,9 @@ describe("useColumnAlignment", () => {
   });
 
   it("配置の更新が既存の配置を上書き", () => {
-    const { result } = renderHook(
-      ({ columnIndex }) => useColumnAlignment(columnIndex),
-      { initialProps: { columnIndex: 0 } }
-    );
+    const { result } = renderHook(({ columnIndex }) => useColumnAlignment(columnIndex), {
+      initialProps: { columnIndex: 0 },
+    });
 
     const alignment1: CellAlignment = { vertical: "top", horizontal: "left" };
     act(() => {
