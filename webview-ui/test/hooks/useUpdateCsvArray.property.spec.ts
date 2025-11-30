@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { act, renderHook } from "@testing-library/react";
 import * as fc from "fast-check";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -120,7 +116,9 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
           act(() => hooks.result.current.deleteRow(-2));
 
           expect(setCSVArray.mock.calls.length).toBeGreaterThan(0);
-          const newArray = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0];
+          const newArray = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0] as Array<
+            Array<string>
+          >;
           // 配列のサイズは変わっていない（またはヘッダを保持）
           expect(newArray.length).toBeGreaterThanOrEqual(Math.min(1, originalLength));
         }),
@@ -139,7 +137,9 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
           act(() => hooks.result.current.insertCol(colIndex));
 
           expect(setCSVArray.mock.calls.length).toBeGreaterThan(0);
-          const newArray = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0];
+          const newArray = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0] as Array<
+            Array<string>
+          >;
           // すべての行の列数が1増えていること
           newArray.forEach((row: string[]) => {
             expect(row.length).toBe(originalColumnCount + 1);
@@ -171,7 +171,9 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
             act(() => hooks.result.current.deleteCol(validColIndex));
 
             expect(setCSVArray.mock.calls.length).toBeGreaterThan(0);
-            const newArray = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0];
+            const newArray = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0] as Array<
+              Array<string>
+            >;
             // すべての行の列数が1減っていること
             newArray.forEach((row: string[]) => {
               expect(row.length).toBe(originalColumnCount - 1);
@@ -204,7 +206,9 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
             act(() => hooks.result.current.updateCell(rowIndex, colIndex, newValue));
 
             expect(setCSVArray.mock.calls.length).toBeGreaterThan(0);
-            const newArray = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0];
+            const newArray = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0] as Array<
+              Array<string>
+            >;
             // 配列のサイズが変わっていないこと
             expect(newArray.length).toBe(csvArray.length);
             expect(newArray[0].length).toBe(csvArray[0].length);
@@ -226,7 +230,9 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
           act(() => hooks.result.current.updateCell(rowIndex, colIndex, newValue));
 
           expect(setCSVArray.mock.calls.length).toBeGreaterThan(0);
-          const newArray = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0];
+          const newArray = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0] as Array<
+            Array<string>
+          >;
           // 配列のサイズが変わっていないこと
           expect(newArray.length).toBe(csvArray.length);
           expect(newArray[0].length).toBe(csvArray[0].length);
@@ -250,7 +256,9 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
           act(() => hooks.result.current.moveColumns(fromIndex, toIndex));
 
           expect(setCSVArray.mock.calls.length).toBeGreaterThan(0);
-          const newArray = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0];
+          const newArray = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0] as Array<
+            Array<string>
+          >;
           // 配列のサイズが変わっていないこと
           expect(newArray.length).toBe(csvArray.length);
           newArray.forEach((row: string[]) => {
@@ -278,14 +286,18 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
 
             // 1回目の入れ替え
             act(() => hooks1.result.current.moveColumns(fromIndex, toIndex));
-            const afterFirstMove = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0];
+            const afterFirstMove = setCSVArray.mock.calls[
+              setCSVArray.mock.calls.length - 1
+            ][0] as Array<Array<string>>;
 
             vi.clearAllMocks();
             const hooks2 = renderHook(() => useUpdateCsvArray(afterFirstMove, setCSVArray, false));
 
             // 2回目の入れ替え（逆方向）
             act(() => hooks2.result.current.moveColumns(toIndex, fromIndex));
-            const afterSecondMove = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0];
+            const afterSecondMove = setCSVArray.mock.calls[
+              setCSVArray.mock.calls.length - 1
+            ][0] as Array<Array<string>>;
 
             // 元に戻っていること
             expect(afterSecondMove).toEqual(csvArray);
@@ -319,7 +331,9 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
 
             // 1回目の入れ替え
             act(() => hooks1.result.current.moveRows(fromIndex, toIndex));
-            const afterFirstMove = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0];
+            const afterFirstMove = setCSVArray.mock.calls[
+              setCSVArray.mock.calls.length - 1
+            ][0] as Array<Array<string>>;
 
             vi.clearAllMocks();
             const hooks2 = renderHook(() => useUpdateCsvArray(afterFirstMove, setCSVArray, false));
@@ -328,7 +342,9 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
             act(() => hooks2.result.current.moveRows(toIndex, fromIndex));
 
             if (setCSVArray.mock.calls.length > 0) {
-              const afterSecondMove = setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0];
+              const afterSecondMove = setCSVArray.mock.calls[
+                setCSVArray.mock.calls.length - 1
+              ][0] as Array<Array<string>>;
               // 元に戻っていること
               expect(afterSecondMove).toEqual(csvArray);
             }
@@ -365,8 +381,9 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
                     break;
                   case "deleteRow":
                     if (setCSVArray.mock.calls.length > 0) {
-                      const currentArray =
-                        setCSVArray.mock.calls[setCSVArray.mock.calls.length - 1][0];
+                      const currentArray = setCSVArray.mock.calls[
+                        setCSVArray.mock.calls.length - 1
+                      ][0] as Array<Array<string>>;
                       if (currentArray.length > 2) {
                         // ヘッダ+最低1行は残す
                         hooks.result.current.deleteRow(0);
