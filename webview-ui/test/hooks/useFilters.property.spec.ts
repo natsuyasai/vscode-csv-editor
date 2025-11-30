@@ -112,8 +112,12 @@ describe("useFilters - Property-Based Tests", () => {
 
           // col0のフィルターはクリアされている
           expect(result.current.isFilterActive("col0")).toBe(false);
-          // col1のフィルターは保持されている
-          expect(result.current.isFilterActive("col1")).toBe(true);
+          // col1のフィルターは保持されている（空白でない場合のみ）
+          if (filter1.trim() !== "") {
+            expect(result.current.isFilterActive("col1")).toBe(true);
+          } else {
+            expect(result.current.isFilterActive("col1")).toBe(false);
+          }
         }
       ),
       { numRuns: 50 }
@@ -132,8 +136,12 @@ describe("useFilters - Property-Based Tests", () => {
           result.current.setFilter("col0", filterValue);
         });
 
-        // フィルター設定後はtrue
-        expect(result.current.isFilterActive("col0")).toBe(true);
+        // フィルター設定後は、空白でない場合のみtrue
+        if (filterValue.trim() !== "") {
+          expect(result.current.isFilterActive("col0")).toBe(true);
+        } else {
+          expect(result.current.isFilterActive("col0")).toBe(false);
+        }
 
         act(() => {
           result.current.clearFilter("col0");
