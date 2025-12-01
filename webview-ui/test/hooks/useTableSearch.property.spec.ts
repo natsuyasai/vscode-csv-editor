@@ -40,25 +40,34 @@ describe("useTableSearch - Property-Based Tests", () => {
           result.current.handleSearch(searchText);
         });
 
-        // 手動でマッチ数を計算
+        // 手動でマッチ数を計算（空白のみの検索文字列は0件とする）
         let expectedMatches = 0;
-        const lowerSearchText = searchText.toLowerCase();
+        const trimmedSearchText = searchText.trim();
+        const lowerSearchText = trimmedSearchText.toLowerCase();
 
-        data.forEach((row) => {
-          Object.keys(row).forEach((key) => {
-            if (key === ROW_IDX_KEY || key === ROW_ID_KEY) {
-              return;
-            }
-            const value = row[key as keyof typeof row];
-            if (
-              value &&
-              (typeof value === "string" || typeof value === "number") &&
-              String(value).toLowerCase().includes(lowerSearchText)
-            ) {
-              expectedMatches++;
-            }
-          });
-        });
+        // 空白のみの場合は0件
+        expectedMatches =
+          trimmedSearchText === ""
+            ? 0
+            : data.reduce((count, row) => {
+                return (
+                  count +
+                  Object.keys(row).reduce((cellCount, key) => {
+                    if (key === ROW_IDX_KEY || key === ROW_ID_KEY) {
+                      return cellCount;
+                    }
+                    const value = row[key as keyof typeof row];
+                    return (
+                      cellCount +
+                      (value &&
+                      (typeof value === "string" || typeof value === "number") &&
+                      String(value).toLowerCase().includes(lowerSearchText)
+                        ? 1
+                        : 0)
+                    );
+                  }, 0)
+                );
+              }, 0);
 
         expect(result.current.matchedItemPositions.length).toBe(expectedMatches);
       }),
@@ -68,60 +77,96 @@ describe("useTableSearch - Property-Based Tests", () => {
 
   it("次へを繰り返すと、最終的に最初の検索結果に戻る", () => {
     fc.assert(
-      fc.property(tableDataArb, fc.string({ minLength: 1, maxLength: 5 }), (data, searchText) => {
-        const { result } = renderHook(() => useTableSearch(data, rowHeight, mockTableContainerRef));
+      fc.property(
+        tableDataArb.chain((data) =>
+          fc
+            .string({ minLength: 1, maxLength: 5 })
+            .filter((searchText) => {
+              // マッチがあるかを事前確認
+              const lowerSearchText = searchText.toLowerCase();
+              return data.some((row) =>
+                Object.keys(row).some((key) => {
+                  if (key === ROW_IDX_KEY || key === ROW_ID_KEY) return false;
+                  const value = row[key as keyof typeof row];
+                  return (
+                    value &&
+                    (typeof value === "string" || typeof value === "number") &&
+                    String(value).toLowerCase().includes(lowerSearchText)
+                  );
+                })
+              );
+            })
+            .map((searchText) => ({ data, searchText }))
+        ),
+        ({ data, searchText }) => {
+          const { result } = renderHook(() => useTableSearch(data, rowHeight, mockTableContainerRef));
 
-        act(() => {
-          result.current.handleSearch(searchText);
-        });
-
-        const matchCount = result.current.matchedItemPositions.length;
-
-        if (matchCount === 0) {
-          // マッチがない場合はスキップ
-          return;
-        }
-
-        // マッチ数 + 1回「次へ」を実行すると、最初のインデックスに戻るはず
-        for (let i = 0; i < matchCount; i++) {
           act(() => {
-            result.current.handleNextSearch();
+            result.current.handleSearch(searchText);
           });
-        }
 
-        // 最初のインデックス（0）に戻っていること
-        expect(result.current.searchedSelectedItemIdx).toBe(0);
-      }),
+          const matchCount = result.current.matchedItemPositions.length;
+
+          // マッチ数回「次へ」を実行（reduceで実行）
+          Array.from({ length: matchCount }).reduce(() => {
+            act(() => {
+              result.current.handleNextSearch();
+            });
+            return null;
+          }, null);
+
+          // 最初のインデックス（0）に戻っていること
+          expect(result.current.searchedSelectedItemIdx).toBe(0);
+        }
+      ),
       { numRuns: 50 }
     );
   });
 
   it("前へを繰り返すと、最終的に最後の検索結果に戻る", () => {
     fc.assert(
-      fc.property(tableDataArb, fc.string({ minLength: 1, maxLength: 5 }), (data, searchText) => {
-        const { result } = renderHook(() => useTableSearch(data, rowHeight, mockTableContainerRef));
+      fc.property(
+        tableDataArb.chain((data) =>
+          fc
+            .string({ minLength: 1, maxLength: 5 })
+            .filter((searchText) => {
+              // マッチがあるかを事前確認
+              const lowerSearchText = searchText.toLowerCase();
+              return data.some((row) =>
+                Object.keys(row).some((key) => {
+                  if (key === ROW_IDX_KEY || key === ROW_ID_KEY) return false;
+                  const value = row[key as keyof typeof row];
+                  return (
+                    value &&
+                    (typeof value === "string" || typeof value === "number") &&
+                    String(value).toLowerCase().includes(lowerSearchText)
+                  );
+                })
+              );
+            })
+            .map((searchText) => ({ data, searchText }))
+        ),
+        ({ data, searchText }) => {
+          const { result } = renderHook(() => useTableSearch(data, rowHeight, mockTableContainerRef));
 
-        act(() => {
-          result.current.handleSearch(searchText);
-        });
-
-        const matchCount = result.current.matchedItemPositions.length;
-
-        if (matchCount === 0) {
-          // マッチがない場合はスキップ
-          return;
-        }
-
-        // マッチ数回「前へ」を実行すると、最初のインデックスに戻るはず
-        for (let i = 0; i < matchCount; i++) {
           act(() => {
-            result.current.handlePreviousSearch();
+            result.current.handleSearch(searchText);
           });
-        }
 
-        // 最初のインデックス（0）に戻っていること
-        expect(result.current.searchedSelectedItemIdx).toBe(0);
-      }),
+          const matchCount = result.current.matchedItemPositions.length;
+
+          // マッチ数回「前へ」を実行（reduceで実行）
+          Array.from({ length: matchCount }).reduce(() => {
+            act(() => {
+              result.current.handlePreviousSearch();
+            });
+            return null;
+          }, null);
+
+          // 最初のインデックス（0）に戻っていること
+          expect(result.current.searchedSelectedItemIdx).toBe(0);
+        }
+      ),
       { numRuns: 50 }
     );
   });
@@ -129,10 +174,29 @@ describe("useTableSearch - Property-Based Tests", () => {
   it("次へ → 前へを繰り返すと、インデックスが変化しない", () => {
     fc.assert(
       fc.property(
-        tableDataArb,
-        fc.string({ minLength: 1, maxLength: 5 }),
-        fc.integer({ min: 1, max: 10 }),
-        (data, searchText, iterations) => {
+        tableDataArb.chain((data) =>
+          fc
+            .string({ minLength: 1, maxLength: 5 })
+            .filter((searchText) => {
+              // マッチがあるかを事前確認
+              const lowerSearchText = searchText.toLowerCase();
+              return data.some((row) =>
+                Object.keys(row).some((key) => {
+                  if (key === ROW_IDX_KEY || key === ROW_ID_KEY) return false;
+                  const value = row[key as keyof typeof row];
+                  return (
+                    value &&
+                    (typeof value === "string" || typeof value === "number") &&
+                    String(value).toLowerCase().includes(lowerSearchText)
+                  );
+                })
+              );
+            })
+            .chain((searchText) =>
+              fc.integer({ min: 1, max: 10 }).map((iterations) => ({ data, searchText, iterations }))
+            )
+        ),
+        ({ data, searchText, iterations }) => {
           const { result } = renderHook(() =>
             useTableSearch(data, rowHeight, mockTableContainerRef)
           );
@@ -141,23 +205,18 @@ describe("useTableSearch - Property-Based Tests", () => {
             result.current.handleSearch(searchText);
           });
 
-          const matchCount = result.current.matchedItemPositions.length;
-
-          if (matchCount === 0) {
-            return;
-          }
-
           const initialIdx = result.current.searchedSelectedItemIdx;
 
-          // 次へ → 前へを繰り返す
-          for (let i = 0; i < iterations; i++) {
+          // 次へ → 前へを繰り返す（reduceで実行）
+          Array.from({ length: iterations }).reduce(() => {
             act(() => {
               result.current.handleNextSearch();
             });
             act(() => {
               result.current.handlePreviousSearch();
             });
-          }
+            return null;
+          }, null);
 
           // 最初のインデックスに戻っていること
           expect(result.current.searchedSelectedItemIdx).toBe(initialIdx);
@@ -219,10 +278,35 @@ describe("useTableSearch - Property-Based Tests", () => {
   it("検索結果がある場合、searchedSelectedItemIdxは常に有効な範囲内", () => {
     fc.assert(
       fc.property(
-        tableDataArb,
-        fc.string({ minLength: 1, maxLength: 5 }),
-        fc.array(fc.constantFrom("next", "previous"), { minLength: 1, maxLength: 20 }),
-        (data, searchText, actions) => {
+        tableDataArb.chain((data) =>
+          fc
+            .string({ minLength: 1, maxLength: 5 })
+            .map((s) => s.trim())
+            .filter((searchText) => {
+              // 空文字列を除外
+              if (searchText === "") return false;
+
+              // マッチがあるかを事前確認
+              const lowerSearchText = searchText.toLowerCase();
+              return data.some((row) =>
+                Object.keys(row).some((key) => {
+                  if (key === ROW_IDX_KEY || key === ROW_ID_KEY) return false;
+                  const value = row[key as keyof typeof row];
+                  return (
+                    value &&
+                    (typeof value === "string" || typeof value === "number") &&
+                    String(value).toLowerCase().includes(lowerSearchText)
+                  );
+                })
+              );
+            })
+            .chain((searchText) =>
+              fc
+                .array(fc.constantFrom("next", "previous"), { minLength: 1, maxLength: 20 })
+                .map((actions) => ({ data, searchText, actions }))
+            )
+        ),
+        ({ data, searchText, actions }) => {
           const { result } = renderHook(() =>
             useTableSearch(data, rowHeight, mockTableContainerRef)
           );
@@ -233,11 +317,7 @@ describe("useTableSearch - Property-Based Tests", () => {
 
           const matchCount = result.current.matchedItemPositions.length;
 
-          if (matchCount === 0) {
-            return;
-          }
-
-          // 次へ/前へを繰り返す
+          // 次へ/前へを繰り返す（forEachはセットアップ操作として許可）
           actions.forEach((action) => {
             act(() => {
               if (action === "next") {

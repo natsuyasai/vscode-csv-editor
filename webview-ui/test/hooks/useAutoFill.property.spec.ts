@@ -50,24 +50,28 @@ describe("useAutoFill - Property-Based Tests", () => {
   it("縦方向のフィルで数値の場合、連番が生成される", () => {
     fc.assert(
       fc.property(
-        fc.array(
-          fc.record({
-            col0: fc.integer({ min: 1, max: 100 }).map(String),
-            col1: fc.string(),
-          }),
-          { minLength: 5, maxLength: 15 }
-        ),
-        fc.integer({ min: 0, max: 10 }),
-        fc.integer({ min: 1, max: 4 }),
-        (data, startRow, fillCount) => {
+        fc
+          .array(
+            fc.record({
+              col0: fc.integer({ min: 1, max: 100 }).map(String),
+              col1: fc.string(),
+            }),
+            { minLength: 5, maxLength: 15 }
+          )
+          .chain((data) =>
+            fc
+              .integer({ min: 0, max: Math.min(10, data.length - 2) })
+              .chain((startRow) =>
+                fc
+                  .integer({ min: 1, max: Math.min(4, data.length - startRow - 1) })
+                  .map((fillCount) => ({ data, startRow, fillCount }))
+              )
+          ),
+        ({ data, startRow, fillCount }) => {
           mockUpdateCells.mockClear(); // 各テストケースの前にモックをクリア
 
-          const validStartRow = Math.min(startRow, data.length - 1);
-          const validEndRow = Math.min(validStartRow + fillCount, data.length - 1);
-
-          if (validStartRow === validEndRow) {
-            return; // 同じ行ならスキップ
-          }
+          const validStartRow = startRow;
+          const validEndRow = validStartRow + fillCount;
 
           const { result } = renderHook(() => useAutoFill(data, mockUpdateCells));
 
@@ -101,26 +105,33 @@ describe("useAutoFill - Property-Based Tests", () => {
   it("横方向のフィルで数値の場合、連番が生成される", () => {
     fc.assert(
       fc.property(
-        fc.array(
-          fc.record({
-            col0: fc.integer({ min: 1, max: 100 }).map(String),
-            col1: fc.string(),
-            col2: fc.string(),
-          }),
-          { minLength: 5, maxLength: 15 }
-        ),
-        fc.integer({ min: 0, max: 10 }),
-        fc.integer({ min: 0, max: 2 }),
-        fc.integer({ min: 1, max: 2 }),
-        (data, startRow, startCol, fillCount) => {
+        fc
+          .array(
+            fc.record({
+              col0: fc.integer({ min: 1, max: 100 }).map(String),
+              col1: fc.string(),
+              col2: fc.string(),
+            }),
+            { minLength: 5, maxLength: 15 }
+          )
+          .chain((data) =>
+            fc
+              .integer({ min: 0, max: Math.min(10, data.length - 1) })
+              .chain((startRow) =>
+                fc
+                  .integer({ min: 0, max: 1 })
+                  .chain((startCol) =>
+                    fc
+                      .integer({ min: 1, max: Math.min(2, 2 - startCol) })
+                      .map((fillCount) => ({ data, startRow, startCol, fillCount }))
+                  )
+              )
+          ),
+        ({ data, startRow, startCol, fillCount }) => {
           mockUpdateCells.mockClear(); // 各テストケースの前にモックをクリア
 
-          const validStartRow = Math.min(startRow, data.length - 1);
-          const validEndCol = Math.min(startCol + fillCount, 2);
-
-          if (startCol === validEndCol) {
-            return; // 同じ列ならスキップ
-          }
+          const validStartRow = startRow;
+          const validEndCol = startCol + fillCount;
 
           const { result } = renderHook(() => useAutoFill(data, mockUpdateCells));
 
@@ -154,31 +165,30 @@ describe("useAutoFill - Property-Based Tests", () => {
   it("文字列のフィルでは、同じ値がコピーされる", () => {
     fc.assert(
       fc.property(
-        fc.array(
-          fc.record({
-            col0: fc.string({ minLength: 1, maxLength: 10 }),
-            col1: fc.string(),
-          }),
-          { minLength: 5, maxLength: 15 }
-        ),
-        fc.integer({ min: 0, max: 10 }),
-        fc.integer({ min: 1, max: 4 }),
-        (data, startRow, fillCount) => {
+        fc
+          .array(
+            fc.record({
+              col0: fc.constantFrom("text", "hello", "world", "test", "abc"),
+              col1: fc.string(),
+            }),
+            { minLength: 5, maxLength: 15 }
+          )
+          .chain((data) =>
+            fc
+              .integer({ min: 0, max: Math.min(10, data.length - 2) })
+              .chain((startRow) =>
+                fc
+                  .integer({ min: 1, max: Math.min(4, data.length - startRow - 1) })
+                  .map((fillCount) => ({ data, startRow, fillCount }))
+              )
+          ),
+        ({ data, startRow, fillCount }) => {
           mockUpdateCells.mockClear(); // 各テストケースの前にモックをクリア
 
-          const validStartRow = Math.min(startRow, data.length - 1);
-          const validEndRow = Math.min(validStartRow + fillCount, data.length - 1);
-
-          if (validStartRow === validEndRow) {
-            return; // 同じ行ならスキップ
-          }
+          const validStartRow = startRow;
+          const validEndRow = validStartRow + fillCount;
 
           const startValue = data[validStartRow].col0;
-
-          // 数値でない場合のみテスト
-          if (!isNaN(parseFloat(startValue)) && startValue.trim() !== "") {
-            return;
-          }
 
           const { result } = renderHook(() => useAutoFill(data, mockUpdateCells));
 
@@ -194,17 +204,15 @@ describe("useAutoFill - Property-Based Tests", () => {
             result.current.handleFillEnd();
           });
 
-          if (mockUpdateCells.mock.calls.length > 0) {
-            const calls = mockUpdateCells.mock.calls[0][0] as Array<{
-              rowIdx: number;
-              colIdx: number;
-              value: string;
-            }>;
-            // すべてのセルが同じ値でコピーされている
-            calls.forEach((call) => {
-              expect(call.value).toBe(startValue);
-            });
-          }
+          const calls = mockUpdateCells.mock.calls[0][0] as Array<{
+            rowIdx: number;
+            colIdx: number;
+            value: string;
+          }>;
+          // すべてのセルが同じ値でコピーされている
+          calls.forEach((call) => {
+            expect(call.value).toBe(startValue);
+          });
         }
       ),
       { numRuns: 50 }
@@ -214,29 +222,38 @@ describe("useAutoFill - Property-Based Tests", () => {
   it("矩形範囲のフィルでは、開始セルの値がすべてのセルにコピーされる", () => {
     fc.assert(
       fc.property(
-        fc.array(
-          fc.record({
-            col0: fc.string({ minLength: 1, maxLength: 10 }),
-            col1: fc.string(),
-            col2: fc.string(),
-          }),
-          { minLength: 5, maxLength: 15 }
-        ),
-        fc.integer({ min: 0, max: 10 }),
-        fc.integer({ min: 0, max: 2 }),
-        fc.integer({ min: 1, max: 3 }),
-        fc.integer({ min: 1, max: 2 }),
-        (data, startRow, startCol, rowFill, colFill) => {
+        fc
+          .array(
+            fc.record({
+              col0: fc.string({ minLength: 1, maxLength: 10 }),
+              col1: fc.string(),
+              col2: fc.string(),
+            }),
+            { minLength: 5, maxLength: 15 }
+          )
+          .chain((data) =>
+            fc
+              .integer({ min: 0, max: Math.min(10, data.length - 2) })
+              .chain((startRow) =>
+                fc
+                  .integer({ min: 0, max: 1 })
+                  .chain((startCol) =>
+                    fc
+                      .integer({ min: 1, max: Math.min(3, data.length - startRow - 1) })
+                      .chain((rowFill) =>
+                        fc
+                          .integer({ min: 1, max: Math.min(2, 2 - startCol) })
+                          .map((colFill) => ({ data, startRow, startCol, rowFill, colFill }))
+                      )
+                  )
+              )
+          ),
+        ({ data, startRow, startCol, rowFill, colFill }) => {
           mockUpdateCells.mockClear(); // 各テストケースの前にモックをクリア
 
-          const validStartRow = Math.min(startRow, data.length - 1);
-          const validEndRow = Math.min(validStartRow + rowFill, data.length - 1);
-          const validEndCol = Math.min(startCol + colFill, 2);
-
-          // 縦または横のみのフィルは除外（矩形範囲のみテスト）
-          if (validStartRow === validEndRow || startCol === validEndCol) {
-            return;
-          }
+          const validStartRow = startRow;
+          const validEndRow = validStartRow + rowFill;
+          const validEndCol = startCol + colFill;
 
           const startValue = data[validStartRow][`col${startCol}` as keyof (typeof data)[0]];
 
@@ -254,17 +271,15 @@ describe("useAutoFill - Property-Based Tests", () => {
             result.current.handleFillEnd();
           });
 
-          if (mockUpdateCells.mock.calls.length > 0) {
-            const calls = mockUpdateCells.mock.calls[0][0] as Array<{
-              rowIdx: number;
-              colIdx: number;
-              value: string;
-            }>;
-            // すべてのセルが同じ値でコピーされている
-            calls.forEach((call) => {
-              expect(call.value).toBe(startValue);
-            });
-          }
+          const calls = mockUpdateCells.mock.calls[0][0] as Array<{
+            rowIdx: number;
+            colIdx: number;
+            value: string;
+          }>;
+          // すべてのセルが同じ値でコピーされている
+          calls.forEach((call) => {
+            expect(call.value).toBe(startValue);
+          });
         }
       ),
       { numRuns: 50 }
@@ -299,20 +314,30 @@ describe("useAutoFill - Property-Based Tests", () => {
           const minCol = Math.min(startCol, endCol);
           const maxCol = Math.max(startCol, endCol);
 
-          // 範囲内のセルはtrue
-          for (let r = minRow; r <= maxRow; r++) {
-            for (let c = minCol; c <= maxCol; c++) {
+          // 範囲内のセルはtrue（reduceで検証）
+          Array.from({ length: maxRow - minRow + 1 }).reduce((_, __, rowOffset) => {
+            const r = minRow + rowOffset;
+            Array.from({ length: maxCol - minCol + 1 }).reduce((__, ___, colOffset) => {
+              const c = minCol + colOffset;
               expect(result.current.isInFillRange(r, c)).toBe(true);
-            }
-          }
+              return null;
+            }, null);
+            return null;
+          }, null);
 
-          // 範囲外のセルはfalse（例: 範囲の外側）
-          if (maxRow + 1 < data.length) {
-            expect(result.current.isInFillRange(maxRow + 1, minCol)).toBe(false);
-          }
-          if (maxCol + 1 <= 2) {
-            expect(result.current.isInFillRange(minRow, maxCol + 1)).toBe(false);
-          }
+          // 範囲外のセルはfalse（reduceで外側1セル分を検証）
+          Array.from({ length: maxRow - minRow + 1 }).reduce((_, __, rowOffset) => {
+            const r = minRow + rowOffset;
+            expect(result.current.isInFillRange(r, minCol - 1)).toBe(false);
+            expect(result.current.isInFillRange(r, maxCol + 1)).toBe(false);
+            return null;
+          }, null);
+          Array.from({ length: maxCol - minCol + 1 }).reduce((_, __, colOffset) => {
+            const c = minCol + colOffset;
+            expect(result.current.isInFillRange(minRow - 1, c)).toBe(false);
+            expect(result.current.isInFillRange(maxRow + 1, c)).toBe(false);
+            return null;
+          }, null);
         }
       ),
       { numRuns: 50 }

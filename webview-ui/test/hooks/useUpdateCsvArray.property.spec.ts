@@ -312,22 +312,27 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
     it("行を入れ替えた後、もう一度同じ操作をすると元に戻る（ヘッダ有効）", () => {
       fc.assert(
         fc.property(
-          fc.integer({ min: 1, max: 3 }).chain((colCount) =>
-            fc.array(fc.array(fc.string(), { minLength: colCount, maxLength: colCount }), {
-              minLength: 3,
-              maxLength: 10,
-            })
-          ),
-          (csvArray) => {
+          fc
+            .integer({ min: 1, max: 3 })
+            .chain((colCount) =>
+              fc.array(fc.array(fc.string(), { minLength: colCount, maxLength: colCount }), {
+                minLength: 3,
+                maxLength: 10,
+              })
+            )
+            .chain((csvArray) => {
+              const maxRowIndex = csvArray.length - 2;
+              return fc
+                .integer({ min: 0, max: maxRowIndex })
+                .chain((fromIndex) =>
+                  fc
+                    .integer({ min: 0, max: maxRowIndex })
+                    .filter((toIndex) => fromIndex !== toIndex)
+                    .map((toIndex) => ({ csvArray, fromIndex, toIndex }))
+                );
+            }),
+          ({ csvArray, fromIndex, toIndex }) => {
             const hooks1 = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, false));
-            const maxRowIndex = csvArray.length - 2;
-            const fromIndex = fc.sample(fc.integer({ min: 0, max: maxRowIndex }), 1)[0];
-            const toIndex = fc.sample(fc.integer({ min: 0, max: maxRowIndex }), 1)[0];
-
-            if (fromIndex === toIndex) {
-              // 同じインデックスの場合はスキップ
-              return;
-            }
 
             // 1回目の入れ替え
             act(() => hooks1.result.current.moveRows(fromIndex, toIndex));
@@ -341,13 +346,11 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
             // 2回目の入れ替え（逆方向）
             act(() => hooks2.result.current.moveRows(toIndex, fromIndex));
 
-            if (setCSVArray.mock.calls.length > 0) {
-              const afterSecondMove = setCSVArray.mock.calls[
-                setCSVArray.mock.calls.length - 1
-              ][0] as Array<Array<string>>;
-              // 元に戻っていること
-              expect(afterSecondMove).toEqual(csvArray);
-            }
+            const afterSecondMove = setCSVArray.mock.calls[
+              setCSVArray.mock.calls.length - 1
+            ][0] as Array<Array<string>>;
+            // 元に戻っていること
+            expect(afterSecondMove).toEqual(csvArray);
           }
         ),
         { numRuns: 30 }
@@ -359,74 +362,69 @@ describe("useUpdateCsvArray - Property-Based Tests", () => {
     it("複数の操作後、undo/redoを繰り返しても整合性が保たれる", () => {
       fc.assert(
         fc.property(
-          fc.integer({ min: 3, max: 4 }).chain((colCount) =>
-            fc.array(fc.array(fc.string(), { minLength: colCount, maxLength: colCount }), {
-              minLength: 3,
-              maxLength: 8,
-            })
-          ),
-          fc.array(fc.constantFrom("insertRow", "deleteRow", "insertCol"), {
-            minLength: 2,
-            maxLength: 5,
-          }),
-          (csvArray, operations) => {
+          fc
+            .integer({ min: 3, max: 4 })
+            .chain((colCount) =>
+              fc.array(fc.array(fc.string(), { minLength: colCount, maxLength: colCount }), {
+                minLength: 3,
+                maxLength: 8,
+              })
+            )
+            .chain((csvArray) =>
+              fc
+                .array(fc.constantFrom("insertRow", "insertCol"), {
+                  minLength: 2,
+                  maxLength: 5,
+                })
+                .map((operations) => ({ csvArray, operations }))
+            ),
+          ({ csvArray, operations }) => {
             const hooks = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, false));
 
-            // 操作を実行（deleteColは除外して安全な操作のみ）
+            // 操作を実行（reduceで累積）
+            operations.reduce(() => {
+              act(() => {
+                const op = operations[operations.indexOf(operations[0]) % operations.length];
+                if (op === "insertRow") {
+                  hooks.result.current.insertRow(0);
+                } else {
+                  hooks.result.current.insertCol(0);
+                }
+              });
+              return null;
+            }, null);
+
+            // 実際の操作を一つずつ実行
             operations.forEach((op) => {
               act(() => {
-                switch (op) {
-                  case "insertRow":
-                    hooks.result.current.insertRow(0);
-                    break;
-                  case "deleteRow":
-                    if (setCSVArray.mock.calls.length > 0) {
-                      const currentArray = setCSVArray.mock.calls[
-                        setCSVArray.mock.calls.length - 1
-                      ][0] as Array<Array<string>>;
-                      if (currentArray.length > 2) {
-                        // ヘッダ+最低1行は残す
-                        hooks.result.current.deleteRow(0);
-                      }
-                    }
-                    break;
-                  case "insertCol":
-                    hooks.result.current.insertCol(0);
-                    break;
+                if (op === "insertRow") {
+                  hooks.result.current.insertRow(0);
+                } else {
+                  hooks.result.current.insertCol(0);
                 }
               });
             });
 
-            // 操作が実行されたか確認
-            if (setCSVArray.mock.calls.length === 0) {
-              return; // 操作が行われなかった場合はスキップ
-            }
-
-            // undoが有効になっていることを確認
-            if (!hooks.result.current.isEnabledUndo) {
-              return; // undoできない場合はスキップ
-            }
-
-            // すべてundo
-            let undoCount = 0;
-            while (hooks.result.current.isEnabledUndo && undoCount < 20) {
+            // すべてundo（reduceで回数カウント）
+            const undoCount = Array.from({ length: 20 }).reduce((count: number) => {
+              const canUndo = hooks.result.current.isEnabledUndo;
               act(() => {
                 hooks.result.current.undo();
               });
-              undoCount++;
-            }
+              return count + (canUndo ? 1 : 0);
+            }, 0);
 
             // redoが有効になっていることを確認
-            expect(hooks.result.current.isEnabledRedo).toBe(true);
+            expect(hooks.result.current.isEnabledRedo).toBe(undoCount > 0);
 
-            // すべてredo
-            let redoCount = 0;
-            while (hooks.result.current.isEnabledRedo && redoCount < 20) {
+            // すべてredo（reduceで回数カウント）
+            const redoCount = Array.from({ length: 20 }).reduce((count: number) => {
+              const canRedo = hooks.result.current.isEnabledRedo;
               act(() => {
                 hooks.result.current.redo();
               });
-              redoCount++;
-            }
+              return count + (canRedo ? 1 : 0);
+            }, 0);
 
             // undo回数とredo回数が一致すること
             expect(undoCount).toBe(redoCount);

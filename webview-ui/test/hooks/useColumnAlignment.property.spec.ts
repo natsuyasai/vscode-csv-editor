@@ -196,14 +196,17 @@ describe("useColumnAlignment - Property-Based Tests", () => {
   it("列インデックスが変更されても、以前の配置設定は保持される", () => {
     fc.assert(
       fc.property(
-        fc.integer({ min: 0, max: 10 }),
-        fc.integer({ min: 0, max: 10 }),
-        alignmentArb,
-        alignmentArb,
-        (col1, col2, alignment1, alignment2) => {
-          // col1とcol2が同じ場合はスキップ
-          if (col1 === col2) return;
-
+        fc
+          .integer({ min: 0, max: 10 })
+          .chain((col1) =>
+            fc
+              .integer({ min: 0, max: 10 })
+              .filter((col2) => col1 !== col2)
+              .chain((col2) =>
+                alignmentArb.chain((alignment1) => alignmentArb.map((alignment2) => ({ col1, col2, alignment1, alignment2 })))
+              )
+          ),
+        ({ col1, col2, alignment1, alignment2 }) => {
           const { result, rerender } = renderHook(
             ({ selectedColumn }) => useColumnAlignment(selectedColumn),
             {
