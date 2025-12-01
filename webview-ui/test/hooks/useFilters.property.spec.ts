@@ -92,7 +92,7 @@ describe("useFilters - Property-Based Tests", () => {
     );
   });
 
-  it("特定のフィルターをクリアすると、他のフィルターは保持される", () => {
+  it("特定のフィルターをクリアすると、そのフィルターのみクリアされる", () => {
     fc.assert(
       fc.property(
         tableDataArb,
@@ -112,12 +112,8 @@ describe("useFilters - Property-Based Tests", () => {
 
           // col0のフィルターはクリアされている
           expect(result.current.isFilterActive("col0")).toBe(false);
-          // col1のフィルターは保持されている（空白でない場合のみ）
-          if (filter1.trim() !== "") {
-            expect(result.current.isFilterActive("col1")).toBe(true);
-          } else {
-            expect(result.current.isFilterActive("col1")).toBe(false);
-          }
+          // col1のフィルターのアクティブ状態は空白文字チェックに依存
+          expect(result.current.isFilterActive("col1")).toBe(filter1.trim() !== "");
         }
       ),
       { numRuns: 50 }
@@ -137,11 +133,7 @@ describe("useFilters - Property-Based Tests", () => {
         });
 
         // フィルター設定後は、空白でない場合のみtrue
-        if (filterValue.trim() !== "") {
-          expect(result.current.isFilterActive("col0")).toBe(true);
-        } else {
-          expect(result.current.isFilterActive("col0")).toBe(false);
-        }
+        expect(result.current.isFilterActive("col0")).toBe(filterValue.trim() !== "");
 
         act(() => {
           result.current.clearFilter("col0");
@@ -171,22 +163,14 @@ describe("useFilters - Property-Based Tests", () => {
           });
 
           // フィルター設定後は、空白でない場合のみtrue
-          if (filter0.trim() !== "") {
-            expect(result.current.hasActiveFilters).toBe(true);
-          } else {
-            expect(result.current.hasActiveFilters).toBe(false);
-          }
+          expect(result.current.hasActiveFilters).toBe(filter0.trim() !== "");
 
           act(() => {
             result.current.setFilter("col1", filter1);
           });
 
           // 複数のフィルター設定後、少なくとも1つが空白でなければtrue
-          if (filter0.trim() !== "" || filter1.trim() !== "") {
-            expect(result.current.hasActiveFilters).toBe(true);
-          } else {
-            expect(result.current.hasActiveFilters).toBe(false);
-          }
+          expect(result.current.hasActiveFilters).toBe(filter0.trim() !== "" || filter1.trim() !== "");
 
           act(() => {
             result.current.clearFilters();
@@ -293,13 +277,10 @@ describe("useFilters - Property-Based Tests", () => {
           });
         }).not.toThrow();
 
-        // 存在しない列のフィルターの場合、cellValueがundefinedになるため、すべての行がフィルタリングされる
-        // ただし、filterValueが空文字列の場合は、すべての行が返される
-        if (filterValue.trim() === "") {
-          expect(result.current.filteredRows.length).toBe(data.length);
-        } else {
-          expect(result.current.filteredRows.length).toBe(0);
-        }
+        // 存在しない列のフィルターの場合、cellValueがundefinedになる
+        // 空文字列の場合はすべての行、それ以外は0行
+        const expectedLength = filterValue.trim() === "" ? data.length : 0;
+        expect(result.current.filteredRows.length).toBe(expectedLength);
       }),
       { numRuns: 30 }
     );

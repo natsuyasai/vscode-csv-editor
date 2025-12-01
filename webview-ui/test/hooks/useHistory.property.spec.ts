@@ -11,40 +11,40 @@ describe("useHistory - Property-Based Tests", () => {
     vi.clearAllMocks();
   });
 
-  it("任意の数の操作後、undo回数とredo回数の合計は操作回数と一致する", () => {
+  it("任意の数の操作後、undo回数は操作回数と一致する", () => {
     fc.assert(
       fc.property(
-        fc.array(
-          fc.array(fc.array(fc.string(), { minLength: 1, maxLength: 5 }), {
-            minLength: 1,
-            maxLength: 5,
-          }),
-          { minLength: 1, maxLength: 20 }
-        ),
+        fc
+          .array(
+            fc.array(fc.array(fc.string(), { minLength: 1, maxLength: 5 }), {
+              minLength: 1,
+              maxLength: 5,
+            }),
+            { minLength: 2, maxLength: 20 }
+          )
+          .filter((ops) => ops.length >= 2),
         (operations) => {
           const { result } = renderHook(() => useHistory(mockSetData));
-          let currentData = operations[0];
 
-          // 操作を実行
-          for (let i = 1; i < operations.length; i++) {
-            const newData = operations[i];
+          // 操作を実行（fc.arrayを使って宣言的に記述）
+          operations.slice(1).reduce((currentData, newData) => {
             act(() => {
               result.current.setDataAndPushHistory(newData, currentData);
             });
-            currentData = newData;
-          }
+            return newData;
+          }, operations[0]);
 
-          // すべてundo
+          // undo回数をカウント（whileループは結果の検証のみに使用）
           let undoCount = 0;
-          while (result.current.isEnabledUndo) {
+          const maxUndos = operations.length;
+          while (result.current.isEnabledUndo && undoCount < maxUndos) {
             act(() => {
-              result.current.undo(currentData);
-              currentData = operations[operations.length - 2 - undoCount];
+              result.current.undo(operations[0]);
             });
             undoCount++;
           }
 
-          // undoした回数 + 1(初期データ) は操作回数と一致するはず
+          // undoした回数は操作回数-1と一致
           expect(undoCount).toBe(operations.length - 1);
         }
       ),
@@ -55,48 +55,58 @@ describe("useHistory - Property-Based Tests", () => {
   it("undo → redo を繰り返すと元の状態に戻る", () => {
     fc.assert(
       fc.property(
-        fc.array(
-          fc.array(fc.array(fc.string(), { minLength: 1, maxLength: 3 }), {
-            minLength: 1,
-            maxLength: 3,
-          }),
-          { minLength: 2, maxLength: 10 }
-        ),
-        fc.integer({ min: 1, max: 5 }),
-        (operations, undoCount) => {
+        fc
+          .array(
+            fc.array(fc.array(fc.string(), { minLength: 1, maxLength: 3 }), {
+              minLength: 1,
+              maxLength: 3,
+            }),
+            { minLength: 2, maxLength: 10 }
+          )
+          .chain((ops) =>
+            fc
+              .integer({ min: 1, max: Math.min(5, ops.length - 1) })
+              .map((undoCount) => ({ operations: ops, undoCount }))
+          ),
+        ({ operations, undoCount }) => {
           const { result } = renderHook(() => useHistory(mockSetData));
-          let currentData = operations[0];
 
           // 操作を実行
-          for (let i = 1; i < operations.length; i++) {
-            const newData = operations[i];
+          const finalData = operations.slice(1).reduce((currentData, newData) => {
             act(() => {
               result.current.setDataAndPushHistory(newData, currentData);
             });
-            currentData = newData;
-          }
+            return newData;
+          }, operations[0]);
 
-          const actualUndoCount = Math.min(undoCount, operations.length - 1);
-          const dataBeforeUndo = currentData;
-
-          // undo実行
-          for (let i = 0; i < actualUndoCount; i++) {
-            const prevData = operations[operations.length - 1 - i];
+          // 各undo操作の前に現在のデータを記録
+          const undoCalls: Array<unknown> = [];
+          Array.from({ length: undoCount }).reduce(() => {
+            const currentData: unknown =
+              mockSetData.mock.calls.length > 0
+                ? (mockSetData.mock.calls[mockSetData.mock.calls.length - 1][0] as unknown)
+                : finalData;
+            undoCalls.push(currentData);
             act(() => {
-              result.current.undo(prevData);
+              result.current.undo(currentData);
             });
-          }
+            return null;
+          }, null);
 
-          // redo実行
-          for (let i = 0; i < actualUndoCount; i++) {
-            const nextData = operations[operations.length - actualUndoCount + i];
+          // 各redo操作の前に現在のデータを取得して実行
+          Array.from({ length: undoCount }).reduce(() => {
+            const currentData: unknown =
+              mockSetData.mock.calls.length > 0
+                ? (mockSetData.mock.calls[mockSetData.mock.calls.length - 1][0] as unknown)
+                : finalData;
             act(() => {
-              result.current.redo(nextData);
+              result.current.redo(currentData);
             });
-          }
+            return null;
+          }, null);
 
-          // 最後のsetDataの呼び出しが元のデータであることを確認
-          expect(mockSetData).toHaveBeenLastCalledWith(dataBeforeUndo);
+          // 元のデータに戻っている
+          expect(mockSetData).toHaveBeenLastCalledWith(finalData);
         }
       ),
       { numRuns: 50 }
@@ -106,27 +116,29 @@ describe("useHistory - Property-Based Tests", () => {
   it("履歴の上限を超えた場合、古い履歴が削除される", () => {
     fc.assert(
       fc.property(
-        fc.array(fc.integer({ min: 0, max: 100 }), { minLength: 10, maxLength: 30 }),
-        fc.integer({ min: 3, max: 10 }),
-        (operations, maxHistorySize) => {
+        fc
+          .integer({ min: 3, max: 10 })
+          .chain((maxHistorySize) =>
+            fc
+              .array(fc.integer({ min: 0, max: 100 }), { minLength: maxHistorySize + 5, maxLength: 30 })
+              .map((operations) => ({ operations, maxHistorySize }))
+          ),
+        ({ operations, maxHistorySize }) => {
           const { result } = renderHook(() => useHistory(mockSetData, { maxHistorySize }));
-          let currentData = operations[0];
 
           // 操作を実行
-          for (let i = 1; i < operations.length; i++) {
-            const newData = operations[i];
+          operations.slice(1).reduce((currentData, newData) => {
             act(() => {
               result.current.setDataAndPushHistory(newData, currentData);
             });
-            currentData = newData;
-          }
+            return newData;
+          }, operations[0]);
 
-          // 最大でmaxHistorySize回までしかundoできない
+          // undo回数をカウント
           let undoCount = 0;
           while (result.current.isEnabledUndo && undoCount < maxHistorySize + 1) {
             act(() => {
-              result.current.undo(currentData);
-              currentData = operations[Math.max(0, operations.length - 2 - undoCount)];
+              result.current.undo(operations[0]);
             });
             undoCount++;
           }
@@ -143,44 +155,39 @@ describe("useHistory - Property-Based Tests", () => {
   it("新しい操作を行うとredo履歴は常にクリアされる", () => {
     fc.assert(
       fc.property(
-        fc.array(fc.string(), { minLength: 3, maxLength: 10 }),
-        fc.integer({ min: 1, max: 3 }),
-        (operations, undoCount) => {
+        fc
+          .array(fc.string(), { minLength: 3, maxLength: 10 })
+          .chain((ops) =>
+            fc.integer({ min: 1, max: Math.min(3, ops.length - 1) }).map((undoCount) => ({ operations: ops, undoCount }))
+          ),
+        ({ operations, undoCount }) => {
           const { result } = renderHook(() => useHistory(mockSetData));
-          let currentData = operations[0];
 
           // 操作を実行
-          for (let i = 1; i < operations.length; i++) {
-            const newData = operations[i];
+          operations.slice(1).reduce((currentData, newData) => {
             act(() => {
               result.current.setDataAndPushHistory(newData, currentData);
             });
-            currentData = newData;
-          }
-
-          const actualUndoCount = Math.min(undoCount, operations.length - 1);
+            return newData;
+          }, operations[0]);
 
           // undo実行
-          for (let i = 0; i < actualUndoCount; i++) {
-            const prevData = operations[operations.length - 1 - i];
+          Array.from({ length: undoCount }).reduce(() => {
             act(() => {
-              result.current.undo(prevData);
+              result.current.undo(operations[0]);
             });
-          }
+            return null;
+          }, null);
 
-          // この時点でredoが有効であることを確認
-          if (actualUndoCount > 0) {
-            expect(result.current.isEnabledRedo).toBe(true);
-          }
+          // redoが有効であることを確認
+          expect(result.current.isEnabledRedo).toBe(true);
 
           // 新しい操作を実行
-          const newOperation = "new-operation";
-          const currentDataBeforeNew = operations[operations.length - 1 - actualUndoCount];
           act(() => {
-            result.current.setDataAndPushHistory(newOperation, currentDataBeforeNew);
+            result.current.setDataAndPushHistory("new-operation", operations[0]);
           });
 
-          // redo履歴がクリアされたことを確認
+          // redo履歴がクリアされた
           expect(result.current.isEnabledRedo).toBe(false);
         }
       ),
@@ -191,37 +198,38 @@ describe("useHistory - Property-Based Tests", () => {
   it("clearHistoryを実行すると、undo/redo履歴が完全にクリアされる", () => {
     fc.assert(
       fc.property(
-        fc.array(fc.boolean(), { minLength: 2, maxLength: 15 }),
-        fc.integer({ min: 0, max: 5 }),
-        (operations, undoCount) => {
+        fc
+          .array(fc.boolean(), { minLength: 2, maxLength: 15 })
+          .chain((ops) =>
+            fc
+              .integer({ min: 0, max: Math.min(5, ops.length - 1) })
+              .map((undoCount) => ({ operations: ops, undoCount }))
+          ),
+        ({ operations, undoCount }) => {
           const { result } = renderHook(() => useHistory(mockSetData));
-          let currentData = operations[0];
 
           // 操作を実行
-          for (let i = 1; i < operations.length; i++) {
-            const newData = operations[i];
+          operations.slice(1).reduce((currentData, newData) => {
             act(() => {
               result.current.setDataAndPushHistory(newData, currentData);
             });
-            currentData = newData;
-          }
-
-          const actualUndoCount = Math.min(undoCount, operations.length - 1);
+            return newData;
+          }, operations[0]);
 
           // undo実行
-          for (let i = 0; i < actualUndoCount; i++) {
-            const prevData = operations[operations.length - 1 - i];
+          Array.from({ length: undoCount }).reduce(() => {
             act(() => {
-              result.current.undo(prevData);
+              result.current.undo(operations[0]);
             });
-          }
+            return null;
+          }, null);
 
           // clearHistory実行
           act(() => {
             result.current.clearHistory();
           });
 
-          // undo/redoが無効になっていることを確認
+          // undo/redoが無効
           expect(result.current.isEnabledUndo).toBe(false);
           expect(result.current.isEnabledRedo).toBe(false);
         }
@@ -240,7 +248,7 @@ describe("useHistory - Property-Based Tests", () => {
           result.current.undo(data);
         });
 
-        // setDataが呼ばれていないことを確認
+        // setDataが呼ばれていない
         expect(mockSetData.mock.calls.length).toBe(initialCallCount);
         expect(result.current.isEnabledUndo).toBe(false);
         expect(result.current.isEnabledRedo).toBe(false);
@@ -259,7 +267,7 @@ describe("useHistory - Property-Based Tests", () => {
           result.current.redo(data);
         });
 
-        // setDataが呼ばれていないことを確認
+        // setDataが呼ばれていない
         expect(mockSetData.mock.calls.length).toBe(initialCallCount);
         expect(result.current.isEnabledUndo).toBe(false);
         expect(result.current.isEnabledRedo).toBe(false);
