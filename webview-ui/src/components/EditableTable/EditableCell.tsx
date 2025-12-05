@@ -184,6 +184,9 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
         e.preventDefault();
         setValue(e.key);
         setIsEditing(true);
+      } else if (e.key === "F2") {
+        e.preventDefault();
+        setIsEditing(true);
       }
     },
     [props.table.options.meta, props.row.index, props.column.id]
@@ -252,8 +255,7 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
               maxHeight: `${rowHeight}px`,
             }
           : undefined
-      }
-    >
+      }>
       {value}
       {/* フィルハンドル（選択中のセルにのみ表示） */}
       {isSelected && !isEditing && (
