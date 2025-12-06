@@ -1,7 +1,7 @@
 import { flexRender, Header as TanStackHeader } from "@tanstack/react-table";
 import { FC, useCallback, useRef, useState } from "react";
 import { DraggableHeaderCell } from "./DraggableHeaderCell";
-import tableStyles from "./index.module.scss";
+import styles from "./HeaderCell.module.scss";
 import { RowData } from "./types";
 
 interface HeaderCellProps {
@@ -183,7 +183,7 @@ export const HeaderCell: FC<HeaderCellProps> = ({
     <th
       key={header.id}
       tabIndex={-1}
-      className={tableStyles.headerCell}
+      className={styles.headerCell}
       onKeyDown={handleHeaderKeyDown}
       onContextMenu={handleHeaderContextMenu}
       style={{
@@ -212,7 +212,7 @@ export const HeaderCell: FC<HeaderCellProps> = ({
             onChange={(e) => changeEditingValue(e.target.value)}
             onKeyDown={handleHeaderEditKeyDown}
             onBlur={handleHeaderEditBlur}
-            className={tableStyles.headerEditTextarea}
+            className={styles.headerEditTextarea}
           />
         ) : (
           <>
@@ -226,7 +226,7 @@ export const HeaderCell: FC<HeaderCellProps> = ({
               onSort={
                 header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined
               }>
-              <div className={tableStyles.headerContent}>
+              <div className={styles.headerContent}>
                 {flexRender(header.column.columnDef.header, header.getContext())}
                 {{
                   asc: " 🔼",
@@ -236,7 +236,7 @@ export const HeaderCell: FC<HeaderCellProps> = ({
             </DraggableHeaderCell>
             <button
               type="button"
-              className={`${tableStyles.headerResizeHandle} ${isResizeHover ? tableStyles.headerResizeHandleHover : ""}`}
+              className={`${styles.headerResizeHandle} ${isResizeHover ? styles.headerResizeHandleHover : ""}`}
               onMouseDown={handleResizeMouseDown}
               onClick={handleResizeClick}
               onMouseEnter={() => setIsResizeHover(true)}
@@ -246,7 +246,7 @@ export const HeaderCell: FC<HeaderCellProps> = ({
           </>
         )
       ) : (
-        <div className={tableStyles.headerContent}>
+        <div className={styles.headerContent}>
           {flexRender(header.column.columnDef.header, header.getContext())}
         </div>
       )}
