@@ -35,6 +35,7 @@
 .cellSelected {
   background-color: var(--vscode-list-inactiveSelectionBackground);
   border: 1px solid var(--vscode-list-activeSelectionBackground);
+  outline: none;
 }
 
 // フィル範囲のセル

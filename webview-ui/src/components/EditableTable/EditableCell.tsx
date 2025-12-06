@@ -56,6 +56,13 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     }
   }, [isEditing]);
 
+  // focusedCellが変更されたときにフォーカスを当てる
+  useEffect(() => {
+    if (isFocused && !isEditing && cellRef.current) {
+      cellRef.current.focus();
+    }
+  }, [isFocused, isEditing]);
+
   const handleClick = () => {
     clickCountRef.current += 1;
 
@@ -103,6 +110,21 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
         } else {
           // 通常のEnter: 現在のセルのみ更新
           props.table.options.meta?.updateData?.(props.row.index, props.column.id, value);
+
+          // 編集モードを抜けた後、下のセルにフォーカスを移動
+          const totalRows = props.table.getRowModel().rows.length;
+          const nextRowIndex = rowIndex + 1;
+
+          if (nextRowIndex < totalRows && columnIndex >= 0) {
+            // 選択状態をクリア
+            props.table.options.meta?.clearSelection?.();
+
+            // 下のセルが存在する場合選択を移動
+            props.table.options.meta?.setFocusedCell?.({
+              row: nextRowIndex,
+              col: columnIndex,
+            });
+          }
         }
       } else if (e.key === "Escape") {
         e.preventDefault();
@@ -110,7 +132,7 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
         setIsEditing(false);
       }
     },
-    [value, initialValue, props.table.options.meta, props.row.index, props.column.id]
+    [props.table, props.row.index, props.column.id, value, initialValue, rowIndex, columnIndex]
   );
 
   const handleMouseDown = useCallback(
