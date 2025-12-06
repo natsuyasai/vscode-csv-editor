@@ -457,7 +457,7 @@ export const EditableTable: FC<EditableTableProps> = ({
     void handlePaste();
   }, [handlePaste]);
 
-  // コンテキストメニュー外クリック時にメニューを閉じる
+  // コンテキストメニュー外クリック時にメニューを閉じる、HeaderCell以外クリック時に列選択を解除
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -477,6 +477,16 @@ export const EditableTable: FC<EditableTableProps> = ({
           handleCloseColumnContextMenu();
         }
       }
+
+      // HeaderCell以外をクリックした場合、列選択を解除
+      if (selectedColumnIndex !== null) {
+        // HeaderCell（th要素）またはその子要素をクリックしたかチェック
+        const isHeaderCellClick = target.closest("th") !== null;
+        if (!isHeaderCellClick) {
+          setSelectedColumnIndex(null);
+          setFocusedColumnIndex(null);
+        }
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -486,6 +496,7 @@ export const EditableTable: FC<EditableTableProps> = ({
   }, [
     isRowContextMenuOpen,
     isColumnContextMenuOpen,
+    selectedColumnIndex,
     rowContextMenuRef,
     columnContextMenuRef,
     handleCloseRowContextMenu,
