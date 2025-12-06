@@ -198,6 +198,7 @@ export const HeaderCell: FC<HeaderCellProps> = ({
         color: isSelected ? "var(--vscode-list-activeSelectionForeground)" : "inherit",
         cursor: header.column.getCanSort() ? "pointer" : "default",
         outline: isFocused ? "2px solid var(--vscode-focusBorder)" : "none",
+        position: "relative",
       }}>
       {header.isPlaceholder ? null : columnIndex !== null ? (
         isEditing ? (
