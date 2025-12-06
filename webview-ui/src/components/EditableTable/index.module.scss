@@ -58,19 +58,20 @@
   box-sizing: border-box;
   user-select: none;
   outline-offset: -2px;
+  position: "relative";
+  overflow: hidden;
 }
 
 // ������(textarea
 .headerEditTextarea {
   width: 100%;
-  min-height: 20px;
+  height: 100%;
   resize: vertical;
-  font-family: inherit;
-  font-size: inherit;
-  padding: 2px 4px;
-  border: 1px solid var(--vscode-focusBorder);
+  padding: 4px;
+  border: none;
   background-color: var(--vscode-input-background);
   color: var(--vscode-input-foreground);
+  outline: none;
 }
 
 // �����������ï�Mn
