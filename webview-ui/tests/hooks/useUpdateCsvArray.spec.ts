@@ -4,16 +4,17 @@ import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 
 describe("useUpdateCsvArray", () => {
   let csvArray: Array<Array<string>>;
-  let setCSVArray: ReturnType<typeof vi.fn>;
+  let setCSVArray = vi.fn();
   let hooks: RenderHookResult<ReturnType<typeof useUpdateCsvArray>, unknown>;
 
   beforeEach(() => {
+    setCSVArray = vi.fn();
     csvArray = [
       ["col0", "col1", "col2"],
       ["a", "b", "c"],
       ["d", "e", "f"],
     ];
-    setCSVArray = vi.fn();
+
     hooks = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, false));
   });
 

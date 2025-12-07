@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useEventListener } from "@/hooks/useEventListener";
 
 describe("useEventListener", () => {
-  let mockHandler: ReturnType<typeof vi.fn>;
+  let mockHandler = vi.fn();
   let mockElement: HTMLElement;
 
   beforeEach(() => {

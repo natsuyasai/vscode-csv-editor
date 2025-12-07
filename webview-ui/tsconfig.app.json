@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "types": [
+      "vite/client"
+    ],
+    "composite": true,
+    "rootDir": "..",
+    "outDir": "./dist/app"
+  },
+  "include": [
+    "./src/**/*",
+    "./scss-modules.d.ts",
+    "../src/message/**/*"
+  ]
+}

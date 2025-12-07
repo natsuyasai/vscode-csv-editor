@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useHistory } from "@/hooks/useHistory";
 
 describe("useHistory", () => {
-  let mockSetData: ReturnType<typeof vi.fn>;
+  let mockSetData = vi.fn();
 
   beforeEach(() => {
     mockSetData = vi.fn();

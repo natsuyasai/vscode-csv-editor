@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useAutoFill } from "@/hooks/useAutoFill";
 
 describe("useAutoFill - Property-Based Tests", () => {
-  let mockUpdateCells: ReturnType<typeof vi.fn>;
+  let mockUpdateCells = vi.fn();
 
   beforeEach(() => {
     mockUpdateCells = vi.fn();

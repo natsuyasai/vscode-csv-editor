@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
 
 describe("useUpdateCsvArray - Property-Based Tests", () => {
-  let setCSVArray: ReturnType<typeof vi.fn>;
+  let setCSVArray = vi.fn();
 
   beforeEach(() => {
     setCSVArray = vi.fn();
