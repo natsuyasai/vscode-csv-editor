@@ -4,7 +4,7 @@ import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { useCallback, useEffect, useState } from "react";
 import styles from "./App.module.scss";
-import { EditableTable } from "./components/EditableTable";
+import { EditableTable } from "./components/editable-table/EditableTable";
 import { useEventListener } from "./hooks/useEventListener";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { debounce } from "./utilities/debounce";

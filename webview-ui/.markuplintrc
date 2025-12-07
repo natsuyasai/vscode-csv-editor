@@ -26,7 +26,7 @@
     }
   ],
   "overrides": {
-    "./**/EditableTable/index.tsx": {
+    "./**/editable-table/EditableTable.tsx": {
       "rules": {
         "permitted-contents": false
       }

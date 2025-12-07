@@ -37,7 +37,7 @@
   "include": [
     ".storybook/**/*",
     "./src/**/*",
-    "./test/**/*",
+    "tests/**/*",
     "./stories/**/*",
     "__mocks__"
   ],

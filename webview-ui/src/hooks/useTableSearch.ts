@@ -30,10 +30,11 @@ export const useTableSearch = <TData extends Record<string, unknown>>(
 
   const handleSearch = useCallback(
     (text: string) => {
-      if (text.trim() === "") {
+      const trimmedText = text.trim();
+      if (trimmedText === "") {
         return;
       }
-      const lowerText = text.toLowerCase();
+      const lowerText = trimmedText.toLowerCase();
       const positions: SearchPosition[] = [];
 
       data.forEach((row, rowIdx) => {
