@@ -20,8 +20,13 @@ const createMockProps = (
         handleCellMouseDown: vi.fn(),
         handleCellMouseEnter: vi.fn(),
         handleCellMouseUp: vi.fn(),
+        clearSelection: vi.fn(),
+        setFocusedCell: vi.fn(),
       },
     },
+    getRowModel: () => ({
+      rows: [{ index: 0 }, { index: 1 }, { index: 2 }],
+    }),
   } as never,
   cell: {} as never,
   renderValue: () => "test value" as never,
@@ -88,8 +93,16 @@ describe("EditableCell", () => {
           meta: {
             updateData: mockUpdateData,
             selectedCells: new Set(),
+            handleCellMouseDown: vi.fn(),
+            handleCellMouseEnter: vi.fn(),
+            handleCellMouseUp: vi.fn(),
+            clearSelection: vi.fn(),
+            setFocusedCell: vi.fn(),
           },
         },
+        getRowModel: () => ({
+          rows: [{ index: 0 }, { index: 1 }, { index: 2 }],
+        }),
       } as never,
     });
 
@@ -145,8 +158,16 @@ describe("EditableCell", () => {
           meta: {
             updateData: mockUpdateData,
             selectedCells: new Set(),
+            handleCellMouseDown: vi.fn(),
+            handleCellMouseEnter: vi.fn(),
+            handleCellMouseUp: vi.fn(),
+            clearSelection: vi.fn(),
+            setFocusedCell: vi.fn(),
           },
         },
+        getRowModel: () => ({
+          rows: [{ index: 0 }, { index: 1 }, { index: 2 }],
+        }),
       } as never,
     });
 
@@ -176,8 +197,16 @@ describe("EditableCell", () => {
           meta: {
             updateData: mockUpdateData,
             selectedCells: new Set(),
+            handleCellMouseDown: vi.fn(),
+            handleCellMouseEnter: vi.fn(),
+            handleCellMouseUp: vi.fn(),
+            clearSelection: vi.fn(),
+            setFocusedCell: vi.fn(),
           },
         },
+        getRowModel: () => ({
+          rows: [{ index: 0 }, { index: 1 }, { index: 2 }],
+        }),
       } as never,
     });
 
@@ -209,8 +238,16 @@ describe("EditableCell", () => {
           meta: {
             updateData: mockUpdateData,
             selectedCells: new Set(),
+            handleCellMouseDown: vi.fn(),
+            handleCellMouseEnter: vi.fn(),
+            handleCellMouseUp: vi.fn(),
+            clearSelection: vi.fn(),
+            setFocusedCell: vi.fn(),
           },
         },
+        getRowModel: () => ({
+          rows: [{ index: 0 }, { index: 1 }, { index: 2 }],
+        }),
       } as never,
     });
 
@@ -239,8 +276,17 @@ describe("EditableCell", () => {
         options: {
           meta: {
             selectedCells,
+            updateData: vi.fn(),
+            handleCellMouseDown: vi.fn(),
+            handleCellMouseEnter: vi.fn(),
+            handleCellMouseUp: vi.fn(),
+            clearSelection: vi.fn(),
+            setFocusedCell: vi.fn(),
           },
         },
+        getRowModel: () => ({
+          rows: [{ index: 0 }, { index: 1 }, { index: 2 }],
+        }),
       } as never,
     });
 
