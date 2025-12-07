@@ -18,10 +18,10 @@ export default mergeConfig(
           extends: true,
           test: {
             name: "unit",
-            include: ["test/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+            include: ["tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
             globals: true,
             environment: "jsdom",
-            setupFiles: "./test/setup.ts",
+            setupFiles: "./tests/setup.ts",
             alias: {
               "@vscode-elements/elements/dist/vscode-context-menu/vscode-context-menu":
                 "@vscode-elements/elements/dist/vscode-context-menu/vscode-context-menu.js",
