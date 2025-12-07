@@ -14,7 +14,7 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -26,25 +26,24 @@
       "@/*": [
         "./src/*"
       ]
-    },
-    "types": [
-      "vitest/globals",
-    ],
-    "typeRoots": [
-      "./node_modules"
-    ]
+    }
   },
-  "include": [
-    ".storybook/**/*",
-    "./src/**/*",
-    "tests/**/*",
-    "./stories/**/*",
-    "__mocks__"
-  ],
+  "files": [],
   "exclude": [
     "node_modules",
     "dist",
     "build",
-    "coverage",
+    "coverage"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.test.json"
+    },
+    {
+      "path": "./tsconfig.storybook.json"
+    }
   ]
 }

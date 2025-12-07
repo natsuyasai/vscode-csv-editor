@@ -3,7 +3,7 @@ import { FC, useEffect, useRef, useState } from "react";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import styles from "./Search.module.scss";
 
-interface Props {
+export interface SearchProps {
   isMatching?: boolean;
   machedCount: number;
   searchedSelectedItemIdx: number;
@@ -13,7 +13,7 @@ interface Props {
   onClose: () => void;
 }
 
-export const Search: FC<Props> = ({
+export const Search: FC<SearchProps> = ({
   isMatching,
   machedCount,
   searchedSelectedItemIdx,

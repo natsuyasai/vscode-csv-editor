@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "types": [
+      "node",
+      "vite/client"
+    ],
+    "composite": true,
+    "rootDir": "..",
+    "outDir": "./dist/storybook"
+  },
+  "include": [
+    ".storybook/**/*",
+    "stories/**/*",
+    "./src/**/*",
+    "./scss-modules.d.ts",
+    "../src/message/**/*"
+  ]
+}

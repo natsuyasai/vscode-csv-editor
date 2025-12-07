@@ -86,7 +86,7 @@ const reactConfig = {
     "import/order": ["error", {
       "groups": [
         "builtin",
-        "external", 
+        "external",
         "internal",
         "parent",
         "sibling",
@@ -101,9 +101,32 @@ const reactConfig = {
   },
 };
 
+const unittestConfig = {
+  name: "unittest-eslint",
+  files: ["**/*.spec.ts", "**/*.spec.tsx", "**/*.test.ts", "**/*.test.tsx", "**/tests/**/*.ts", "**/tests/**/*.tsx", "**/__mocks__/**/*.ts"],
+  languageOptions: {
+    parser: typescriptParser,
+    parserOptions: {
+      projectService: false,
+      project: "./tsconfig.test.json",
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+  plugins: typescriptConfig.plugins,
+  rules: typescriptConfig.rules
+};
+
 const storybookConfig = {
   name: "storybook",
-  files: ["**/*.stories.ts", "**/*.stories.tsx"],
+  files: ["**/*.stories.ts", "**/*.stories.tsx", ".storybook/**/*.ts", ".storybook/**/*.tsx", "stories/**/*.ts", "stories/**/*.tsx"],
+  languageOptions: {
+    parser: typescriptParser,
+    parserOptions: {
+      projectService: false,
+      project: "./tsconfig.storybook.json",
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
   plugins: {
     storybook: storybook,
   },
@@ -137,14 +160,11 @@ const a11yConfig = {
 export default [
   ignores,
   ...storybook.configs["flat/recommended"],
-  storybookConfig,
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked.map(config => ({
     ...config,
     languageOptions: {
-      ...config.languageOptions,
       parserOptions: {
-        ...config.languageOptions?.parserOptions,
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
@@ -153,5 +173,7 @@ export default [
   typescriptConfig,
   reactConfig,
   jsxA11y.flatConfigs.strict,
-  a11yConfig
+  a11yConfig,
+  unittestConfig,
+  storybookConfig
 ];

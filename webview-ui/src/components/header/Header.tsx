@@ -12,7 +12,7 @@ import { RowSizeType, CellAlignment } from "@/types";
 import { CellAlignmentControls } from "./CellAlignmentControls";
 import styles from "./Header.module.scss";
 
-interface Props {
+export interface HeaderProps {
   isIgnoreHeaderRow: boolean;
   onUpdateIgnoreHeaderRow: (checked: boolean) => void;
   rowSize: RowSizeType;
@@ -45,7 +45,7 @@ interface Props {
   selectedCellsCount?: number;
 }
 
-export const Header: FC<Props> = ({
+export const Header: FC<HeaderProps> = ({
   isIgnoreHeaderRow,
   onUpdateIgnoreHeaderRow,
   rowSize,

@@ -2,6 +2,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, mergeConfig } from "vitest/config";
+import { playwright } from "@vitest/browser-playwright";
 
 const dirname =
   typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
@@ -40,7 +41,7 @@ export default mergeConfig(
             name: "storybook",
             browser: {
               enabled: true,
-              provider: "playwright",
+              provider: playwright(),
               headless: true,
               instances: [{ browser: "chromium" }],
             },

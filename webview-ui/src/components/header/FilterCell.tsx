@@ -2,7 +2,7 @@ import { VscodeIcon } from "@vscode-elements/react-elements";
 import { FC, useState } from "react";
 import styles from "./FilterCell.module.scss";
 
-interface Props {
+export interface FilterCellProps {
   columnKey: string;
   value: string;
   onChange: (value: string) => void;
@@ -10,7 +10,13 @@ interface Props {
   isActive: boolean;
 }
 
-export const FilterCell: FC<Props> = ({ columnKey: _, value, onChange, onClear, isActive }) => {
+export const FilterCell: FC<FilterCellProps> = ({
+  columnKey: _,
+  value,
+  onChange,
+  onClear,
+  isActive,
+}) => {
   const [isFocused, setIsFocused] = useState(false);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
