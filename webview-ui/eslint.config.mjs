@@ -8,6 +8,7 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
 import storybook from "eslint-plugin-storybook";
+import path from "path";
 import tseslint from "typescript-eslint";
 
 const ignores = {
@@ -86,7 +87,7 @@ const reactConfig = {
     "import/order": ["error", {
       "groups": [
         "builtin",
-        "external", 
+        "external",
         "internal",
         "parent",
         "sibling",
@@ -99,6 +100,20 @@ const reactConfig = {
       }
     }],
   },
+};
+
+const unittestConfig = {
+  name: "unittest-eslint",
+  files: ["**/*.spec.ts", "**/*.spec.tsx", "**/*.test.ts", "**/*.test.tsx", "**/tests/**/*.ts", "**/tests/**/*.tsx", "**/__mocks__/**/*.ts"],
+  languageOptions: {
+    parser: typescriptParser,
+    parserOptions: {
+      projectService: true,
+      tsconfigRootDir: path.join(import.meta.dirname, "tests"),
+    },
+  },
+  plugins: typescriptConfig.plugins,
+  rules: typescriptConfig.rules
 };
 
 const storybookConfig = {
@@ -142,9 +157,7 @@ export default [
   ...tseslint.configs.recommendedTypeChecked.map(config => ({
     ...config,
     languageOptions: {
-      ...config.languageOptions,
       parserOptions: {
-        ...config.languageOptions?.parserOptions,
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
@@ -153,5 +166,6 @@ export default [
   typescriptConfig,
   reactConfig,
   jsxA11y.flatConfigs.strict,
-  a11yConfig
+  a11yConfig,
+  unittestConfig
 ];
