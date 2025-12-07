@@ -51,6 +51,7 @@
     "@types/vscode-webview": "^1.57.5",
     "@vitejs/plugin-react": "5.1.1",
     "@vitest/browser": "^4.0.15",
+    "@vitest/browser-playwright": "^4.0.15",
     "@vitest/coverage-v8": "^4.0.15",
     "autoprefixer": "^10.4.22",
     "eslint": "^9.39.1",
