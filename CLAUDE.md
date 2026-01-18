@@ -1,6 +1,13 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、このリポジトリのコードを扱う際にClaude Code (claude.ai/code) に対するガイダンスを提供します。
+
+## 役割と専門知識
+
+あなたは、kent Beck のテスト駆動開発（TDD）と Tidy First の原則に従うシニアソフトウェアエンジニアです。  
+あなたの目的は、これらの方法論に正確に従って開発を導くことです。
+
+## 開発原則
 
 - 必ず日本語で回答してください。
 - ユーザーからの指示や仕様に疑問などがあれば作業を中断し、質問すること。
@@ -8,242 +15,252 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - TDDおよびテスト駆動開発で実装する際は、すべてt-wadaの推奨する進め方に従ってください。
 - リファクタリングはMartin Fowloerが推奨する進め方に従ってください。
 - セキュリティルールに従うこと。
-- 実装完了時に必ず「npm run check-types」と「npm run lint」を実行し、エラーや警告がない状態としてください。
+- 実装完了時に必ずsrc/とwebview-ui/srcに対して「npm run check-types」と「npm run lint」を実行し、エラーや警告がない状態としてください。
 - エラーや警告が発生する場合は、必ず修正してください。
-- Before doing any UI, frontend or React development, ALWAYS call the storybook MCP server to get further instructions.
+- webview-ui/srcに対してUI、フロントエンド、またはReact開発を行う前に、必ずstorybook MCPサーバーを呼び出して追加の指示を取得してください。
 
-## Project Structure
+## 開発手順
 
-This is a VSCode extension that provides a custom CSV editor with a React-based webview UI. The extension uses a dual-architecture approach:
+- 作業を遂行するための計画を出してください
+- ブランチを作成し、計画を1つずつ対応を進めてください  
+- 単一の実装が完了したらフォーマットチェック、lint、型チェック、テストがすべて正常となることを確認してください
+- 全てが正常であれば対応毎にコミットするようにしてください
 
-- **Extension side** (`src/`): TypeScript code running in VSCode's extension host
-- **Webview side** (`webview-ui/`): React application that renders the CSV editor interface
 
-Key components:
-- `CSVEditorProvider` implements VSCode's CustomTextEditorProvider interface
-- React app uses `tanstack/react-table` for the editable table interface
-- Communication between extension and webview via postMessage API
-- Uses Zustand for state management and custom hooks for data operations
+## プロジェクト構造
 
-## Communication Architecture
+これはReactベースのwebview UIを持つカスタムCSVエディタを提供するVSCode拡張機能です。この拡張機能はデュアルアーキテクチャアプローチを使用しています:
 
-Message passing uses typed interfaces in `src/message/`:
-- `messageTypeToWebview.ts`: Extension → Webview messages (init, update, updateTheme)
-- `messageTypeToExtention.ts`: Webview → Extension messages (init, update, reload, save)
-- Data flow: VSCode Document ↔ Extension ↔ Webview with debounced updates
+- **拡張機能側** (`src/`): VSCodeの拡張機能ホストで実行されるTypeScriptコード
+- **Webview側** (`webview-ui/`): CSVエディタインターフェースをレンダリングするReactアプリケーション
 
-## Build Commands
+### 主要なコンポーネント:
 
-### Extension Development
+- `CSVEditorProvider`はVSCodeの`CustomTextEditorProvider`インターフェースを実装
+- Reactアプリは編集可能なテーブルインターフェースに`tanstack/react-table`を使用
+- 拡張機能とwebview間の通信はpostMessage APIを介して行う
+- 状態管理にはZustand、データ操作にはカスタムフックを使用
+
+## 通信アーキテクチャ
+
+メッセージパッシングは`src/message/`内の型付きインターフェースを使用します:
+- `messageTypeToWebview.ts`: 拡張機能 → Webview メッセージ (init, update, updateTheme)
+- `messageTypeToExtention.ts`: Webview → 拡張機能 メッセージ (init, update, reload, save)
+- データフロー: VSCode Document ↔ Extension ↔ Webview (デバウンス更新あり)
+
+## ビルドコマンド
+
+### 拡張機能開発
 ```bash
-# Install dependencies for both extension and webview
+# 拡張機能とwebviewの両方の依存関係をインストール
 npm run install:all
 
-# Development build with watching (builds extension + webview, watches TypeScript)
+# 監視付き開発ビルド (拡張機能 + webviewをビルド、TypeScriptを監視)
 npm run watch
 
-# Production build (includes webview build)
+# 本番ビルド (webviewビルドを含む)
 npm run package
 
-# Type checking
+# 型チェック
 npm run check-types
 
-# Linting
+# リント
 npm run lint
 
-# Run tests (requires pre-compilation)
+# テスト実行 (事前コンパイルが必要)
 npm test
 
-# Run single test file
+# 単一のテストファイルを実行
 npx vscode-test --grep "test name"
 ```
 
-### Webview Development
+### Webview開発
 ```bash
 cd webview-ui
 
-# Start development server (for isolated webview development)
+# 開発サーバーを起動 (webviewの独立した開発用)
 npm start
 
-# Build for production (called automatically by extension package command)
+# 本番用ビルド (拡張機能のpackageコマンドから自動的に呼び出される)
 npm run build
 
-# Run tests with Vitest
+# Vitestでテストを実行
 npm test
 
-# Run tests in watch mode
+# ウォッチモードでテストを実行
 npm test -- --watch
 
-# Run Storybook for component development
+# コンポーネント開発用にStorybookを実行
 npm run storybook
 
-# Type checking
+# 型チェック
 npm run check-types
 
-# Linting (includes ESLint + markuplint for JSX/TSX)
+# リント (JSX/TSX用のESLint + markuplintを含む)
 npm run lint
 ```
 
-## Testing
+## テスト
 
-- Extension tests use VSCode's test framework (`@vscode/test-cli`)
-- Webview tests use Vitest with React Testing Library
-- Storybook for component development and testing
+- 拡張機能のテストはVSCodeのテストフレームワーク (`@vscode/test-cli`) を使用
+- WebviewのテストはVitestとReact Testing Libraryを使用
+- コンポーネント開発とテストにはStorybookを使用
 
-## Architecture Notes
+## アーキテクチャノート
 
-The extension registers a custom editor for CSV files that:
-1. Creates a webview panel with React UI
-2. Parses CSV content using `csv-parse` library
-3. Renders editable table using `@tanstack/react-table` with virtual scrolling (`@tanstack/react-virtual`)
-4. Supports features like sorting, searching, filtering, row/column operations, drag & drop
-5. Provides row and column resizing with Excel-like behavior
-6. Updates the underlying VSCode document when changes are made
-7. Handles theme changes and VS Code integration
+この拡張機能はCSVファイル用のカスタムエディタを登録します:
+1. React UIを持つwebviewパネルを作成
+2. `csv-parse`ライブラリを使用してCSVコンテンツを解析
+3. 仮想スクロール(`@tanstack/react-virtual`)を使用して`@tanstack/react-table`で編集可能なテーブルをレンダリング
+4. ソート、検索、フィルタリング、行/列操作、ドラッグ&ドロップなどの機能をサポート
+5. Excelライクな動作で行と列のリサイズを提供
+6. 変更が行われたときに基礎となるVSCodeドキュメントを更新
+7. テーマ変更とVS Code統合を処理
 
-Key architectural decisions:
-- **State Management**: Combination of React state + Zustand store for cell editing
-- **Custom Hooks**: Extensive use of custom hooks for modularity:
-  - `useRowResize`: Row height resizing with drag-to-resize functionality
-  - `useColumnResize`: Column width resizing with drag-to-resize functionality
-  - `useCellSelection`: Cell selection and copy/paste with TSV escaping (RFC 4180)
-  - `useAutoFill`: Excel-like auto-fill functionality
-  - `useUpdateCsvArray`: CSV data operations with history management
-  - `useTableSearch`: Search functionality with highlighting
-  - `useColumnAlignment`: Column alignment controls
-  - `useContextMenus`: Context menu management
-- **Performance**:
-  - Virtual scrolling with `@tanstack/react-virtual` for handling large datasets
-  - Variable row heights support (for cells with newlines)
-  - Debounced updates and React.memo optimizations
-- **History Management**: Built-in undo/redo functionality with state history
-- **Keyboard Shortcuts**: Ctrl+S (save), Ctrl+F (search), Ctrl+Z/Y (undo/redo), Ctrl+C/V (copy/paste)
-- **Copy/Paste**: TSV format with proper escaping for newlines, tabs, and quotes (RFC 4180 compatible)
+### 主要なアーキテクチャ決定
 
-## Key Files for Development
+- **状態管理**: セル編集のためのReact stateとZustand storeの組み合わせ
+- **カスタムフック**: モジュール性のための広範なカスタムフックの使用:
+  - `useRowResize`: ドラッグでリサイズする機能を持つ行の高さリサイズ
+  - `useColumnResize`: ドラッグでリサイズする機能を持つ列の幅リサイズ
+  - `useCellSelection`: TSVエスケープ付きのセル選択とコピー/ペースト (RFC 4180)
+  - `useAutoFill`: Excelライクな自動入力機能
+  - `useUpdateCsvArray`: 履歴管理付きのCSVデータ操作
+  - `useTableSearch`: ハイライト付きの検索機能
+  - `useColumnAlignment`: 列の配置制御
+  - `useContextMenus`: コンテキストメニュー管理
+- **パフォーマンス**:
+  - 大規模データセットを扱うための`@tanstack/react-virtual`による仮想スクロール
+  - 可変行高のサポート (改行を含むセル用)
+  - デバウンス更新とReact.memoによる最適化
+- **履歴管理**: 状態履歴を持つ組み込みのアンドゥ/リドゥ機能
+- **キーボードショートカット**: Ctrl+S (保存), Ctrl+F (検索), Ctrl+Z/Y (アンドゥ/リドゥ), Ctrl+C/V (コピー/ペースト)
+- **コピー/ペースト**: 改行、タブ、引用符の適切なエスケープを持つTSV形式 (RFC 4180互換)
 
-### Extension Side
-- `src/editor/csvEditorProvider.ts`: Main extension logic and webview communication
+## 開発のための主要ファイル
 
-### Webview Side - Core Components
-- `webview-ui/src/App.tsx`: Main React component with state management
-- `webview-ui/src/components/EditableTable/index.tsx`: Core table component with virtual scrolling
-- `webview-ui/src/components/EditableTable/EditableCell.tsx`: Editable cell component with auto-fill
-- `webview-ui/src/components/EditableTable/HeaderCell.tsx`: Header cell with editing and column resize
-- `webview-ui/src/components/EditableTable/RowIndexCell.tsx`: Row index cell with row reordering and resize
-- `webview-ui/src/components/Header.tsx`: Top header with toolbar controls
+### 拡張機能側
+- `src/editor/csvEditorProvider.ts`: 主要な拡張機能ロジックとwebview通信
 
-### Webview Side - Custom Hooks
-- `webview-ui/src/hooks/useUpdateCsvArray.ts`: CSV data operations with history management
-- `webview-ui/src/hooks/useRowResize.ts`: Row height resizing (20-500px range)
-- `webview-ui/src/hooks/useColumnResize.ts`: Column width resizing (50-1000px range)
-- `webview-ui/src/hooks/useCellSelection.ts`: Cell selection, copy/paste, TSV escaping
-- `webview-ui/src/hooks/useAutoFill.ts`: Excel-like auto-fill functionality
-- `webview-ui/src/hooks/useTableSearch.ts`: Search with match navigation
+### Webview側 - コアコンポーネント
+- `webview-ui/src/App.tsx`: 状態管理を持つメインのReactコンポーネント
+- `webview-ui/src/components/EditableTable/index.tsx`: 仮想スクロール付きのコアテーブルコンポーネント
+- `webview-ui/src/components/EditableTable/EditableCell.tsx`: 自動入力機能付きの編集可能なセルコンポーネント
+- `webview-ui/src/components/EditableTable/HeaderCell.tsx`: 編集と列リサイズ機能付きのヘッダーセル
+- `webview-ui/src/components/EditableTable/RowIndexCell.tsx`: 行の並び替えとリサイズ機能付きの行インデックスセル
+- `webview-ui/src/components/Header.tsx`: ツールバーコントロール付きのトップヘッダー
 
-### Webview Side - Styling
-- `webview-ui/src/components/EditableTable/index.module.scss`: Main table styles
-- `webview-ui/src/components/EditableTable/EditableCell.module.scss`: Cell styles with fill handle
-- `webview-ui/src/components/EditableTable/RowIndexCell.module.scss`: Row index cell with resize handle
-- Note: Uses SCSS with VSCode CSS variables for theming
+### Webview側 - カスタムフック
+- `webview-ui/src/hooks/useUpdateCsvArray.ts`: 履歴管理付きのCSVデータ操作
+- `webview-ui/src/hooks/useRowResize.ts`: 行の高さリサイズ (20-500pxの範囲)
+- `webview-ui/src/hooks/useColumnResize.ts`: 列の幅リサイズ (50-1000pxの範囲)
+- `webview-ui/src/hooks/useCellSelection.ts`: セル選択、コピー/ペースト、TSVエスケープ
+- `webview-ui/src/hooks/useAutoFill.ts`: Excelライクな自動入力機能
+- `webview-ui/src/hooks/useTableSearch.ts`: マッチナビゲーション付きの検索
 
-## Feature Implementation Details
+### Webview側 - スタイリング
+- `webview-ui/src/components/EditableTable/index.module.scss`: メインのテーブルスタイル
+- `webview-ui/src/components/EditableTable/EditableCell.module.scss`: フィルハンドル付きのセルスタイル
+- `webview-ui/src/components/EditableTable/RowIndexCell.module.scss`: リサイズハンドル付きの行インデックスセル
+- 注: テーマ対応のためにVSCodeのCSS変数を使用したSCSSを使用
 
-### Table Rendering
-- **Framework**: `@tanstack/react-table` with custom cell renderers
-- **Virtual Scrolling**: `@tanstack/react-virtual` for performance with large datasets
-  - Variable row heights support via `estimateSize`
-  - Row heights recalculated on `rowHeight` or individual `rowHeights` changes
-- **Layout**: Fixed table layout with explicit column widths
-- **Styling**: SCSS modules with VSCode theme variables
+## 機能実装詳細
 
-### Cell Editing
-- **Edit Mode**: Click to edit, escape to cancel, enter/tab to save
-- **Text Area**: Auto-resize textarea for multi-line content
-- **Newline Support**: `white-space: pre-wrap` and `word-wrap: break-word` for proper display
-- **Focus Management**: Automatic focus on edit, cursor position at end
+### テーブルレンダリング
+- **フレームワーク**: カスタムセルレンダラー付きの`@tanstack/react-table`
+- **仮想スクロール**: 大規模データセットのパフォーマンス向上のための`@tanstack/react-virtual`
+  - `estimateSize`による可変行高のサポート
+  - `rowHeight`または個別の`rowHeights`の変更時に行の高さを再計算
+- **レイアウト**: 明示的な列幅を持つ固定テーブルレイアウト
+- **スタイリング**: VSCodeテーマ変数を使用したSCSSモジュール
 
-### Row Operations
-- **Row Selection**: Click row index to select entire row
-- **Row Reordering**: Drag and drop rows using `react-dnd`
-- **Row Resizing**: Drag handle at bottom of row index cell
-  - Uses `useRef` for synchronous state access
-  - Height range: 20-500px
-  - Row height applied to both `<tr>` and cell `<div>` elements
-- **Row Addition/Deletion**: Context menu or keyboard shortcuts
-- **Row Index Column**: Fixed at 40px width, not resizable
+### セル編集
+- **編集モード**: クリックで編集、Escでキャンセル、Enter/Tabで保存
+- **テキストエリア**: 複数行コンテンツ用の自動リサイズテキストエリア
+- **改行サポート**: 適切な表示のための`white-space: pre-wrap`と`word-wrap: break-word`
+- **フォーカス管理**: 編集時の自動フォーカス、カーソル位置は末尾
 
-### Column Operations
-- **Column Selection**: Click column header to select entire column
-- **Column Reordering**: Drag and drop column headers using `react-dnd`
-- **Column Resizing**: Drag handle at right edge of column header
-  - Uses `useRef` for synchronous state access
-  - Width range: 50-1000px, default 150px
-  - Resize handles use `position: absolute` with z-index 10
-- **Column Addition/Deletion**: Context menu
-- **Column Alignment**: Left/Center/Right alignment per column via context menu
-- **Header Editing**: Double-click, F2, or type to edit column headers
+### 行操作
+- **行選択**: 行インデックスをクリックして行全体を選択
+- **行の並び替え**: `react-dnd`を使用した行のドラッグ&ドロップ
+- **行のリサイズ**: 行インデックスセルの下部にあるドラッグハンドル
+  - 同期的な状態アクセスのために`useRef`を使用
+  - 高さの範囲: 20-500px
+  - 行の高さは`<tr>`とセルの`<div>`要素の両方に適用
+- **行の追加/削除**: コンテキストメニューまたはキーボードショートカット
+- **行インデックス列**: 幅40pxで固定、リサイズ不可
 
-### Sorting and Filtering
-- **Sorting**: Click header to sort (ascending/descending/none), visual indicators (🔼/🔽)
-- **Filtering**: Toggle filter row with input fields per column
-- **Filter Persistence**: Filters maintained during data updates
+### 列操作
+- **列選択**: 列ヘッダーをクリックして列全体を選択
+- **列の並び替え**: `react-dnd`を使用した列ヘッダーのドラッグ&ドロップ
+- **列のリサイズ**: 列ヘッダーの右端にあるドラッグハンドル
+  - 同期的な状態アクセスのために`useRef`を使用
+  - 幅の範囲: 50-1000px、デフォルト150px
+  - リサイズハンドルは`position: absolute`とz-index 10を使用
+- **列の追加/削除**: コンテキストメニュー
+- **列の配置**: コンテキストメニューを介した列ごとの左/中央/右揃え
+- **ヘッダー編集**: ダブルクリック、F2、または入力して列ヘッダーを編集
 
-### Cell Selection and Clipboard
-- **Selection**: Click and drag to select range, Shift+Click for rectangular selection
-- **Copy/Paste**: Ctrl+C/V with TSV format
-  - RFC 4180 compliant escaping:
-    - Values with newlines, tabs, or quotes wrapped in double quotes
-    - Double quotes escaped by doubling (`"` → `""`)
-  - Custom parser handles Unix (`\n`) and Windows (`\r\n`) line endings
-- **Auto-fill**: Excel-like fill handle (drag from bottom-right of selection)
-- **Bulk Edit**: Apply value to all selected cells
+### ソートとフィルタリング
+- **ソート**: ヘッダーをクリックしてソート (昇順/降順/なし)、視覚的なインジケータ (🔼/🔽)
+- **フィルタリング**: 列ごとの入力フィールドを持つフィルタ行を切り替え
+- **フィルタの永続性**: データ更新中もフィルタを維持
 
-### Search Functionality
-- **Activation**: Ctrl+F to open search
-- **Navigation**: Previous/Next buttons or Enter/Shift+Enter
-- **Highlighting**: Matched cells highlighted, current match emphasized
-- **Auto-scroll**: Automatic scroll to matched cell
+### セル選択とクリップボード
+- **選択**: クリック&ドラッグで範囲選択、Shift+クリックで矩形選択
+- **コピー/ペースト**: TSV形式でのCtrl+C/V
+  - RFC 4180準拠のエスケープ:
+    - 改行、タブ、または引用符を含む値はダブルクォートで囲む
+    - ダブルクォートは二重にしてエスケープ (`"` → `""`)
+  - カスタムパーサーはUnix (`\n`) とWindows (`\r\n`) の改行に対応
+- **自動入力**: Excelライクなフィルハンドル (選択範囲の右下からドラッグ)
+- **一括編集**: 選択されたすべてのセルに値を適用
 
-### History and Undo/Redo
-- **Undo**: Ctrl+Z to undo last change
-- **Redo**: Ctrl+Y to redo
-- **History Stack**: Maintains full edit history per session
-- **Operations Tracked**: Cell edits, row/column operations, bulk operations
+### 検索機能
+- **アクティベーション**: Ctrl+Fで検索を開く
+- **ナビゲーション**: 前へ/次へボタンまたはEnter/Shift+Enter
+- **ハイライト**: マッチしたセルをハイライト、現在のマッチを強調
+- **自動スクロール**: マッチしたセルへの自動スクロール
 
-### Context Menus
-- **Row Context Menu**: Right-click row index
-  - Insert row above/below
-  - Delete row
-  - Select row
-- **Column Context Menu**: Right-click column header
-  - Insert column left/right
-  - Delete column
-  - Set alignment (left/center/right)
-  - Edit header
+### 履歴とアンドゥ/リドゥ
+- **アンドゥ**: Ctrl+Zで最後の変更を元に戻す
+- **リドゥ**: Ctrl+Yでやり直し
+- **履歴スタック**: セッションごとに完全な編集履歴を維持
+- **追跡される操作**: セル編集、行/列操作、一括操作
 
-### Keyboard Shortcuts
-- **Save**: Ctrl+S (triggers VSCode save)
-- **Search**: Ctrl+F
-- **Copy/Paste**: Ctrl+C/V
-- **Undo/Redo**: Ctrl+Z/Y
-- **Cell Navigation**: Arrow keys, Tab/Shift+Tab
-- **Edit**: Enter, F2, or type to start editing
-- **Delete**: Delete or Backspace to clear cell/header
+### コンテキストメニュー
+- **行のコンテキストメニュー**: 行インデックスを右クリック
+  - 上/下に行を挿入
+  - 行を削除
+  - 行を選択
+- **列のコンテキストメニュー**: 列ヘッダーを右クリック
+  - 左/右に列を挿入
+  - 列を削除
+  - 配置を設定 (左/中央/右)
+  - ヘッダーを編集
 
-### Theme Integration
-- **VSCode Themes**: Automatic light/dark theme detection
-- **CSS Variables**: Uses VSCode theme variables for colors
-- **Dynamic Updates**: Theme changes applied without reload
+### キーボードショートカット
+- **保存**: Ctrl+S (VSCodeの保存をトリガー)
+- **検索**: Ctrl+F
+- **コピー/ペースト**: Ctrl+C/V
+- **アンドゥ/リドゥ**: Ctrl+Z/Y
+- **セルナビゲーション**: 矢印キー、Tab/Shift+Tab
+- **編集**: Enter、F2、または入力で編集を開始
+- **削除**: DeleteまたはBackspaceでセル/ヘッダーをクリア
 
-### Data Persistence
-- **Auto-save**: Debounced updates to VSCode document
-- **Change Detection**: Tracks modifications, triggers dirty state
-- **Format Preservation**: Maintains CSV formatting on save
+### テーマ統合
+- **VSCodeテーマ**: ライト/ダークテーマの自動検出
+- **CSS変数**: 色にVSCodeのテーマ変数を使用
+- **動的更新**: リロードせずにテーマ変更を適用
 
-### Testing Guidelines
-- **Framework**: Vitest with React Testing Library
-- **Component Testing**: Test user interactions, not implementation details
-- **Multiple Buttons**: Use specific text or aria-label selectors when multiple `role="button"` elements exist
-- **Coverage**: All features covered by unit tests
-- **Pre-commit**: `npm test`, `npm run check-types`, `npm run lint` must pass
+### データ永続化
+- **自動保存**: VSCodeドキュメントへのデバウンス更新
+- **変更検出**: 変更を追跡し、ダーティ状態をトリガー
+- **フォーマットの保持**: 保存時にCSVフォーマットを維持
+
+### テストガイドライン
+- **フレームワーク**: VitestとReact Testing Library
+- **コンポーネントテスト**: 実装の詳細ではなく、ユーザーインタラクションをテスト
+- **複数のボタン**: 複数の`role="button"`要素が存在する場合は、特定のテキストまたはaria-labelセレクタを使用
+- **カバレッジ**: すべての機能がユニットテストでカバーされている
+- **プレコミット**: `npm test`、`npm run check-types`、`npm run lint`が通る必要がある
