@@ -371,6 +371,8 @@ export const EditableTable: FC<EditableTableProps> = ({
 
   // 仮想スクロールのための参照
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  // ヘッダーツールバー領域の参照（列選択解除の対象外にするため）
+  const headerWrapperRef = useRef<HTMLDivElement>(null);
 
   // 検索機能
   const {
@@ -482,7 +484,9 @@ export const EditableTable: FC<EditableTableProps> = ({
       if (selectedColumnIndex !== null) {
         // HeaderCell（th要素）またはその子要素をクリックしたかチェック
         const isHeaderCellClick = target.closest("th") !== null;
-        if (!isHeaderCellClick) {
+        // ヘッダーツールバー（列操作ボタンを含む）をクリックした場合は解除しない
+        const isHeaderWrapperClick = headerWrapperRef.current?.contains(target) ?? false;
+        if (!isHeaderCellClick && !isHeaderWrapperClick) {
           setSelectedColumnIndex(null);
           setFocusedColumnIndex(null);
         }
@@ -675,7 +679,7 @@ export const EditableTable: FC<EditableTableProps> = ({
 
   return (
     <div className={tableStyles.root}>
-      <div className={tableStyles.headerWrapper}>
+      <div ref={headerWrapperRef} className={tableStyles.headerWrapper}>
         <Header
           isIgnoreHeaderRow={isIgnoreHeaderRow}
           onUpdateIgnoreHeaderRow={setIsIgnoreHeaderRow}
