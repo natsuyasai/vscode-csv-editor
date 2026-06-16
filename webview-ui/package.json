@@ -12,7 +12,7 @@
     "test:unit": "vitest --project unit",
     "test:story": "vitest --project storybook",
     "test:property": "vitest --project unit --run property.spec",
-    "format": "prettier --write \"src/**/*.{ts,tsx,scss,css}\" \"tests/**/*.{ts,tsx}\" \"stories/**/*.{ts,tsx}\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx,scss,css}\"",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "check-types": "tsc --build",

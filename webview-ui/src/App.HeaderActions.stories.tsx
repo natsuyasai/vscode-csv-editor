@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within, waitFor } from "storybook/test";
-import App from "../../src/App";
-import { setInitData, waitReadyForGrid, COL_MAX_WITH_HEADER } from "./utils";
+import { setInitData, waitReadyForGrid, COL_MAX_WITH_HEADER } from "@/test-utils/appStoryUtils";
+import App from "./App";
 
 const meta: Meta<typeof App> = {
   title: "App/HeaderActions",

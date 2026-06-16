@@ -103,7 +103,7 @@ const reactConfig = {
 
 const unittestConfig = {
   name: "unittest-eslint",
-  files: ["**/*.spec.ts", "**/*.spec.tsx", "**/*.test.ts", "**/*.test.tsx", "**/tests/**/*.ts", "**/tests/**/*.tsx", "**/__mocks__/**/*.ts"],
+  files: ["**/*.spec.ts", "**/*.spec.tsx", "**/*.test.ts", "**/*.test.tsx", "src/test-utils/setup.ts", "**/__mocks__/**/*.ts"],
   languageOptions: {
     parser: typescriptParser,
     parserOptions: {
@@ -118,7 +118,7 @@ const unittestConfig = {
 
 const storybookConfig = {
   name: "storybook",
-  files: ["**/*.stories.ts", "**/*.stories.tsx", ".storybook/**/*.ts", ".storybook/**/*.tsx", "stories/**/*.ts", "stories/**/*.tsx"],
+  files: ["**/*.stories.ts", "**/*.stories.tsx", ".storybook/**/*.ts", ".storybook/**/*.tsx", "src/test-utils/appStoryUtils.ts", "src/test-utils/rowSizeSelect.ts"],
   languageOptions: {
     parser: typescriptParser,
     parserOptions: {

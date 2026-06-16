@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import App from "../../src/App";
-import { setInitData } from "../app/utils";
+import { setInitData } from "@/test-utils/appStoryUtils";
+import App from "./App";
 
 const meta: Meta<typeof App> = {
   title: "App/MultiCellSelection",

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import App from "../../src/App";
-import { setInitData, waitReadyForGrid } from "./utils";
+import { setInitData, waitReadyForGrid } from "@/test-utils/appStoryUtils";
+import App from "./App";
 
 const meta: Meta<typeof App> = {
   title: "App/CellEditing",
