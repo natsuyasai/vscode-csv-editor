@@ -13,5 +13,15 @@
     "./src/**/*",
     "./scss-modules.d.ts",
     "../src/message/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "src/**/*.spec.*",
+    "src/**/*.test.*",
+    "src/**/*.stories.*",
+    "src/test-utils/**"
   ]
 }

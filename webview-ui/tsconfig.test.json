@@ -10,9 +10,17 @@
     "outDir": "./dist/test"
   },
   "include": [
-    "./tests/**/*",
     "__mocks__/**/*",
     "./src/**/*",
     "../src/message/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "src/**/*.stories.*",
+    "src/test-utils/appStoryUtils.ts",
+    "src/test-utils/rowSizeSelect.ts"
   ]
 }
