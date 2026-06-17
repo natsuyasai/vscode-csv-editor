@@ -36,19 +36,24 @@ t-wada（和田卓人）が推奨するTDDの進め方に従って実装を行�
 
 ## このプロジェクトでのテスト規約
 
-### テストファイルの配置
+### テストファイルの配置（コロケーション）
 
-- コンポーネントテスト: `webview-ui/tests/components/<Name>.spec.tsx`
-- hooksテスト: `webview-ui/tests/hooks/<hookName>.spec.ts`
-- ユーティリティテスト: `webview-ui/tests/utilities/<utilName>.spec.ts`
-- Storybookテスト: `webview-ui/stories/<Name>.stories.tsx`（play function）
+テスト・Story は **対象コードと同じディレクトリ** に配置する。
+
+- コンポーネントテスト: `webview-ui/src/components/<dir>/<Name>.spec.tsx`
+- hooksテスト: `webview-ui/src/hooks/<hookName>.spec.ts`
+- storesテスト: `webview-ui/src/stores/<storeName>.spec.ts`
+- ユーティリティテスト: `webview-ui/src/utilities/<utilName>.spec.ts`
+- Storybookテスト: `webview-ui/src/components/<dir>/<Name>.stories.tsx`（play function）
+- プロパティベーステスト: `webview-ui/src/<dir>/<Name>.property.spec.ts`
+- Story/テスト共通ヘルパー: `webview-ui/src/test-utils/`
 
 ### テスト実行コマンド
 
 ```bash
 # 特定のテストファイルのみ実行（高速なフィードバック）
 cd ./webview-ui
-npx vitest run tests/path/to/test.spec.ts
+npx vitest run src/path/to/test.spec.ts
 
 # ユニットテスト全体
 npm run test:unit

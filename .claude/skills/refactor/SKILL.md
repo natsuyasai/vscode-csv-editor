@@ -67,8 +67,8 @@ Martin Fowlerが推奨するリファクタリングの進め方に従って、�
 cd ./webview-ui
 npm run test:unit
 
-# 特定ファイルのみ
-npx vitest run tests/path/to/test.spec.ts
+# 特定ファイルのみ（テストは対象コードと同じ場所にコロケーション）
+npx vitest run src/path/to/test.spec.ts
 ```
 
 ## 禁止事項

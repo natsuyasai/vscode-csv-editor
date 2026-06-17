@@ -26,7 +26,7 @@ UI/フロントエンド/React開発を開始する前に、Storybook MCPサー�
 
 #### 2a. 既存コンポーネントの修正
 
-1. 対象コンポーネントの既存Storyを確認する (`webview-ui/stories/`)
+1. 対象コンポーネントの既存Storyを確認する（対象コードと同じディレクトリ `webview-ui/src/components/<dir>/<Name>.stories.tsx`）
 2. 必要に応じて新しいStoryバリエーションを追加
 3. Storyのplay functionでインタラクションテストを記述
 4. コンポーネントを修正
@@ -35,7 +35,7 @@ UI/フロントエンド/React開発を開始する前に、Storybook MCPサー�
 #### 2b. 新規コンポーネントの作成
 
 1. `/component-create <コンポーネント名>` スキルを使用してテンプレートを生成
-2. Story（`webview-ui/stories/<Name>.stories.tsx`）を先に完成させる
+2. Story（`webview-ui/src/components/<dir>/<Name>.stories.tsx`、対象コードと同じ場所）を先に完成させる
 3. play functionでユーザーインタラクションを定義
 4. コンポーネントを実装してStoryが動くようにする
 5. テーマバリエーション（Light/Dark）のStoryを追加
@@ -114,12 +114,14 @@ npm run test:unit
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within, waitFor, fireEvent } from "storybook/test";
 // ローカルインポート
-import { Component } from "@/components/Component/Component";
+import { Component } from "@/components/<dir>/Component";
 ```
 
 - グループ間の空行は不要
 - 同グループ内はアルファベット順
+- Story/テスト共通ヘルパーは `@/test-utils/`（例: `@/test-utils/appStoryUtils`）からインポート
 
 ## 参考Story
 
-- `webview-ui/stories/ContextMenu.stories.tsx` — play function・テーマバリエーションの参考実装
+- `webview-ui/src/components/header/Header.stories.tsx` — コンポーネント Story（play function・テーマバリエーション）
+- `webview-ui/src/App.Basic.stories.tsx` 他 `App.*.stories.tsx` — アプリ全体の機能結合テスト（play function）

@@ -15,8 +15,8 @@ arg: "コンポーネント名（PascalCase）"
 1. `webview-ui/src/components/$ARGUMENTS/$ARGUMENTS.tsx` — コンポーネント本体
 2. `webview-ui/src/components/$ARGUMENTS/$ARGUMENTS.module.scss` — CSS Modules
 3. `webview-ui/src/components/$ARGUMENTS/index.ts` — バレルエクスポート
-4. `webview-ui/stories/$ARGUMENTS.stories.tsx` — Storybook Story
-5. `webview-ui/tests/components/$ARGUMENTS.spec.tsx` — ユニットテスト
+4. `webview-ui/src/components/$ARGUMENTS/$ARGUMENTS.stories.tsx` — Storybook Story（対象コードと同じ場所）
+5. `webview-ui/src/components/$ARGUMENTS/$ARGUMENTS.spec.tsx` — ユニットテスト（対象コードと同じ場所）
 
 ## テンプレート
 
@@ -146,5 +146,5 @@ describe("$ARGUMENTS", () => {
 
 ### 既存パターンの参考
 
-- `ContextMenu` コンポーネントの構造を参考にしてください
-- play function付きStoryの書き方は `webview-ui/stories/ContextMenu.stories.tsx` を参照
+- `webview-ui/src/components/header/` のコンポーネント構成（本体 / scss / stories / spec のコロケーション）を参考にしてください
+- play function付きStoryの書き方は `webview-ui/src/components/header/Header.stories.tsx` を参照
