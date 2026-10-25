@@ -573,6 +573,78 @@ export const EditableTable: FC<EditableTableProps> = ({
     }
   }, [searchOpen, openSearch, handleCloseSearch]);
 
+  // Ctrl/Cmd+Shift+D/I/B/L/R の操作対象。
+  // 行: 行番号で選択した行 > フォーカス中セルの行(表示位置→データ位置に変換)
+  // 列: 列ヘッダーで選択した列 > フォーカス中セルの列
+  const resolveTargetRowIndex = useCallback((): number | null => {
+    if (selectedRowIndex !== null) {
+      return selectedRowIndex;
+    }
+    if (focusedCell !== null) {
+      return rowIndexMapperRef.current.toDataIndex(focusedCell.row) ?? null;
+    }
+    return null;
+  }, [selectedRowIndex, focusedCell]);
+
+  const resolveTargetColumnIndex = useCallback((): number | null => {
+    if (selectedColumnIndex !== null) {
+      return selectedColumnIndex;
+    }
+    return focusedCell?.col ?? null;
+  }, [selectedColumnIndex, focusedCell]);
+
+  const resetTargetSelection = useCallback(() => {
+    setSelectedRowIndex(null);
+    setSelectedColumnIndex(null);
+    setFocusedColumnIndex(null);
+    setFocusedCell(null);
+    clearSelection();
+  }, [clearSelection]);
+
+  const handleShortcutDelete = useCallback(() => {
+    // 行番号で行を選択している場合は行、列ヘッダーで列を選択している場合は列、
+    // どちらも無ければフォーカス中セルの行を削除する
+    if (selectedRowIndex === null && selectedColumnIndex !== null) {
+      _deleteCol(selectedColumnIndex);
+      resetTargetSelection();
+      return;
+    }
+    const rowIndex = resolveTargetRowIndex();
+    if (rowIndex !== null) {
+      _deleteRow(rowIndex);
+      resetTargetSelection();
+    }
+  }, [
+    selectedRowIndex,
+    selectedColumnIndex,
+    _deleteCol,
+    _deleteRow,
+    resolveTargetRowIndex,
+    resetTargetSelection,
+  ]);
+
+  const handleShortcutInsertRow = useCallback(
+    (offset: 0 | 1) => {
+      const rowIndex = resolveTargetRowIndex();
+      if (rowIndex !== null) {
+        _insertRow(rowIndex + offset);
+        resetTargetSelection();
+      }
+    },
+    [resolveTargetRowIndex, _insertRow, resetTargetSelection]
+  );
+
+  const handleShortcutInsertColumn = useCallback(
+    (offset: 0 | 1) => {
+      const colIndex = resolveTargetColumnIndex();
+      if (colIndex !== null) {
+        _insertCol(colIndex + offset);
+        resetTargetSelection();
+      }
+    },
+    [resolveTargetColumnIndex, _insertCol, resetTargetSelection]
+  );
+
   const tableShortcuts = useMemo<KeyboardShortcut[]>(
     () => [
       {
@@ -598,6 +670,48 @@ export const EditableTable: FC<EditableTableProps> = ({
         handler: () => redo(),
       },
       { key: "f", mod: true, preventDefault: true, handler: handleToggleSearch },
+      // フィルター行の切り替えは入力中でも動作させる(テキスト編集の標準動作と衝突しない)
+      { key: "h", mod: true, shift: true, preventDefault: true, handler: handleToggleFilters },
+      {
+        key: "d",
+        mod: true,
+        shift: true,
+        ignoreWhenEditing: true,
+        preventDefault: true,
+        handler: handleShortcutDelete,
+      },
+      {
+        key: "i",
+        mod: true,
+        shift: true,
+        ignoreWhenEditing: true,
+        preventDefault: true,
+        handler: () => handleShortcutInsertRow(0),
+      },
+      {
+        key: "b",
+        mod: true,
+        shift: true,
+        ignoreWhenEditing: true,
+        preventDefault: true,
+        handler: () => handleShortcutInsertRow(1),
+      },
+      {
+        key: "l",
+        mod: true,
+        shift: true,
+        ignoreWhenEditing: true,
+        preventDefault: true,
+        handler: () => handleShortcutInsertColumn(0),
+      },
+      {
+        key: "r",
+        mod: true,
+        shift: true,
+        ignoreWhenEditing: true,
+        preventDefault: true,
+        handler: () => handleShortcutInsertColumn(1),
+      },
       {
         key: "Escape",
         preventDefault: true,
@@ -623,7 +737,19 @@ export const EditableTable: FC<EditableTableProps> = ({
         },
       },
     ],
-    [undo, redo, searchOpen, handleToggleSearch, handleCloseSearch, handleCopy, handlePaste]
+    [
+      undo,
+      redo,
+      searchOpen,
+      handleToggleSearch,
+      handleCloseSearch,
+      handleCopy,
+      handlePaste,
+      handleToggleFilters,
+      handleShortcutDelete,
+      handleShortcutInsertRow,
+      handleShortcutInsertColumn,
+    ]
   );
   useKeyboardShortcuts({ shortcuts: tableShortcuts });
 
