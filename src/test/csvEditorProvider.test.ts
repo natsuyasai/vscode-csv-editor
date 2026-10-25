@@ -11,29 +11,63 @@ import { Message, UpdateMessage, SaveMessage } from "../message/messageTypeToExt
 suite("CSVEditorProvider", () => {
   vscode.window.showInformationMessage("CSVEditorProviderテストを開始します。");
 
-  test("registerメソッドはDisposableを返す", async () => {
-    // コマンドが既に登録されているか確認
-    const commands = await vscode.commands.getCommands(true);
-    const csvEditorCommandExists = commands.includes("csv-editor.openEditor");
+  test("registerが返すDisposableでコマンドとカスタムエディタの登録を解除できる", () => {
+    // 拡張機能が有効化済みでも衝突しないよう、登録APIをスタブに差し替えて検証する
+    const commandsApi = vscode.commands as {
+      registerCommand: (
+        command: string,
+        callback: (...args: unknown[]) => unknown
+      ) => vscode.Disposable;
+    };
+    const windowApi = vscode.window as {
+      registerCustomEditorProvider: (viewType: string, provider: unknown) => vscode.Disposable;
+    };
+    const originalRegisterCommand = commandsApi.registerCommand;
+    const originalRegisterCustomEditorProvider = windowApi.registerCustomEditorProvider;
 
-    if (csvEditorCommandExists) {
-      // 既にコマンドが登録されている場合は、登録されていることを確認するだけ
-      assert.ok(true, "CSV Editor command is already registered");
-      return;
+    const registeredCommands: string[] = [];
+    const registeredViewTypes: string[] = [];
+    const disposedNames: string[] = [];
+    const trackedDisposable = (name: string): vscode.Disposable => ({
+      dispose: () => {
+        disposedNames.push(name);
+      },
+    });
+    commandsApi.registerCommand = (command) => {
+      registeredCommands.push(command);
+      return trackedDisposable(`command:${command}`);
+    };
+    windowApi.registerCustomEditorProvider = (viewType) => {
+      registeredViewTypes.push(viewType);
+      return trackedDisposable(`editor:${viewType}`);
+    };
+
+    try {
+      const context = {
+        subscriptions: [],
+        extensionUri: vscode.Uri.parse("file:///fake"),
+      } as unknown as vscode.ExtensionContext;
+
+      const disposable = CSVEditorProvider.register(context);
+      assert.deepStrictEqual(registeredCommands, ["csv-editor.openEditor"]);
+      assert.deepStrictEqual(registeredViewTypes, ["csv-editor.openEditor"]);
+      assert.deepStrictEqual(disposedNames, [], "dispose前は何も解除されない");
+
+      disposable.dispose();
+      assert.deepStrictEqual(
+        [...disposedNames].sort(),
+        ["command:csv-editor.openEditor", "editor:csv-editor.openEditor"],
+        "コマンドとカスタムエディタの両方が解除される"
+      );
+
+      // 解除後に再度登録しても問題ない
+      CSVEditorProvider.register(context).dispose();
+      assert.strictEqual(registeredCommands.length, 2);
+      assert.strictEqual(registeredViewTypes.length, 2);
+    } finally {
+      commandsApi.registerCommand = originalRegisterCommand;
+      windowApi.registerCustomEditorProvider = originalRegisterCustomEditorProvider;
     }
-
-    // コマンドがまだ登録されていない場合のみ、新規登録をテスト
-    const context = {
-      subscriptions: [],
-      extensionUri: vscode.Uri.parse("file:///fake"),
-    } as unknown as vscode.ExtensionContext;
-
-    const disposable = CSVEditorProvider.register(context);
-    assert.ok(disposable);
-    assert.strictEqual(typeof disposable.dispose, "function");
-
-    // テスト後にクリーンアップ
-    disposable.dispose();
   });
 
   suite("E2Eテスト - Webview", () => {
@@ -411,6 +445,45 @@ suite("CSVEditorProvider", () => {
       const themeMessage = sentMessages.find((msg) => msg.type === "updateTheme");
       assert.ok(themeMessage, "Theme update message should be sent");
       assert.ok(themeMessage.payload === "light" || themeMessage.payload === "dark");
+    });
+
+    test("パネルを閉じた後はテーマ変更を通知しない（テーマ変更リスナーが解除される）", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      // テーマ変更イベントを手動で発火できるよう差し替える
+      const themeEmitter = new vscode.EventEmitter<vscode.ColorTheme>();
+      const windowApi = vscode.window as {
+        onDidChangeActiveColorTheme: vscode.Event<vscode.ColorTheme>;
+      };
+      const originalOnDidChangeTheme = windowApi.onDidChangeActiveColorTheme;
+      windowApi.onDidChangeActiveColorTheme = themeEmitter.event;
+      try {
+        const harness = createHarness(document);
+
+        themeEmitter.fire(vscode.window.activeColorTheme);
+        const themeMessagesBeforeDispose = harness.sentMessages.filter(
+          (m) => m.type === "updateTheme"
+        );
+        assert.strictEqual(
+          themeMessagesBeforeDispose.length,
+          1,
+          "パネル表示中はテーマ変更を通知する"
+        );
+
+        harness.dispose();
+        themeEmitter.fire(vscode.window.activeColorTheme);
+
+        const themeMessagesAfterDispose = harness.sentMessages.filter(
+          (m) => m.type === "updateTheme"
+        );
+        assert.strictEqual(
+          themeMessagesAfterDispose.length,
+          1,
+          "パネルを閉じた後はテーマ変更を通知しない"
+        );
+      } finally {
+        windowApi.onDidChangeActiveColorTheme = originalOnDidChangeTheme;
+        themeEmitter.dispose();
+      }
     });
 
     test("特殊文字を含む複雑なCSVデータ読み込み", async () => {
