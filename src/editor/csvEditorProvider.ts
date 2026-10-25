@@ -1,7 +1,7 @@
 // WebViewの内容を表示するためのクラス
 import * as vscode from "vscode";
 import { ThemeKind, UpdateMessage, UpdateThemeMessage } from "../message/messageTypeToWebview";
-import { isMessageToExtension } from "../message/messageTypeToExtention";
+import { isMessageToExtension } from "../message/messageTypeToExtension";
 import { disposeAll } from "../util/dispose";
 import { getUri } from "../util/getUri";
 import { loggerDisposable, logWarning } from "../util/logger";

@@ -3,7 +3,7 @@ import {
   OpenAsTextMessage,
   SaveMessage,
   UpdateMessage as UpdateToExtensionMessage,
-} from "@message/messageTypeToExtention";
+} from "@message/messageTypeToExtension";
 import { isMessageToWebview, ThemeKind, UpdateMessage } from "@message/messageTypeToWebview";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./App.module.scss";

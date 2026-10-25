@@ -6,7 +6,7 @@ import * as path from "path";
 import * as os from "os";
 import { setTimeout as sleep } from "timers/promises";
 import { CSVEditorProvider } from "../editor/csvEditorProvider";
-import { Message, UpdateMessage, SaveMessage } from "../message/messageTypeToExtention";
+import { Message, UpdateMessage, SaveMessage } from "../message/messageTypeToExtension";
 
 suite("CSVEditorProvider", () => {
   vscode.window.showInformationMessage("CSVEditorProviderテストを開始します。");

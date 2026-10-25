@@ -6,7 +6,7 @@ import * as path from "path";
 import * as os from "os";
 import { setTimeout as sleep } from "timers/promises";
 import { CSVEditorProvider } from "../editor/csvEditorProvider";
-import { Message } from "../message/messageTypeToExtention";
+import { Message } from "../message/messageTypeToExtension";
 
 /**
  * 大きなCSV(1万行)の編集結果の反映 (issue #90)
