@@ -219,13 +219,13 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
   private static replaceWholeDocument(
     document: vscode.TextDocument,
     csvText: string
-  ): Thenable<boolean> {
+  ): Promise<boolean> {
     const edit = new vscode.WorkspaceEdit();
     const fullRange = new vscode.Range(
       new vscode.Position(0, 0),
       document.positionAt(document.getText().length)
     );
     edit.replace(document.uri, fullRange, csvText);
-    return vscode.workspace.applyEdit(edit);
+    return Promise.resolve(vscode.workspace.applyEdit(edit));
   }
 }

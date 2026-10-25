@@ -4,6 +4,7 @@ import { suite, test, beforeEach, afterEach } from "mocha";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { setTimeout as sleep } from "timers/promises";
 import { CSVEditorProvider } from "../editor/csvEditorProvider";
 import { Message, UpdateMessage, SaveMessage } from "../message/messageTypeToExtention";
 
@@ -282,7 +283,7 @@ suite("CSVEditorProvider", () => {
       };
     }
 
-    const waitForEvents = () => new Promise((resolve) => setTimeout(resolve, 100));
+    const waitForEvents = () => sleep(100);
 
     test("updateメッセージはドキュメントを更新してダーティにするが保存しない", async () => {
       const document = await vscode.workspace.openTextDocument(testCsvFile);
