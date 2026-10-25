@@ -1,17 +1,36 @@
 {
   "name": "csv-editor",
   "displayName": "csv-editor",
-  "description": "edit csv",
+  "description": "Edit CSV files in a spreadsheet-like table editor with sorting, filtering, undo/redo, and copy/paste.",
   "version": "0.0.4-alpha5",
+  "license": "MIT",
+  "keywords": [
+    "csv",
+    "editor",
+    "table",
+    "spreadsheet",
+    "tsv",
+    "excel",
+    "data"
+  ],
   "repository": {
+    "type": "git",
     "url": "https://github.com/natsuyasai/vscode-csv-editor"
+  },
+  "homepage": "https://github.com/natsuyasai/vscode-csv-editor#readme",
+  "bugs": {
+    "url": "https://github.com/natsuyasai/vscode-csv-editor/issues"
+  },
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
   },
   "publisher": "natsuyasai",
   "engines": {
     "vscode": "^1.99.0"
   },
   "categories": [
-    "Other"
+    "Data Science"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
