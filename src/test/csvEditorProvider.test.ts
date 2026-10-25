@@ -9,8 +9,6 @@ import { CSVEditorProvider } from "../editor/csvEditorProvider";
 import { Message, UpdateMessage, SaveMessage } from "../message/messageTypeToExtension";
 
 suite("CSVEditorProvider", () => {
-  vscode.window.showInformationMessage("CSVEditorProviderテストを開始します。");
-
   test("registerが返すDisposableでコマンドとカスタムエディタの登録を解除できる", () => {
     // 拡張機能が有効化済みでも衝突しないよう、登録APIをスタブに差し替えて検証する
     const commandsApi = vscode.commands as {
