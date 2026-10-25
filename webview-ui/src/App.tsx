@@ -5,7 +5,6 @@ import {
   UpdateMessage as UpdateToExtensionMessage,
 } from "@message/messageTypeToExtention";
 import { Message, ThemeKind, UpdateMessage } from "@message/messageTypeToWebview";
-import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./App.module.scss";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
@@ -13,7 +12,13 @@ import { ParseErrorView } from "./components/common/ParseErrorView";
 import { EditableTable } from "./components/editable-table/EditableTable";
 import { useEventListener } from "./hooks/useEventListener";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
-import { CsvParseError, parseCsv } from "./utilities/csvFormat";
+import {
+  CsvFormat,
+  CsvParseError,
+  DEFAULT_CSV_FORMAT,
+  parseCsv,
+  stringifyCsv,
+} from "./utilities/csvFormat";
 import { vscode } from "./utilities/vscode";
 
 /** 編集内容を拡張機能(TextDocument)へ送るまでのデバウンス時間(ms) */
@@ -25,6 +30,8 @@ export default function App() {
   const rawTextRef = useRef("");
   // 外部変更を受けた際にEditableTable(Undo履歴・選択状態を保持)を作り直すためのキー
   const [externalRevision, setExternalRevision] = useState(0);
+  // 読み込み時に検出した書式。保存(update送信)時に同じ形式で出力する
+  const csvFormatRef = useRef<CsvFormat>(DEFAULT_CSV_FORMAT);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cancelPendingSync = useCallback(() => {
@@ -69,6 +76,7 @@ export default function App() {
       const result = parseCsv(text);
       if (result.ok) {
         setParseError(null);
+        csvFormatRef.current = result.format;
         setCSVArray(result.rows);
       } else {
         // 解析失敗時はテーブルを破棄しエラー表示にする。拡張機能へは何も送らない
@@ -152,7 +160,7 @@ export default function App() {
 
   function updateCSVArray(csv: Array<Array<string>>) {
     setCSVArray(csv);
-    const text = csvStringfy(csv);
+    const text = stringifyCsv(csv, csvFormatRef.current);
     rawTextRef.current = text;
     setRawText(text);
     scheduleSync(text);
