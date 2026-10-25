@@ -68,12 +68,19 @@ const filterCsv = [
 
 const writeText = vi.fn();
 const readText = vi.fn();
-const scrollToMock = vi.fn();
+// jsdomのscrollToは位置を反映しないため、scrollTopへ反映して実ブラウザの挙動に近づける
+const scrollToMock = vi.fn(function (this: HTMLElement, options?: ScrollToOptions) {
+  this.scrollTop = options?.top ?? 0;
+});
 
 beforeEach(() => {
   // jsdomでは要素サイズが0になり仮想スクロールが行を描画しないため、サイズを与える
   Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, value: 600 });
   Object.defineProperty(HTMLElement.prototype, "offsetWidth", { configurable: true, value: 800 });
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, value: 600 });
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, value: 800 });
+  // スクロール可能な最大位置の算出に使われる（0だとスクロール位置が0へ丸められる）
+  Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, value: 5000 });
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
     value: scrollToMock,

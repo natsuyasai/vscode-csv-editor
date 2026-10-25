@@ -5,7 +5,6 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 
-/* eslint-env node */
 /* eslint-disable no-undef */
 
 suite("CSVエディター Webview統合テスト", () => {

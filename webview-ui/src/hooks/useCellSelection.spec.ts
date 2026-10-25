@@ -224,7 +224,7 @@ describe("useCellSelection", () => {
         }
         return updater;
       }
-    ) as React.Dispatch<React.SetStateAction<typeof dataWithNewlines>>;
+    );
 
     const { result } = renderHook(() => useCellSelection(dataWithNewlines, setData));
 
@@ -266,7 +266,7 @@ describe("useCellSelection", () => {
         }
         return updater;
       }
-    ) as React.Dispatch<React.SetStateAction<typeof emptyData>>;
+    );
 
     const { result: pasteResult } = renderHook(() => useCellSelection(emptyData, emptySetData));
 
@@ -309,7 +309,7 @@ describe("useCellSelection", () => {
         }
         return updater;
       }
-    ) as React.Dispatch<React.SetStateAction<typeof dataWithTabs>>;
+    );
 
     const { result } = renderHook(() => useCellSelection(dataWithTabs, setData));
 
@@ -346,7 +346,7 @@ describe("useCellSelection", () => {
         }
         return updater;
       }
-    ) as React.Dispatch<React.SetStateAction<typeof dataWithQuotes>>;
+    );
 
     const { result } = renderHook(() => useCellSelection(dataWithQuotes, setData));
 
