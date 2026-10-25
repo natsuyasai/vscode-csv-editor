@@ -15,7 +15,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
    */
   public static register(context: vscode.ExtensionContext): vscode.Disposable {
     // 現在アクティブなファイルを開くコマンドを登録
-    vscode.commands.registerCommand("csv-editor.openEditor", () => {
+    const openEditorCommand = vscode.commands.registerCommand("csv-editor.openEditor", () => {
       const activeEditor = vscode.window.activeTextEditor;
       if (!activeEditor) {
         vscode.window.showErrorMessage("csv-editor: No active editor.");
@@ -25,7 +25,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       vscode.commands.executeCommand("vscode.openWith", uri, CSVEditorProvider.viewType);
     });
 
-    return vscode.window.registerCustomEditorProvider(
+    const customEditorProvider = vscode.window.registerCustomEditorProvider(
       CSVEditorProvider.viewType,
       new CSVEditorProvider(context),
       {
@@ -36,6 +36,8 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
         supportsMultipleEditorsPerDocument: false, // 同一ドキュメントに対して複数のエディタをサポートするかどうか
       }
     );
+
+    return vscode.Disposable.from(openEditorCommand, customEditorProvider);
   }
 
   // package.jsonのviewTypeと一致させる
