@@ -36,6 +36,8 @@ const Wrapper = ({ initial }: { initial: string[][] }) => {
 beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, value: 600 });
   Object.defineProperty(HTMLElement.prototype, "offsetWidth", { configurable: true, value: 800 });
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, value: 600 });
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, value: 800 });
   Object.defineProperty(HTMLElement.prototype, "scrollTo", { configurable: true, value: vi.fn() });
 });
 

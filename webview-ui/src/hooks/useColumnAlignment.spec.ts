@@ -139,7 +139,7 @@ describe("useColumnAlignment 列の挿入・削除・移動への追従 (#86)", 
   const right = { vertical: "center", horizontal: "right" } as const;
   const setup = () => {
     const hook = renderHook(({ columnIndex }) => useColumnAlignment(columnIndex), {
-      initialProps: { columnIndex: 1 as number | null },
+      initialProps: { columnIndex: 1 },
     });
     act(() => hook.result.current.handleAlignmentChange(right));
     return hook.result;

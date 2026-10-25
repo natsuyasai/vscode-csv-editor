@@ -178,9 +178,7 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     // 注: clearSelectionは呼ばない（矢印キーでの範囲選択を維持するため）
     if (columnIndex >= 0) {
       // 新しいフォーカスセルを設定
-      const setFocusedCellFn = props.table.options.meta?.setFocusedCell as
-        | ((cell: { row: number; col: number } | null) => void)
-        | undefined;
+      const setFocusedCellFn = props.table.options.meta?.setFocusedCell;
       setFocusedCellFn?.({ row: rowIndex, col: columnIndex });
     }
   }, [columnIndex, rowIndex, props.table.options.meta]);
@@ -189,9 +187,7 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (e.key === "Tab") {
         // Tabキー: 選択をクリア（ブラウザのデフォルト動作でフォーカス移動）
-        const clearSelectionFn = props.table.options.meta?.clearSelection as
-          | (() => void)
-          | undefined;
+        const clearSelectionFn = props.table.options.meta?.clearSelection;
         clearSelectionFn?.();
         // デフォルト動作を許可（次のセルへフォーカス移動）
         return;
@@ -228,9 +224,7 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     (e: React.MouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
       if (columnIndex >= 0) {
-        const handleFillStartFn = props.table.options.meta?.handleFillStart as
-          | ((row: number, col: number) => void)
-          | undefined;
+        const handleFillStartFn = props.table.options.meta?.handleFillStart;
         handleFillStartFn?.(rowIndex, columnIndex);
       }
     },
@@ -251,15 +245,11 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
     );
   }
 
-  const isInFillRangeFn = props.table.options.meta?.isInFillRange as
-    | ((row: number, col: number) => boolean)
-    | undefined;
+  const isInFillRangeFn = props.table.options.meta?.isInFillRange;
   const isFillRange = isInFillRangeFn ? isInFillRangeFn(rowIndex, columnIndex) : false;
 
   // 行の高さを取得
-  const getRowHeightFn = props.table.options.meta?.getRowHeight as
-    | ((rowIndex: number) => number)
-    | undefined;
+  const getRowHeightFn = props.table.options.meta?.getRowHeight;
   const rowHeight = getRowHeightFn ? getRowHeightFn(rowIndex) : undefined;
 
   // セルのクラス名を決定
