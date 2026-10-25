@@ -20,6 +20,12 @@
 - webview-ui/srcに対してUI、フロントエンド、またはReact開発を行う前に、必ずstorybook MCPサーバーを呼び出して追加の指示を取得してください。
 - **全作業内で同様のミスの指摘が複数回（2回以上）発生した場合は、必ずこのCLAUDE.mdに再発防止策を追記してください**（適切なセクションに「何を・なぜ・どう防ぐか」を簡潔に記載）。
 
+### 再発防止策
+
+- **改行コードを変えない**: Windows 上でスクリプト置換するとファイルが CRLF 化し、全行差分・マージ時の全体衝突が複数回発生した。既存ファイルの LF/CRLF を維持し、コミット前に `git diff --stat` で行数が不自然に多くないか確認する。
+- **Storybook テストも必ず実行する**: play function を未実行のまま PR にして CI（実ブラウザ）で失敗した。jsdom の vitest が通っても実ブラウザでは挙動が異なるため、`cd webview-ui && npx vitest --project storybook --run` を完了条件に含める（初回は `npx playwright install chromium`）。
+- **VSCode 側テストは webview をビルドしてから実行する**: `npm run build:webview` 前の `npm test` は実 webview を読み込まず検証が不十分になる。ハング対策に時間制限を付ける（例: `timeout 400 npm test`）。
+
 ## 開発手順
 
 アプリ開発は以下の標準フローに従って進めてください。各フェーズには対応するスキルがあり、`/dev-flow` がフロー全体を統括します。
