@@ -20,6 +20,7 @@ import { useColumnResize } from "@/hooks/useColumnResize";
 import { useContextMenus } from "@/hooks/useContextMenus";
 import { useHeaderAction } from "@/hooks/useHeaderAction";
 import { useHeaderEditing } from "@/hooks/useHeaderEditing";
+import { KeyboardShortcut, useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useRowResize } from "@/hooks/useRowResize";
 import { useTableSearch } from "@/hooks/useTableSearch";
 import { useUpdateCsvArray } from "@/hooks/useUpdateCsvArray";
@@ -554,48 +555,70 @@ export const EditableTable: FC<EditableTableProps> = ({
     handleCloseColumnContextMenu,
   ]);
 
-  // キーボードショートカット（Ctrl+Z、Ctrl+Y、Ctrl+F、Escape）
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Z: Undo
-      if (e.ctrlKey && e.key === "z") {
-        e.preventDefault();
-        undo();
-      }
-      // Ctrl+Y: Redo
-      else if (e.ctrlKey && e.key === "y") {
-        e.preventDefault();
-        redo();
-      }
-      // Ctrl+F: 検索フォームの表示/非表示
-      else if (e.ctrlKey && e.key === "f") {
-        e.preventDefault();
-        if (searchOpen) {
-          handleCloseSearch();
-        } else {
-          openSearch();
-        }
-      }
-      // Escape: 検索フォームを閉じる
-      else if (e.key === "Escape" && searchOpen) {
-        e.preventDefault();
-        handleCloseSearch();
-        // Ctrl+C: コピー
-      } else if (e.ctrlKey && e.key === "c") {
-        e.preventDefault();
-        handleCopy().catch(() => {});
-        // Ctrl+V: ペースト
-      } else if (e.ctrlKey && e.key === "v") {
-        e.preventDefault();
-        handlePaste().catch(() => {});
-      }
-    };
+  // キーボードショートカット（Ctrl/Cmd+Z、Ctrl/Cmd+Shift+Z、Ctrl/Cmd+Y、Ctrl/Cmd+F、Ctrl/Cmd+C/V、Escape）
+  // 入力欄(セル編集・検索・フィルター・ヘッダー編集)では標準のテキスト操作を優先する。
+  // 検索(Ctrl/Cmd+F)は入力中でも動作させ、Escapeは検索欄から閉じられるようにする。
+  const handleToggleSearch = useCallback(() => {
+    if (searchOpen) {
+      handleCloseSearch();
+    } else {
+      openSearch();
+    }
+  }, [searchOpen, openSearch, handleCloseSearch]);
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [undo, redo, searchOpen, openSearch, handleCloseSearch, handleCopy, handlePaste]);
+  const tableShortcuts = useMemo<KeyboardShortcut[]>(
+    () => [
+      {
+        key: "z",
+        mod: true,
+        shift: true,
+        ignoreWhenEditing: true,
+        preventDefault: true,
+        handler: () => redo(),
+      },
+      {
+        key: "z",
+        mod: true,
+        ignoreWhenEditing: true,
+        preventDefault: true,
+        handler: () => undo(),
+      },
+      {
+        key: "y",
+        mod: true,
+        ignoreWhenEditing: true,
+        preventDefault: true,
+        handler: () => redo(),
+      },
+      { key: "f", mod: true, preventDefault: true, handler: handleToggleSearch },
+      {
+        key: "Escape",
+        preventDefault: true,
+        condition: () => searchOpen,
+        handler: () => handleCloseSearch(),
+      },
+      {
+        key: "c",
+        mod: true,
+        ignoreWhenEditing: true,
+        preventDefault: true,
+        handler: () => {
+          handleCopy().catch(() => {});
+        },
+      },
+      {
+        key: "v",
+        mod: true,
+        ignoreWhenEditing: true,
+        preventDefault: true,
+        handler: () => {
+          handlePaste().catch(() => {});
+        },
+      },
+    ],
+    [undo, redo, searchOpen, handleToggleSearch, handleCloseSearch, handleCopy, handlePaste]
+  );
+  useKeyboardShortcuts({ shortcuts: tableShortcuts });
 
   // オートフィルのmouseupイベント
   useEffect(() => {

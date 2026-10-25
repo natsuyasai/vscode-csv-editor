@@ -6,6 +6,10 @@ export interface KeyboardShortcut {
   shift?: boolean;
   alt?: boolean;
   meta?: boolean;
+  /** Ctrl または Cmd(Meta) のどちらかが押されていれば一致とする（Windows/Linux: Ctrl, macOS: Cmd） */
+  mod?: boolean;
+  /** true の場合、input / textarea / select / contenteditable からのイベントでは実行せず標準動作を残す */
+  ignoreWhenEditing?: boolean;
   handler: (event: KeyboardEvent) => void;
   preventDefault?: boolean;
   stopPropagation?: boolean;
@@ -36,6 +40,9 @@ export function useKeyboardShortcuts({
       }
       for (const shortcut of shortcuts) {
         if (isMatchingShortcut(event, shortcut)) {
+          if (shortcut.ignoreWhenEditing && isEditableEventTarget(event)) {
+            continue;
+          }
           // 条件チェック
           if (shortcut.condition && !shortcut.condition()) {
             continue;
@@ -69,10 +76,31 @@ function isMatchingShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut): b
   const keyMatches = event.key.toLowerCase() === shortcut.key.toLowerCase();
 
   // 修飾キーの比較
-  const ctrlMatches = Boolean(event.ctrlKey) === Boolean(shortcut.ctrl);
+  const modMatches = shortcut.mod
+    ? event.ctrlKey || event.metaKey
+    : Boolean(event.ctrlKey) === Boolean(shortcut.ctrl) &&
+      Boolean(event.metaKey) === Boolean(shortcut.meta);
   const shiftMatches = Boolean(event.shiftKey) === Boolean(shortcut.shift);
   const altMatches = Boolean(event.altKey) === Boolean(shortcut.alt);
-  const metaMatches = Boolean(event.metaKey) === Boolean(shortcut.meta);
 
-  return keyMatches && ctrlMatches && shiftMatches && altMatches && metaMatches;
+  return keyMatches && modMatches && shiftMatches && altMatches;
+}
+
+const EDITABLE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
+
+function isEditableElement(element: Element): boolean {
+  if (EDITABLE_TAGS.has(element.tagName)) {
+    return true;
+  }
+  // VSCode Elements の入力系カスタム要素（Shadow DOM 内の input がホスト要素に再ターゲットされる）
+  if (element.tagName.toLowerCase().startsWith("vscode-text")) {
+    return true;
+  }
+  const editable = element.closest("[contenteditable]")?.getAttribute("contenteditable");
+  return editable !== null && editable !== undefined && editable.toLowerCase() !== "false";
+}
+
+function isEditableEventTarget(event: KeyboardEvent): boolean {
+  const origin = event.composedPath()[0] ?? event.target;
+  return origin instanceof Element && isEditableElement(origin);
 }
