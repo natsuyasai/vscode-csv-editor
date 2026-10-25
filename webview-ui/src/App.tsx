@@ -161,13 +161,6 @@ export default function App() {
     vscode.postMessage({ type: "openAsText" } satisfies OpenAsTextMessage);
   }, [cancelPendingSync]);
 
-  const _handleReloadWebview = () => {
-    vscode.postMessage({
-      type: "reload",
-      payload: getRawText(),
-    });
-  };
-
   function updateCSVArray(csv: Array<Array<string>>) {
     setCSVArray(csv);
     latestRowsRef.current = csv;
