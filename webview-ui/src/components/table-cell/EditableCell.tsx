@@ -27,7 +27,8 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
   const clickCountRef = useRef(0);
 
   // セル選択状態の取得
-  const rowIndex = props.row.index;
+  // 選択・フォーカス・範囲計算は表示位置(ソート・フィルター後の並び)で扱う
+  const rowIndex = props.table.options.meta?.getViewRowIndex?.(props.row.index) ?? props.row.index;
   const columnId = props.column.id;
   const columnIndex = columnId.startsWith("col") ? parseInt(columnId.substring(3)) : -1;
   const cellKey = `${rowIndex}-${columnIndex}`;

@@ -1,21 +1,14 @@
 import { renderHook, act } from "@testing-library/react";
 import * as fc from "fast-check";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { useTableSearch } from "@/hooks/useTableSearch";
 import { ROW_IDX_KEY, ROW_ID_KEY } from "@/types";
 
 describe("useTableSearch - Property-Based Tests", () => {
-  let mockTableContainerRef: React.RefObject<HTMLDivElement>;
-  let mockScrollTo: ReturnType<typeof vi.fn>;
-  const rowHeight = 40;
+  let mockScrollToRow: Mock<(viewRowIdx: number) => void>;
 
   beforeEach(() => {
-    mockScrollTo = vi.fn();
-    mockTableContainerRef = {
-      current: {
-        scrollTo: mockScrollTo,
-      } as unknown as HTMLDivElement,
-    };
+    mockScrollToRow = vi.fn<(viewRowIdx: number) => void>();
     vi.clearAllMocks();
   });
 
@@ -34,7 +27,7 @@ describe("useTableSearch - Property-Based Tests", () => {
   it("検索結果の数は、検索文字列を含むセルの数と一致する", () => {
     fc.assert(
       fc.property(tableDataArb, fc.string({ minLength: 1, maxLength: 10 }), (data, searchText) => {
-        const { result } = renderHook(() => useTableSearch(data, rowHeight, mockTableContainerRef));
+        const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
         act(() => {
           result.current.handleSearch(searchText);
@@ -99,9 +92,7 @@ describe("useTableSearch - Property-Based Tests", () => {
             .map((searchText) => ({ data, searchText }))
         ),
         ({ data, searchText }) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, rowHeight, mockTableContainerRef)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(searchText);
@@ -149,9 +140,7 @@ describe("useTableSearch - Property-Based Tests", () => {
             .map((searchText) => ({ data, searchText }))
         ),
         ({ data, searchText }) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, rowHeight, mockTableContainerRef)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(searchText);
@@ -203,9 +192,7 @@ describe("useTableSearch - Property-Based Tests", () => {
             )
         ),
         ({ data, searchText, iterations }) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, rowHeight, mockTableContainerRef)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(searchText);
@@ -235,7 +222,7 @@ describe("useTableSearch - Property-Based Tests", () => {
   it("検索を閉じると、すべての状態がリセットされる", () => {
     fc.assert(
       fc.property(tableDataArb, fc.string({ minLength: 1, maxLength: 10 }), (data, searchText) => {
-        const { result } = renderHook(() => useTableSearch(data, rowHeight, mockTableContainerRef));
+        const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
         // 検索を開いて実行
         act(() => {
@@ -265,9 +252,7 @@ describe("useTableSearch - Property-Based Tests", () => {
         tableDataArb,
         fc.constantFrom("", "  ", "\t", "\n", "   \t\n  "),
         (data, emptySearchText) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, rowHeight, mockTableContainerRef)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(emptySearchText);
@@ -313,9 +298,7 @@ describe("useTableSearch - Property-Based Tests", () => {
             )
         ),
         ({ data, searchText, actions }) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, rowHeight, mockTableContainerRef)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(searchText);
@@ -356,9 +339,7 @@ describe("useTableSearch - Property-Based Tests", () => {
         ),
         fc.constantFrom("apple", "APPLE", "Apple", "aPpLe"),
         (data, searchText) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, rowHeight, mockTableContainerRef)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(searchText);
@@ -384,9 +365,7 @@ describe("useTableSearch - Property-Based Tests", () => {
           { minLength: 1, maxLength: 10 }
         ),
         (data) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, rowHeight, mockTableContainerRef)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           // ROW_IDX_KEYの値を検索
           const rowIdxValue = data[0][ROW_IDX_KEY];
@@ -394,15 +373,26 @@ describe("useTableSearch - Property-Based Tests", () => {
             result.current.handleSearch(rowIdxValue);
           });
 
+          // handleSearchは検索語をtrimし、空になった場合は検索しない仕様
           // ROW_IDX_KEYの値がcol0に含まれない限り、マッチしないはず
-          const expectedMatches = data.filter((row) =>
-            String(row.col0).toLowerCase().includes(rowIdxValue.toLowerCase())
-          ).length;
+          const trimmed = rowIdxValue.trim();
+          const expectedMatches =
+            trimmed === ""
+              ? 0
+              : data.filter((row) => String(row.col0).toLowerCase().includes(trimmed.toLowerCase()))
+                  .length;
 
           expect(result.current.matchedItemPositions.length).toBe(expectedMatches);
         }
       ),
-      { numRuns: 30 }
+      {
+        numRuns: 30,
+        // 過去の反例（空白のみ／前後に空白を含む検索語）を固定して常に検証する
+        examples: [
+          [[{ [ROW_IDX_KEY]: " ", [ROW_ID_KEY]: "a", col0: " " }]],
+          [[{ [ROW_IDX_KEY]: " a", [ROW_ID_KEY]: "b", col0: "xa" }]],
+        ],
+      }
     );
   });
 
@@ -420,9 +410,7 @@ describe("useTableSearch - Property-Based Tests", () => {
         ),
         fc.integer({ min: 0, max: 999 }),
         (data, searchNumber) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, rowHeight, mockTableContainerRef)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(String(searchNumber));

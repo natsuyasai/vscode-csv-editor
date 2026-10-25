@@ -41,6 +41,8 @@ declare module "@tanstack/react-table" {
     handleFillEnd?: () => void;
     // 行の高さ取得
     getRowHeight?: (rowIndex: number) => number;
+    // データ位置(row.index)から表示位置(ソート・フィルター後の並び)を取得
+    getViewRowIndex?: (dataRowIndex: number) => number;
   }
 }
 
@@ -74,6 +76,8 @@ export interface DraggableHeaderCellProps {
 export interface RowIndexCellProps extends CellContext<RowData, unknown> {
   isSelected: boolean;
   onSelect: () => void;
+  /** true の間は行のドラッグ&ドロップによる並び替えを無効にする（ソート・フィルター適用中） */
+  isDragDisabled?: boolean;
   onRowReorder?: (sourceIndex: number, targetIndex: number) => void;
   onContextMenu?: (e: React.MouseEvent, rowIndex: number) => void;
   rowIndex: number;

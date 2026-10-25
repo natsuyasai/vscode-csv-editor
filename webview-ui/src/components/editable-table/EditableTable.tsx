@@ -31,6 +31,11 @@ import { RowIndexCell } from "../table-cell/RowIndexCell";
 import { FilterInput } from "../table-header/FilterInput";
 import { HeaderCell } from "../table-header/HeaderCell";
 import tableStyles from "./EditableTable.module.scss";
+import {
+  createRowIndexMapper,
+  identityRowIndexMapper,
+  type RowIndexMapper,
+} from "./rowIndexMapper";
 import type { EditableTableProps, RowData } from "./types";
 
 export const EditableTable: FC<EditableTableProps> = ({
@@ -93,6 +98,14 @@ export const EditableTable: FC<EditableTableProps> = ({
     endResize: endColumnResize,
   } = useColumnResize(150); // デフォルトの列幅は150px
 
+  // 表示位置(ソート・フィルター後の並び)とデータ位置の変換。
+  // table は選択状態などの後に生成されるため、最新の変換器を ref 経由で参照する。
+  const rowIndexMapperRef = useRef<RowIndexMapper>(identityRowIndexMapper);
+  const viewToDataIndex = useCallback(
+    (viewIndex: number) => rowIndexMapperRef.current.toDataIndex(viewIndex),
+    []
+  );
+
   // セル選択機能
   const {
     selectedCells,
@@ -104,7 +117,7 @@ export const EditableTable: FC<EditableTableProps> = ({
     handleCopy,
     handlePaste,
     clearSelection,
-  } = useCellSelection(data, setData, _updateCells);
+  } = useCellSelection(data, setData, _updateCells, viewToDataIndex);
 
   // セルクリック時にfocusedCellも更新
   const handleCellMouseDown = useCallback(
@@ -127,7 +140,8 @@ export const EditableTable: FC<EditableTableProps> = ({
   // オートフィル機能
   const { isFilling, handleFillStart, handleFillMove, handleFillEnd, isInFillRange } = useAutoFill(
     data,
-    _updateCells
+    _updateCells,
+    viewToDataIndex
   );
 
   // コンテキストメニュー機能
@@ -224,13 +238,23 @@ export const EditableTable: FC<EditableTableProps> = ({
     return newRows;
   }, [csvArray, isIgnoreHeaderRow]);
 
+  // ソート・フィルター適用中は表示順とデータ順が異なるため、行のドラッグ&ドロップによる並び替えを無効にする
+  const isRowReorderDisabled = sorting.length > 0 || columnFilters.length > 0;
+
   // 行のドラッグ&ドロップハンドラー
+  // _moveRows は毎レンダリングで新しくなるため ref 経由で参照し、handleRowReorder の参照を安定させる。
+  // 参照が変わると columns が再生成され行番号セルが再マウントされて、
+  // mousedown〜mouseup の間に再レンダリングが起きた場合にクリックが失われる。
+  const moveRowsRef = useRef(_moveRows);
+  useEffect(() => {
+    moveRowsRef.current = _moveRows;
+  });
   const handleRowReorder = useCallback(
     (sourceIndex: number, targetIndex: number) => {
-      if (sourceIndex === targetIndex) return;
-      _moveRows(sourceIndex, targetIndex);
+      if (isRowReorderDisabled || sourceIndex === targetIndex) return;
+      moveRowsRef.current(sourceIndex, targetIndex);
     },
-    [_moveRows]
+    [isRowReorderDisabled]
   );
 
   // 列のドラッグ&ドロップハンドラー
@@ -280,6 +304,7 @@ export const EditableTable: FC<EditableTableProps> = ({
               isSelected={isSelected}
               onSelect={onSelect}
               rowIndex={rowIndex}
+              isDragDisabled={isRowReorderDisabled}
               onRowReorder={handleRowReorder}
               onContextMenu={onContextMenu}
               onRowResizeStart={startResize}
@@ -308,6 +333,7 @@ export const EditableTable: FC<EditableTableProps> = ({
     csvArray,
     isIgnoreHeaderRow,
     handleRowReorder,
+    isRowReorderDisabled,
     openRowContextMenu,
     clearSelection,
     startResize,
@@ -347,13 +373,12 @@ export const EditableTable: FC<EditableTableProps> = ({
       handleShiftClick,
       applyValueToSelectedCells: (value: string) => {
         // 選択中のセルすべてに値を適用
-        const cellUpdates = Array.from(selectedCells).map((cellKey) => {
+        const cellUpdates: Array<{ rowIdx: number; colIdx: number; value: string }> = [];
+        selectedCells.forEach((cellKey) => {
           const [rowStr, colStr] = cellKey.split("-");
-          return {
-            rowIdx: parseInt(rowStr),
-            colIdx: parseInt(colStr),
-            value,
-          };
+          const dataRowIdx = viewToDataIndex(parseInt(rowStr));
+          if (dataRowIdx === undefined) return;
+          cellUpdates.push({ rowIdx: dataRowIdx, colIdx: parseInt(colStr), value });
         });
         _updateCells(cellUpdates);
         clearSelection();
@@ -366,13 +391,41 @@ export const EditableTable: FC<EditableTableProps> = ({
       handleFillEnd,
       // 行の高さ取得
       getRowHeight,
+      // 行の表示位置取得
+      getViewRowIndex: (dataRowIndex: number) =>
+        rowIndexMapperRef.current.toViewIndex(dataRowIndex) ?? dataRowIndex,
     },
   });
+
+  // 表示行(ソート・フィルター後)から変換器を更新する
+  const viewRows = table.getRowModel().rows;
+  const rowIndexMapper = useMemo(() => createRowIndexMapper(viewRows), [viewRows]);
+  rowIndexMapperRef.current = rowIndexMapper;
 
   // 仮想スクロールのための参照
   const tableContainerRef = useRef<HTMLDivElement>(null);
   // ヘッダーツールバー領域の参照（列選択解除の対象外にするため）
   const headerWrapperRef = useRef<HTMLDivElement>(null);
+
+  // 行の仮想化
+  // 行の高さは行の実体(データ位置)に紐づくため、表示位置からデータ位置へ変換して取得する
+  const rowVirtualizer = useVirtualizer({
+    count: viewRows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: (index) => getRowHeight(viewRows[index]?.index ?? index),
+    overscan: 10,
+  });
+
+  // 表示位置の行へスクロール（個別の行高さは仮想スクローラが反映する）
+  const scrollToViewRow = useCallback(
+    (viewRowIdx: number) => {
+      rowVirtualizer.scrollToIndex(viewRowIdx, { align: "auto" });
+    },
+    [rowVirtualizer]
+  );
+
+  // 検索対象は表示中（ソート・フィルター後）の行
+  const searchTargetRows = useMemo(() => viewRows.map((row) => row.original), [viewRows]);
 
   // 検索機能
   const {
@@ -383,20 +436,21 @@ export const EditableTable: FC<EditableTableProps> = ({
     handleNextSearch,
     handlePreviousSearch,
     handleCloseSearch,
+    clearMatches,
     openSearch,
-  } = useTableSearch(data, rowHeight, tableContainerRef, (row, col) => {
+  } = useTableSearch(searchTargetRows, scrollToViewRow, (row, col) => {
     // 検索結果のセルを選択状態にする
     handleCellMouseDown(row, col);
     handleCellMouseUp();
   });
 
-  // 行の仮想化
-  const rowVirtualizer = useVirtualizer({
-    count: table.getRowModel().rows.length,
-    getScrollElement: () => tableContainerRef.current,
-    estimateSize: (index) => getRowHeight(index),
-    overscan: 10,
-  });
+  // ソート・フィルターで表示順が変わると、表示位置で持つ選択・フォーカス・検索結果は
+  // 別の行を指してしまうため破棄する
+  useEffect(() => {
+    clearSelection();
+    setFocusedCell(null);
+    clearMatches();
+  }, [sorting, columnFilters, clearSelection, clearMatches]);
 
   // rowHeightまたは個別の行の高さが変更されたときにvirtualizerを再計算
   useEffect(() => {
@@ -565,42 +619,21 @@ export const EditableTable: FC<EditableTableProps> = ({
   }, [isFilling, handleFillEnd]);
 
   // focusedCellが変更されたときに該当セルにフォーカスを当てる
+  // focusedCell.row は表示位置。DOM上の並び(仮想スクロールで描画中の行のみ)ではなく
+  // data-view-row-index 属性で対象を探し、未描画の行は仮想スクローラで描画対象にする
   useEffect(() => {
     if (focusedCell === null) {
       return;
     }
 
-    // セルのDOM要素を取得してフォーカスを当てる
-    // TanStack Tableのセル構造: td[role="gridcell"] > div[role="button"]
-    const allGridCells = document.querySelectorAll('td[role="gridcell"]');
+    scrollToViewRow(focusedCell.row);
 
-    for (const gridCell of Array.from(allGridCells)) {
-      const cellButton = gridCell.querySelector<HTMLElement>('div[role="button"]');
-      if (!cellButton) continue;
-
-      // セルの位置から判断する
-      const parentRow = gridCell.closest("tr");
-      if (!parentRow) continue;
-
-      // 行のインデックスを取得（tbodyの中での位置）
-      const tbody = parentRow.closest("tbody");
-      if (!tbody) continue;
-
-      const rows = Array.from(tbody.querySelectorAll("tr"));
-      const rowIndex = rows.indexOf(parentRow);
-
-      if (rowIndex !== focusedCell.row) continue;
-
-      // セルのインデックスを取得（行番号列を除く）
-      const cells = Array.from(parentRow.querySelectorAll('td[role="gridcell"]'));
-      const colIndex = cells.indexOf(gridCell) - 1; // -1 for row index column
-
-      if (colIndex === focusedCell.col) {
-        cellButton.focus();
-        return;
-      }
-    }
-  }, [focusedCell]);
+    const cellButton = tableContainerRef.current?.querySelector<HTMLElement>(
+      `tr[data-view-row-index="${focusedCell.row}"] td[data-col-index="${focusedCell.col}"] div[role="button"]`
+    );
+    // 未描画の行は、描画された時点で EditableCell が自身でフォーカスを取得する
+    cellButton?.focus();
+  }, [focusedCell, scrollToViewRow]);
 
   // 矢印キーでセル選択を移動
   useEffect(() => {
@@ -626,7 +659,8 @@ export const EditableTable: FC<EditableTableProps> = ({
 
       e.preventDefault();
 
-      const totalRows = data.length;
+      // 移動範囲は表示されている行(ソート・フィルター後)
+      const totalRows = viewRows.length;
       const totalCols = csvArray[0]?.length || 0;
 
       if (totalRows === 0 || totalCols === 0) {
@@ -670,7 +704,7 @@ export const EditableTable: FC<EditableTableProps> = ({
   }, [
     editingHeaderIndex,
     focusedCell,
-    data.length,
+    viewRows.length,
     csvArray,
     handleCellMouseDown,
     handleCellMouseUp,
@@ -782,11 +816,12 @@ export const EditableTable: FC<EditableTableProps> = ({
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                   const row = table.getRowModel().rows[virtualRow.index];
                   if (!row) return null;
-                  const isRowSelected = selectedRowIndex === virtualRow.index;
-                  const rowHeightValue = getRowHeight(virtualRow.index);
+                  const isRowSelected = selectedRowIndex === row.index;
+                  const rowHeightValue = getRowHeight(row.index);
                   return (
                     <tr
                       key={row.id}
+                      data-view-row-index={virtualRow.index}
                       className={tableStyles.dataRow}
                       style={{
                         height: `${rowHeightValue}px`,
@@ -811,6 +846,7 @@ export const EditableTable: FC<EditableTableProps> = ({
                           <td
                             key={cell.id}
                             role="gridcell"
+                            data-col-index={colIndex}
                             className={tableStyles.dataCell}
                             onContextMenu={handleCellContextMenu}
                             style={{
