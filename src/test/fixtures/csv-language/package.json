@@ -1,0 +1,19 @@
+{
+  "name": "csv-language-fixture",
+  "displayName": "CSV Language Fixture",
+  "description": "テスト用: CSV言語拡張（言語ID csv）の導入を再現する。拡張子は割り当てない。",
+  "version": "0.0.0",
+  "private": true,
+  "publisher": "csv-editor-test",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "csv",
+        "aliases": ["CSV"]
+      }
+    ]
+  }
+}
