@@ -413,6 +413,45 @@ suite("CSVEditorProvider", () => {
       assert.ok(themeMessage.payload === "light" || themeMessage.payload === "dark");
     });
 
+    test("パネルを閉じた後はテーマ変更を通知しない（テーマ変更リスナーが解除される）", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      // テーマ変更イベントを手動で発火できるよう差し替える
+      const themeEmitter = new vscode.EventEmitter<vscode.ColorTheme>();
+      const windowApi = vscode.window as {
+        onDidChangeActiveColorTheme: vscode.Event<vscode.ColorTheme>;
+      };
+      const originalOnDidChangeTheme = windowApi.onDidChangeActiveColorTheme;
+      windowApi.onDidChangeActiveColorTheme = themeEmitter.event;
+      try {
+        const harness = createHarness(document);
+
+        themeEmitter.fire(vscode.window.activeColorTheme);
+        const themeMessagesBeforeDispose = harness.sentMessages.filter(
+          (m) => m.type === "updateTheme"
+        );
+        assert.strictEqual(
+          themeMessagesBeforeDispose.length,
+          1,
+          "パネル表示中はテーマ変更を通知する"
+        );
+
+        harness.dispose();
+        themeEmitter.fire(vscode.window.activeColorTheme);
+
+        const themeMessagesAfterDispose = harness.sentMessages.filter(
+          (m) => m.type === "updateTheme"
+        );
+        assert.strictEqual(
+          themeMessagesAfterDispose.length,
+          1,
+          "パネルを閉じた後はテーマ変更を通知しない"
+        );
+      } finally {
+        windowApi.onDidChangeActiveColorTheme = originalOnDidChangeTheme;
+        themeEmitter.dispose();
+      }
+    });
+
     test("特殊文字を含む複雑なCSVデータ読み込み", async () => {
       // 特殊文字を含むCSVファイルを作成
       const complexCsvContent =
