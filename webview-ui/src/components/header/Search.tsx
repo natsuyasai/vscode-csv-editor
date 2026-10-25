@@ -1,6 +1,7 @@
 import { VscodeButton, VscodeIcon, VscodeTextfield } from "@vscode-elements/react-elements";
 import { FC, useEffect, useRef, useState } from "react";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { isImeComposing } from "@/utilities/ime";
 import styles from "./Search.module.scss";
 
 export interface SearchProps {
@@ -55,6 +56,10 @@ export const Search: FC<SearchProps> = ({
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") {
+      // IME変換確定のEnterでは検索しない
+      if (isImeComposing(e)) {
+        return;
+      }
       onSearch(searchText);
       nextButtonRef.current?.focus();
       return;

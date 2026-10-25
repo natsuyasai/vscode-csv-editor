@@ -1,5 +1,5 @@
 import { CellContext } from "@tanstack/react-table";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { RowData } from "@/components/editable-table/types";
@@ -308,5 +308,75 @@ describe("EditableCell", () => {
     render(<EditableCell {...props} />);
 
     expect(screen.getByText("true")).toBeInTheDocument();
+  });
+  describe("IME入力", () => {
+    it("IME変換中のEnterでは編集を確定しない", async () => {
+      const props = createMockProps();
+      const updateData = props.table.options.meta?.updateData as ReturnType<typeof vi.fn>;
+      render(<EditableCell {...props} />);
+      const cell = screen.getByRole("button");
+      cell.focus();
+      fireEvent.keyDown(cell, { key: "F2" });
+      const textarea = await screen.findByRole("textbox");
+
+      fireEvent.keyDown(textarea, { key: "Enter", isComposing: true });
+      fireEvent.keyDown(textarea, { key: "Enter", keyCode: 229 });
+
+      expect(screen.getByRole("textbox")).toBeInTheDocument();
+      expect(updateData).not.toHaveBeenCalled();
+    });
+
+    it("IME変換中のEscapeでは編集をキャンセルしない", async () => {
+      const props = createMockProps();
+      render(<EditableCell {...props} />);
+      const cell = screen.getByRole("button");
+      cell.focus();
+      fireEvent.keyDown(cell, { key: "F2" });
+      const textarea = await screen.findByRole("textbox");
+
+      fireEvent.keyDown(textarea, { key: "Escape", isComposing: true });
+
+      expect(screen.getByRole("textbox")).toBeInTheDocument();
+    });
+
+    it("変換確定後のEnterでは編集を確定する", async () => {
+      const props = createMockProps();
+      const updateData = props.table.options.meta?.updateData as ReturnType<typeof vi.fn>;
+      render(<EditableCell {...props} />);
+      const cell = screen.getByRole("button");
+      cell.focus();
+      fireEvent.keyDown(cell, { key: "F2" });
+      const textarea = await screen.findByRole("textbox");
+
+      fireEvent.keyDown(textarea, { key: "Enter", isComposing: false });
+
+      expect(updateData).toHaveBeenCalledWith(0, "col0", "test value");
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    });
+
+    it("選択中にIMEで入力開始(Processキー)すると、preventDefaultせず空の編集状態になる", async () => {
+      const props = createMockProps();
+      render(<EditableCell {...props} />);
+      const cell = screen.getByRole("button");
+      cell.focus();
+
+      const notPrevented = fireEvent.keyDown(cell, { key: "Process", keyCode: 229 });
+
+      expect(notPrevented).toBe(true);
+      const textarea = await screen.findByRole("textbox");
+      expect(textarea).toHaveValue("");
+      await waitFor(() => expect(textarea).toHaveFocus());
+    });
+
+    it("keyCode 229のみ(keyがProcess以外)でも編集を開始する", async () => {
+      const props = createMockProps();
+      render(<EditableCell {...props} />);
+      const cell = screen.getByRole("button");
+      cell.focus();
+
+      fireEvent.keyDown(cell, { key: "a", keyCode: 229 });
+
+      expect(await screen.findByRole("textbox")).toHaveValue("");
+    });
   });
 });
