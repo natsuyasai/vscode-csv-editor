@@ -5,8 +5,11 @@ import { EditableTable } from "@/components/editable-table/EditableTable";
 /**
  * ソート・フィルター適用中の表示位置整合性 (issue #79)
  *
- * データ順: a(3), b(12), c(1), d(2)
- * num昇順ソート後の表示順: c(1), d(2), a(3), b(12)
+ * データ順: a(3), b(9), c(1), d(2)
+ * num昇順ソート後の表示順: c(1), d(2), a(3), b(9)
+ *
+ * 注意: ソートは TanStack Table の auto 判定で、行数が少ないと文字列比較になる
+ * (桁数の異なる値は数値順にならない)。このためソート用データは1桁の数値に揃えている。
  */
 const meta = {
   title: "components/editable-table/EditableTable/SortFilter",
@@ -22,7 +25,7 @@ const meta = {
     csvArray: [
       ["name", "num"],
       ["a", "3"],
-      ["b", "12"],
+      ["b", "9"],
       ["c", "1"],
       ["d", "2"],
     ],
@@ -114,6 +117,16 @@ export const SortedRangeSelection: Story = {
 
 export const FilteredArrowKeyNavigation: Story = {
   name: "フィルター中の矢印キー移動は表示行の範囲内",
+  args: {
+    // num列に "2" を含む行 → b(12), d(2) が表示される（データ位置が不連続）
+    csvArray: [
+      ["name", "num"],
+      ["a", "3"],
+      ["b", "12"],
+      ["c", "1"],
+      ["d", "2"],
+    ],
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     // フィルター行を表示してnum列に "2" を入力 → b(12), d(2) が表示される
