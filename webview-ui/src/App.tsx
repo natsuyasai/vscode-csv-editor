@@ -4,7 +4,7 @@ import {
   SaveMessage,
   UpdateMessage as UpdateToExtensionMessage,
 } from "@message/messageTypeToExtention";
-import { Message, ThemeKind, UpdateMessage } from "@message/messageTypeToWebview";
+import { isMessageToWebview, ThemeKind, UpdateMessage } from "@message/messageTypeToWebview";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./App.module.scss";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
@@ -90,9 +90,12 @@ export default function App() {
   );
 
   const handleMessagesFromExtension = useCallback(
-    (event: MessageEvent<Message>) => {
-      const message = event.data satisfies Message;
-      // console.log("Received message from extension:", message);
+    (event: MessageEvent<unknown>) => {
+      // 想定外のメッセージ（他の送信元・不正な形式）は無視する
+      if (!isMessageToWebview(event.data)) {
+        return;
+      }
+      const message = event.data;
       switch (message.type) {
         case "init":
         case "update":
@@ -103,7 +106,7 @@ export default function App() {
           break;
         case "updateTheme":
           {
-            const theme = event.data.payload as ThemeKind;
+            const theme = message.payload as ThemeKind;
             setTheme(theme);
           }
           break;
