@@ -1,10 +1,20 @@
 // WebViewの内容を表示するためのクラス
 import * as vscode from "vscode";
 import { ThemeKind, UpdateMessage, UpdateTheameMessage } from "../message/messageTypeToWebview";
-import { Message } from "../message/messageTypeToExtention";
+import { isMessageToExtension } from "../message/messageTypeToExtention";
 import { disposeAll } from "../util/dispose";
 import { getUri } from "../util/getUri";
+import { loggerDisposable, logWarning } from "../util/logger";
 import { getNonce } from "../util/util";
+
+/** ログ用に不正メッセージの概要だけを返す（payload の内容は出力しない） */
+function describeInvalidMessage(value: unknown): string {
+  if (typeof value !== "object" || value === null) {
+    return typeof value;
+  }
+  const { type, payload } = value as { type?: unknown; payload?: unknown };
+  return `type=${typeof type === "string" ? type : typeof type}, payload=${typeof payload}`;
+}
 
 export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
   /**
@@ -37,7 +47,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       }
     );
 
-    return vscode.Disposable.from(openEditorCommand, customEditorProvider);
+    return vscode.Disposable.from(openEditorCommand, customEditorProvider, loggerDisposable());
   }
 
   // package.jsonのviewTypeと一致させる
@@ -133,8 +143,13 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 
     // Receive message from the webview.
     disposables.push(
-      webviewPanel.webview.onDidReceiveMessage(async (e: Message) => {
-        // console.log(`${e.type}:${e.payload}`);
+      webviewPanel.webview.onDidReceiveMessage(async (raw: unknown) => {
+        // webview は信頼境界の外側のため、想定外のメッセージは無視してログに残す
+        if (!isMessageToExtension(raw)) {
+          logWarning(`想定外のメッセージを無視しました (${describeInvalidMessage(raw)})`);
+          return;
+        }
+        const e = raw;
         switch (e.type) {
           case "init":
             updateTheme();
@@ -209,6 +224,8 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <!-- CSP は default-src none を基点に必要なものだけ許可する（安全側）。
+               img-src / connect-src 等を追加する場合も、必要最小限のソースのみ個別に許可し、unsafe-inline や * は使わないこと -->
           <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource}; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
           <link rel="stylesheet" href="${codiconsUri.toString()}" id="vscode-codicon-stylesheet">
           <link rel="stylesheet" type="text/css" href="${stylesUri.toString()}" />
