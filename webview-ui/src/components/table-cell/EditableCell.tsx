@@ -1,5 +1,6 @@
 import { CellContext } from "@tanstack/react-table";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
+import { isImeComposing, isImeInputStart } from "../../utilities/ime";
 import { RowData } from "../editable-table/types";
 import styles from "./EditableCell.module.scss";
 
@@ -94,6 +95,10 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // IME変換中のキー(変換確定のEnterなど)は編集の確定・キャンセルに使わない
+      if (isImeComposing(e)) {
+        return;
+      }
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         setIsEditing(false);
@@ -190,6 +195,10 @@ export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
         clearSelectionFn?.();
         // デフォルト動作を許可（次のセルへフォーカス移動）
         return;
+      } else if (isImeInputStart(e)) {
+        // IME入力開始: preventDefaultせず、空の編集状態に移行してIMEの変換をtextareaへ引き継ぐ
+        setValue("");
+        setIsEditing(true);
       } else if (e.key === "Enter" || e.key === " ") {
         setIsEditing(true);
       } else if (e.key === "Delete") {

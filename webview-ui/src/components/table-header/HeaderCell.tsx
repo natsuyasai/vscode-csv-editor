@@ -1,5 +1,6 @@
 import { flexRender, Header as TanStackHeader } from "@tanstack/react-table";
 import { FC, useCallback, useRef, useState } from "react";
+import { isImeComposing, isImeInputStart } from "../../utilities/ime";
 import { RowData } from "../editable-table/types";
 import { DraggableHeaderCell } from "./DraggableHeaderCell";
 import styles from "./HeaderCell.module.scss";
@@ -83,6 +84,9 @@ export const HeaderCell: FC<HeaderCellProps> = ({
       // ヘッダーの値を削除して編集モードに移行
       updateCol(columnIndex, "");
       startEditing(columnIndex, "");
+    } else if (isImeInputStart(e)) {
+      // IME入力開始: preventDefaultせず空値で編集を開始し、IMEの変換をtextareaへ引き継ぐ
+      startEditing(columnIndex, "");
     } else if (e.key === "F2") {
       // 編集モードに移行
       const renderedHeader = flexRender(header.column.columnDef.header, header.getContext());
@@ -108,6 +112,10 @@ export const HeaderCell: FC<HeaderCellProps> = ({
   };
 
   const handleHeaderEditKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // IME変換中のキー(変換確定のEnterなど)は編集の確定・キャンセルに使わない
+    if (isImeComposing(e)) {
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       finishEditing();
