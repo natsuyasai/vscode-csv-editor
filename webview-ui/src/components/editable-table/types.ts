@@ -41,6 +41,8 @@ declare module "@tanstack/react-table" {
     handleFillEnd?: () => void;
     // 行の高さ取得
     getRowHeight?: (rowIndex: number) => number;
+    // データ位置(row.index)から表示位置(ソート・フィルター後の並び)を取得
+    getViewRowIndex?: (dataRowIndex: number) => number;
   }
 }
 

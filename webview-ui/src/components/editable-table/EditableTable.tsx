@@ -31,6 +31,11 @@ import { RowIndexCell } from "../table-cell/RowIndexCell";
 import { FilterInput } from "../table-header/FilterInput";
 import { HeaderCell } from "../table-header/HeaderCell";
 import tableStyles from "./EditableTable.module.scss";
+import {
+  createRowIndexMapper,
+  identityRowIndexMapper,
+  type RowIndexMapper,
+} from "./rowIndexMapper";
 import type { EditableTableProps, RowData } from "./types";
 
 export const EditableTable: FC<EditableTableProps> = ({
@@ -93,6 +98,14 @@ export const EditableTable: FC<EditableTableProps> = ({
     endResize: endColumnResize,
   } = useColumnResize(150); // デフォルトの列幅は150px
 
+  // 表示位置(ソート・フィルター後の並び)とデータ位置の変換。
+  // table は選択状態などの後に生成されるため、最新の変換器を ref 経由で参照する。
+  const rowIndexMapperRef = useRef<RowIndexMapper>(identityRowIndexMapper);
+  const viewToDataIndex = useCallback(
+    (viewIndex: number) => rowIndexMapperRef.current.toDataIndex(viewIndex),
+    []
+  );
+
   // セル選択機能
   const {
     selectedCells,
@@ -104,7 +117,7 @@ export const EditableTable: FC<EditableTableProps> = ({
     handleCopy,
     handlePaste,
     clearSelection,
-  } = useCellSelection(data, setData, _updateCells);
+  } = useCellSelection(data, setData, _updateCells, viewToDataIndex);
 
   // セルクリック時にfocusedCellも更新
   const handleCellMouseDown = useCallback(
@@ -127,7 +140,8 @@ export const EditableTable: FC<EditableTableProps> = ({
   // オートフィル機能
   const { isFilling, handleFillStart, handleFillMove, handleFillEnd, isInFillRange } = useAutoFill(
     data,
-    _updateCells
+    _updateCells,
+    viewToDataIndex
   );
 
   // コンテキストメニュー機能
@@ -347,13 +361,12 @@ export const EditableTable: FC<EditableTableProps> = ({
       handleShiftClick,
       applyValueToSelectedCells: (value: string) => {
         // 選択中のセルすべてに値を適用
-        const cellUpdates = Array.from(selectedCells).map((cellKey) => {
+        const cellUpdates: Array<{ rowIdx: number; colIdx: number; value: string }> = [];
+        selectedCells.forEach((cellKey) => {
           const [rowStr, colStr] = cellKey.split("-");
-          return {
-            rowIdx: parseInt(rowStr),
-            colIdx: parseInt(colStr),
-            value,
-          };
+          const dataRowIdx = viewToDataIndex(parseInt(rowStr));
+          if (dataRowIdx === undefined) return;
+          cellUpdates.push({ rowIdx: dataRowIdx, colIdx: parseInt(colStr), value });
         });
         _updateCells(cellUpdates);
         clearSelection();
@@ -366,8 +379,16 @@ export const EditableTable: FC<EditableTableProps> = ({
       handleFillEnd,
       // 行の高さ取得
       getRowHeight,
+      // 行の表示位置取得
+      getViewRowIndex: (dataRowIndex: number) =>
+        rowIndexMapperRef.current.toViewIndex(dataRowIndex) ?? dataRowIndex,
     },
   });
+
+  // 表示行(ソート・フィルター後)から変換器を更新する
+  const viewRows = table.getRowModel().rows;
+  const rowIndexMapper = useMemo(() => createRowIndexMapper(viewRows), [viewRows]);
+  rowIndexMapperRef.current = rowIndexMapper;
 
   // 仮想スクロールのための参照
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -782,7 +803,7 @@ export const EditableTable: FC<EditableTableProps> = ({
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                   const row = table.getRowModel().rows[virtualRow.index];
                   if (!row) return null;
-                  const isRowSelected = selectedRowIndex === virtualRow.index;
+                  const isRowSelected = selectedRowIndex === row.index;
                   const rowHeightValue = getRowHeight(virtualRow.index);
                   return (
                     <tr
