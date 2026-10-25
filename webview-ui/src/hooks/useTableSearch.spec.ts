@@ -5,9 +5,7 @@ import { ROW_IDX_KEY, ROW_ID_KEY } from "@/types";
 
 describe("useTableSearch", () => {
   let mockData: Array<Record<string, unknown>>;
-  let mockTableContainerRef: React.RefObject<HTMLDivElement>;
-  let mockScrollTo: ReturnType<typeof vi.fn>;
-  const rowHeight = 40;
+  let mockScrollToRow: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockData = [
@@ -22,12 +20,7 @@ describe("useTableSearch", () => {
       },
     ];
 
-    mockScrollTo = vi.fn();
-    mockTableContainerRef = {
-      current: {
-        scrollTo: mockScrollTo,
-      } as unknown as HTMLDivElement,
-    };
+    mockScrollToRow = vi.fn();
   });
 
   afterEach(() => {
@@ -35,7 +28,7 @@ describe("useTableSearch", () => {
   });
 
   it("初期状態では検索が閉じられている", () => {
-    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
+    const { result } = renderHook(() => useTableSearch(mockData, mockScrollToRow));
 
     expect(result.current.searchOpen).toBe(false);
     expect(result.current.matchedItemPositions).toEqual([]);
@@ -43,7 +36,7 @@ describe("useTableSearch", () => {
   });
 
   it("openSearchで検索を開く", () => {
-    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
+    const { result } = renderHook(() => useTableSearch(mockData, mockScrollToRow));
 
     act(() => {
       result.current.openSearch();
@@ -53,7 +46,7 @@ describe("useTableSearch", () => {
   });
 
   it("handleSearchで検索結果を取得", () => {
-    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
+    const { result } = renderHook(() => useTableSearch(mockData, mockScrollToRow));
 
     act(() => {
       result.current.handleSearch("fruit");
@@ -66,14 +59,11 @@ describe("useTableSearch", () => {
     expect(result.current.searchedSelectedItemIdx).toBe(0);
 
     // 最初のマッチ位置にスクロール
-    expect(mockScrollTo).toHaveBeenCalledWith({
-      top: 0,
-      behavior: "smooth",
-    });
+    expect(mockScrollToRow).toHaveBeenCalledWith(0);
   });
 
   it("handleSearchで大文字小文字を区別しない", () => {
-    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
+    const { result } = renderHook(() => useTableSearch(mockData, mockScrollToRow));
 
     act(() => {
       result.current.handleSearch("APPLE");
@@ -84,7 +74,7 @@ describe("useTableSearch", () => {
   });
 
   it("handleSearchで空文字列を検索しても何もしない", () => {
-    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
+    const { result } = renderHook(() => useTableSearch(mockData, mockScrollToRow));
 
     act(() => {
       result.current.handleSearch("");
@@ -94,7 +84,7 @@ describe("useTableSearch", () => {
   });
 
   it("handleSearchでマッチがない場合は何もしない", () => {
-    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
+    const { result } = renderHook(() => useTableSearch(mockData, mockScrollToRow));
 
     act(() => {
       result.current.handleSearch("NotFound");
@@ -104,7 +94,7 @@ describe("useTableSearch", () => {
   });
 
   it("handleNextSearchで次の検索結果に移動", () => {
-    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
+    const { result } = renderHook(() => useTableSearch(mockData, mockScrollToRow));
 
     // 検索実行
     act(() => {
@@ -117,14 +107,11 @@ describe("useTableSearch", () => {
     });
 
     expect(result.current.searchedSelectedItemIdx).toBe(1);
-    expect(mockScrollTo).toHaveBeenLastCalledWith({
-      top: 40, // rowIdx: 1 * rowHeight: 40
-      behavior: "smooth",
-    });
+    expect(mockScrollToRow).toHaveBeenLastCalledWith(1);
   });
 
   it("handleNextSearchで最後の検索結果から最初に戻る", () => {
-    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
+    const { result } = renderHook(() => useTableSearch(mockData, mockScrollToRow));
 
     // 検索実行
     act(() => {
@@ -142,14 +129,11 @@ describe("useTableSearch", () => {
     });
 
     expect(result.current.searchedSelectedItemIdx).toBe(0);
-    expect(mockScrollTo).toHaveBeenLastCalledWith({
-      top: 0,
-      behavior: "smooth",
-    });
+    expect(mockScrollToRow).toHaveBeenLastCalledWith(0);
   });
 
   it("handlePreviousSearchで前の検索結果に移動", () => {
-    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
+    const { result } = renderHook(() => useTableSearch(mockData, mockScrollToRow));
 
     // 検索実行
     act(() => {
@@ -167,14 +151,11 @@ describe("useTableSearch", () => {
     });
 
     expect(result.current.searchedSelectedItemIdx).toBe(0);
-    expect(mockScrollTo).toHaveBeenLastCalledWith({
-      top: 0,
-      behavior: "smooth",
-    });
+    expect(mockScrollToRow).toHaveBeenLastCalledWith(0);
   });
 
   it("handlePreviousSearchで最初の検索結果から最後に戻る", () => {
-    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
+    const { result } = renderHook(() => useTableSearch(mockData, mockScrollToRow));
 
     // 検索実行
     act(() => {
@@ -187,14 +168,11 @@ describe("useTableSearch", () => {
     });
 
     expect(result.current.searchedSelectedItemIdx).toBe(1);
-    expect(mockScrollTo).toHaveBeenLastCalledWith({
-      top: 40,
-      behavior: "smooth",
-    });
+    expect(mockScrollToRow).toHaveBeenLastCalledWith(1);
   });
 
   it("handleCloseSearchで検索状態をリセット", () => {
-    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
+    const { result } = renderHook(() => useTableSearch(mockData, mockScrollToRow));
 
     // 検索を開いて実行
     act(() => {
@@ -215,7 +193,7 @@ describe("useTableSearch", () => {
   });
 
   it("ROW_IDX_KEYとROW_ID_KEYは検索対象外", () => {
-    const { result } = renderHook(() => useTableSearch(mockData, rowHeight, mockTableContainerRef));
+    const { result } = renderHook(() => useTableSearch(mockData, mockScrollToRow));
 
     // ROW_IDX_KEYの値を検索
     act(() => {

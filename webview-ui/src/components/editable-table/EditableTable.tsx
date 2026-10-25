@@ -395,6 +395,26 @@ export const EditableTable: FC<EditableTableProps> = ({
   // ヘッダーツールバー領域の参照（列選択解除の対象外にするため）
   const headerWrapperRef = useRef<HTMLDivElement>(null);
 
+  // 行の仮想化
+  // 行の高さは行の実体(データ位置)に紐づくため、表示位置からデータ位置へ変換して取得する
+  const rowVirtualizer = useVirtualizer({
+    count: viewRows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: (index) => getRowHeight(viewRows[index]?.index ?? index),
+    overscan: 10,
+  });
+
+  // 表示位置の行へスクロール（個別の行高さは仮想スクローラが反映する）
+  const scrollToViewRow = useCallback(
+    (viewRowIdx: number) => {
+      rowVirtualizer.scrollToIndex(viewRowIdx, { align: "auto" });
+    },
+    [rowVirtualizer]
+  );
+
+  // 検索対象は表示中（ソート・フィルター後）の行
+  const searchTargetRows = useMemo(() => viewRows.map((row) => row.original), [viewRows]);
+
   // 検索機能
   const {
     searchOpen,
@@ -404,20 +424,21 @@ export const EditableTable: FC<EditableTableProps> = ({
     handleNextSearch,
     handlePreviousSearch,
     handleCloseSearch,
+    clearMatches,
     openSearch,
-  } = useTableSearch(data, rowHeight, tableContainerRef, (row, col) => {
+  } = useTableSearch(searchTargetRows, scrollToViewRow, (row, col) => {
     // 検索結果のセルを選択状態にする
     handleCellMouseDown(row, col);
     handleCellMouseUp();
   });
 
-  // 行の仮想化
-  const rowVirtualizer = useVirtualizer({
-    count: table.getRowModel().rows.length,
-    getScrollElement: () => tableContainerRef.current,
-    estimateSize: (index) => getRowHeight(index),
-    overscan: 10,
-  });
+  // ソート・フィルターで表示順が変わると、表示位置で持つ選択・フォーカス・検索結果は
+  // 別の行を指してしまうため破棄する
+  useEffect(() => {
+    clearSelection();
+    setFocusedCell(null);
+    clearMatches();
+  }, [sorting, columnFilters, clearSelection, clearMatches]);
 
   // rowHeightまたは個別の行の高さが変更されたときにvirtualizerを再計算
   useEffect(() => {
@@ -804,7 +825,7 @@ export const EditableTable: FC<EditableTableProps> = ({
                   const row = table.getRowModel().rows[virtualRow.index];
                   if (!row) return null;
                   const isRowSelected = selectedRowIndex === row.index;
-                  const rowHeightValue = getRowHeight(virtualRow.index);
+                  const rowHeightValue = getRowHeight(row.index);
                   return (
                     <tr
                       key={row.id}

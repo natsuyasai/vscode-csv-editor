@@ -13,15 +13,15 @@ export interface SearchPosition {
  * テーブル検索機能のカスタムフック
  * 検索、次へ/前へナビゲーション、検索終了機能を提供
  *
- * @param data - 検索対象のデータ配列
- * @param rowHeight - 行の高さ（スクロール計算用）
- * @param tableContainerRef - テーブルコンテナの参照
- * @param onSelectCell - セル選択時のコールバック関数（オプショナル）
+ * 検索対象・検索結果の位置はすべて「表示位置」(ソート・フィルター後の並び)で扱う。
+ *
+ * @param viewRows - 検索対象の行データ（表示されている並び＝ソート・フィルター後）
+ * @param scrollToRow - 表示位置の行へスクロールする関数（仮想スクローラ経由で個別の行高さが反映される）
+ * @param onSelectCell - セル選択時のコールバック関数（表示位置で呼ばれる。オプショナル）
  */
 export const useTableSearch = <TData extends Record<string, unknown>>(
-  data: TData[],
-  rowHeight: number,
-  tableContainerRef: React.RefObject<HTMLDivElement | null>,
+  viewRows: TData[],
+  scrollToRow: (viewRowIdx: number) => void,
   onSelectCell?: (row: number, col: number) => void
 ) => {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -37,7 +37,7 @@ export const useTableSearch = <TData extends Record<string, unknown>>(
       const lowerText = trimmedText.toLowerCase();
       const positions: SearchPosition[] = [];
 
-      data.forEach((row, rowIdx) => {
+      viewRows.forEach((row, rowIdx) => {
         Object.keys(row).forEach((key) => {
           if (key === ROW_IDX_KEY || key === ROW_ID_KEY) {
             return;
@@ -63,17 +63,14 @@ export const useTableSearch = <TData extends Record<string, unknown>>(
 
       // 最初のマッチ位置にスクロール
       const firstMatch = positions[0];
-      tableContainerRef.current?.scrollTo({
-        top: firstMatch.rowIdx * rowHeight,
-        behavior: "smooth",
-      });
+      scrollToRow(firstMatch.rowIdx);
 
       // セルを選択状態にする
       if (onSelectCell) {
         onSelectCell(firstMatch.rowIdx, firstMatch.colIdx);
       }
     },
-    [data, rowHeight, tableContainerRef, onSelectCell]
+    [viewRows, scrollToRow, onSelectCell]
   );
 
   const handleNextSearch = useCallback(() => {
@@ -85,16 +82,13 @@ export const useTableSearch = <TData extends Record<string, unknown>>(
     const position = matchedItemPositions[nextIdx];
     setSearchedSelectedItemIdx(nextIdx);
 
-    tableContainerRef.current?.scrollTo({
-      top: position.rowIdx * rowHeight,
-      behavior: "smooth",
-    });
+    scrollToRow(position.rowIdx);
 
     // セルを選択状態にする
     if (onSelectCell) {
       onSelectCell(position.rowIdx, position.colIdx);
     }
-  }, [matchedItemPositions, searchedSelectedItemIdx, rowHeight, tableContainerRef, onSelectCell]);
+  }, [matchedItemPositions, searchedSelectedItemIdx, scrollToRow, onSelectCell]);
 
   const handlePreviousSearch = useCallback(() => {
     if (matchedItemPositions.length === 0) {
@@ -107,21 +101,24 @@ export const useTableSearch = <TData extends Record<string, unknown>>(
     const position = matchedItemPositions[prevIdx];
     setSearchedSelectedItemIdx(prevIdx);
 
-    tableContainerRef.current?.scrollTo({
-      top: position.rowIdx * rowHeight,
-      behavior: "smooth",
-    });
+    scrollToRow(position.rowIdx);
 
     // セルを選択状態にする
     if (onSelectCell) {
       onSelectCell(position.rowIdx, position.colIdx);
     }
-  }, [matchedItemPositions, searchedSelectedItemIdx, rowHeight, tableContainerRef, onSelectCell]);
+  }, [matchedItemPositions, searchedSelectedItemIdx, scrollToRow, onSelectCell]);
 
   const handleCloseSearch = useCallback(() => {
     setMatchedItemPositions([]);
     setSearchedSelectedItemIdx(0);
     setSearchOpen(false);
+  }, []);
+
+  // 検索結果だけを破棄する（検索フォームは開いたまま）。ソート・フィルター変更時に使う
+  const clearMatches = useCallback(() => {
+    setMatchedItemPositions([]);
+    setSearchedSelectedItemIdx(0);
   }, []);
 
   const openSearch = useCallback(() => {
@@ -136,6 +133,7 @@ export const useTableSearch = <TData extends Record<string, unknown>>(
     handleNextSearch,
     handlePreviousSearch,
     handleCloseSearch,
+    clearMatches,
     openSearch,
   };
 };
