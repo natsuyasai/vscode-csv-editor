@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { remapOnMove, shiftOnDelete, shiftOnInsert } from "@/utilities/indexKeyRemap";
 
 /**
  * 列のリサイズ機能を提供するカスタムフック
@@ -77,6 +78,27 @@ export const useColumnResize = (defaultColumnWidth: number) => {
     // この関数は、デフォルト幅が変更されたときに呼ばれる
   }, []);
 
+  /**
+   * 列が挿入されたとき、設定が同じ列に付いたままになるようキーを付け替える
+   */
+  const onColumnInserted = useCallback((index: number) => {
+    setColumnWidths((prev) => shiftOnInsert(prev, index));
+  }, []);
+
+  /**
+   * 列が削除されたとき、削除された列の設定を破棄し、後続のキーを付け替える
+   */
+  const onColumnDeleted = useCallback((index: number) => {
+    setColumnWidths((prev) => shiftOnDelete(prev, index));
+  }, []);
+
+  /**
+   * 列が移動されたとき、設定が移動した列に付いていくようキーを付け替える
+   */
+  const onColumnMoved = useCallback((from: number, to: number) => {
+    setColumnWidths((prev) => remapOnMove(prev, from, to));
+  }, []);
+
   return {
     columnWidths,
     getColumnWidth,
@@ -86,5 +108,8 @@ export const useColumnResize = (defaultColumnWidth: number) => {
     endResize,
     resetAllColumnWidths,
     updateDefaultWidth,
+    onColumnInserted,
+    onColumnDeleted,
+    onColumnMoved,
   };
 };
