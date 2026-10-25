@@ -66,13 +66,13 @@ export const SortedRowSelection: Story = {
     await sortByNum(canvasElement);
     const tr = cellOf(canvasElement, "d").closest("tr")!;
     await userEvent.click(tr.querySelector<HTMLElement>('td:first-child [role="button"]')!);
-    await waitFor(() => {
+    await waitFor(async () => {
       const selected = Array.from(canvasElement.querySelectorAll("tbody tr")).filter((row) =>
         (row.querySelector("td") as HTMLElement).style.backgroundColor.includes(
           "activeSelectionBackground"
         )
       );
-      expect(selected).toEqual([tr]);
+      await expect(selected).toEqual([tr]);
     });
   },
 };
@@ -102,10 +102,10 @@ export const SortedRangeSelection: Story = {
       { keys: "[/MouseLeft]" },
     ]);
     // 選択された3セル(c, d, a)にフィルハンドルが表示され、範囲外の b には表示されない
-    await waitFor(() => {
+    await waitFor(async () => {
       const handles = canvasElement.querySelectorAll('[aria-label="Auto fill handle"]');
-      expect(handles.length).toBe(3);
-      expect(
+      await expect(handles.length).toBe(3);
+      await expect(
         cellOf(canvasElement, "b").querySelector('[aria-label="Auto fill handle"]')
       ).toBeNull();
     });
