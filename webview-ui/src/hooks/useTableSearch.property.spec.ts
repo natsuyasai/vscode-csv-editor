@@ -373,15 +373,26 @@ describe("useTableSearch - Property-Based Tests", () => {
             result.current.handleSearch(rowIdxValue);
           });
 
+          // handleSearchは検索語をtrimし、空になった場合は検索しない仕様
           // ROW_IDX_KEYの値がcol0に含まれない限り、マッチしないはず
-          const expectedMatches = data.filter((row) =>
-            String(row.col0).toLowerCase().includes(rowIdxValue.toLowerCase())
-          ).length;
+          const trimmed = rowIdxValue.trim();
+          const expectedMatches =
+            trimmed === ""
+              ? 0
+              : data.filter((row) => String(row.col0).toLowerCase().includes(trimmed.toLowerCase()))
+                  .length;
 
           expect(result.current.matchedItemPositions.length).toBe(expectedMatches);
         }
       ),
-      { numRuns: 30 }
+      {
+        numRuns: 30,
+        // 過去の反例（空白のみ／前後に空白を含む検索語）を固定して常に検証する
+        examples: [
+          [[{ [ROW_IDX_KEY]: " ", [ROW_ID_KEY]: "a", col0: " " }]],
+          [[{ [ROW_IDX_KEY]: " a", [ROW_ID_KEY]: "b", col0: "xa" }]],
+        ],
+      }
     );
   });
 
