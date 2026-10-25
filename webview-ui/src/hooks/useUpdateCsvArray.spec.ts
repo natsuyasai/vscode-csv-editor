@@ -49,6 +49,50 @@ describe("useUpdateCsvArray", () => {
         ["d", "e", "f"],
       ]);
     });
+
+    it("ヘッダ行無効時に最終行の上へ挿入すると末尾ではなく最終行の直前に入ること", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
+      act(() => hookslocal.result.current.insertRow(2));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["", "", ""],
+        ["d", "e", "f"],
+      ]);
+    });
+
+    it("ヘッダ行無効時に末尾位置を指定すると末尾に追加されること", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
+      act(() => hookslocal.result.current.insertRow(3));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["d", "e", "f"],
+        ["", "", ""],
+      ]);
+    });
+
+    it("ヘッダ行有効時に最終データ行の上へ挿入すると最終行の直前に入ること", () => {
+      act(() => hooks.result.current.insertRow(1));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "col1", "col2"],
+        ["a", "b", "c"],
+        ["", "", ""],
+        ["d", "e", "f"],
+      ]);
+    });
+
+    it("空ファイル(ヘッダ有効)で行を追加するとヘッダ行とデータ行が作られること", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray([], setCSVArray, false));
+      act(() => hookslocal.result.current.insertRow(0));
+      expect(setCSVArray).toHaveBeenCalledWith([["new column"], [""]]);
+    });
+
+    it("空ファイル(ヘッダ無効)で行を追加すると空セルの1行が作られること", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray([], setCSVArray, true));
+      act(() => hookslocal.result.current.insertRow(0));
+      expect(setCSVArray).toHaveBeenCalledWith([[""]]);
+    });
   });
 
   describe("deleteRow", () => {
@@ -138,6 +182,28 @@ describe("useUpdateCsvArray", () => {
         ["a", "b", "", "c"],
         ["d", "e", "", "f"],
       ]);
+    });
+
+    it("ヘッダ行無効時は1行目にも空文字が挿入されること", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray(csvArray, setCSVArray, true));
+      act(() => hookslocal.result.current.insertCol(1));
+      expect(setCSVArray).toHaveBeenCalledWith([
+        ["col0", "", "col1", "col2"],
+        ["a", "", "b", "c"],
+        ["d", "", "e", "f"],
+      ]);
+    });
+
+    it("空ファイル(ヘッダ有効)で列を追加するとヘッダのみの1列が作られること", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray([], setCSVArray, false));
+      act(() => hookslocal.result.current.insertCol(0));
+      expect(setCSVArray).toHaveBeenCalledWith([["new column"]]);
+    });
+
+    it("空ファイル(ヘッダ無効)で列を追加すると空セルの1列が作られること", () => {
+      const hookslocal = renderHook(() => useUpdateCsvArray([], setCSVArray, true));
+      act(() => hookslocal.result.current.insertCol(0));
+      expect(setCSVArray).toHaveBeenCalledWith([[""]]);
     });
   });
 

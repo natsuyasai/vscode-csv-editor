@@ -493,7 +493,7 @@ export const EditableTable: FC<EditableTableProps> = ({
   }, [selectedRowIndex, _deleteRow]);
 
   const handleInsertColumn = useCallback(() => {
-    const index = selectedColumnIndex !== null ? selectedColumnIndex : csvArray[0].length;
+    const index = selectedColumnIndex !== null ? selectedColumnIndex : (csvArray[0]?.length ?? 0);
     _insertCol(index);
     setSelectedColumnIndex(null);
   }, [selectedColumnIndex, csvArray, _insertCol]);
