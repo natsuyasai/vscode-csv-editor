@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { remapOnMove, shiftOnDelete, shiftOnInsert } from "@/utilities/indexKeyRemap";
 
 /**
  * 行のリサイズ機能を提供するカスタムフック
@@ -77,6 +78,27 @@ export const useRowResize = (defaultRowHeight: number) => {
     // この関数は、デフォルト高さが変更されたときに呼ばれる
   }, []);
 
+  /**
+   * 行が挿入されたとき、設定が同じ行に付いたままになるようキーを付け替える
+   */
+  const onRowInserted = useCallback((index: number) => {
+    setRowHeights((prev) => shiftOnInsert(prev, index));
+  }, []);
+
+  /**
+   * 行が削除されたとき、削除された行の設定を破棄し、後続のキーを付け替える
+   */
+  const onRowDeleted = useCallback((index: number) => {
+    setRowHeights((prev) => shiftOnDelete(prev, index));
+  }, []);
+
+  /**
+   * 行が移動されたとき、設定が移動した行に付いていくようキーを付け替える
+   */
+  const onRowMoved = useCallback((from: number, to: number) => {
+    setRowHeights((prev) => remapOnMove(prev, from, to));
+  }, []);
+
   return {
     rowHeights,
     getRowHeight,
@@ -86,5 +108,8 @@ export const useRowResize = (defaultRowHeight: number) => {
     endResize,
     resetAllRowHeights,
     updateDefaultHeight,
+    onRowInserted,
+    onRowDeleted,
+    onRowMoved,
   };
 };

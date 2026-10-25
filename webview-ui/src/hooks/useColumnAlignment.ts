@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { CellAlignment } from "@/types";
+import { remapOnMove, shiftOnDelete, shiftOnInsert } from "@/utilities/indexKeyRemap";
 
 /**
  * 列の配置調整機能のカスタムフック
@@ -46,10 +47,34 @@ export const useColumnAlignment = (selectedColumnIndex: number | null) => {
     [columnAlignments]
   );
 
+  /**
+   * 列が挿入されたとき、設定が同じ列に付いたままになるようキーを付け替える
+   */
+  const onColumnInserted = useCallback((index: number) => {
+    setColumnAlignments((prev) => shiftOnInsert(prev, index));
+  }, []);
+
+  /**
+   * 列が削除されたとき、削除された列の設定を破棄し、後続のキーを付け替える
+   */
+  const onColumnDeleted = useCallback((index: number) => {
+    setColumnAlignments((prev) => shiftOnDelete(prev, index));
+  }, []);
+
+  /**
+   * 列が移動されたとき、設定が移動した列に付いていくようキーを付け替える
+   */
+  const onColumnMoved = useCallback((from: number, to: number) => {
+    setColumnAlignments((prev) => remapOnMove(prev, from, to));
+  }, []);
+
   return {
     columnAlignments,
     handleAlignmentChange,
     getCurrentAlignment,
     getColumnAlignment,
+    onColumnInserted,
+    onColumnDeleted,
+    onColumnMoved,
   };
 };

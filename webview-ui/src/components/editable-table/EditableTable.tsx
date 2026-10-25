@@ -47,16 +47,16 @@ export const EditableTable: FC<EditableTableProps> = ({
 }) => {
   const { isIgnoreHeaderRow, rowSize, setIsIgnoreHeaderRow, setRowSize } = useHeaderAction();
   const {
-    insertRow: _insertRow,
-    deleteRow: _deleteRow,
+    insertRow: _insertRowRaw,
+    deleteRow: _deleteRowRaw,
     updateRow: _updateRow,
-    insertCol: _insertCol,
-    deleteCol: _deleteCol,
+    insertCol: _insertColRaw,
+    deleteCol: _deleteColRaw,
     updateCol: _updateCol,
     updateCell: _updateCell,
     updateCells: _updateCells,
-    moveColumns: _moveColumns,
-    moveRows: _moveRows,
+    moveColumns: _moveColumnsRaw,
+    moveRows: _moveRowsRaw,
     undo,
     redo,
     isEnabledUndo,
@@ -87,6 +87,9 @@ export const EditableTable: FC<EditableTableProps> = ({
     startResize,
     handleResize,
     endResize,
+    onRowInserted,
+    onRowDeleted,
+    onRowMoved,
   } = useRowResize(rowHeight);
 
   // 列のリサイズ機能
@@ -97,6 +100,9 @@ export const EditableTable: FC<EditableTableProps> = ({
     startResize: startColumnResize,
     handleResize: handleColumnResize,
     endResize: endColumnResize,
+    onColumnInserted,
+    onColumnDeleted,
+    onColumnMoved,
   } = useColumnResize(150); // デフォルトの列幅は150px
 
   // 表示位置(ソート・フィルター後の並び)とデータ位置の変換。
@@ -145,6 +151,102 @@ export const EditableTable: FC<EditableTableProps> = ({
     viewToDataIndex
   );
 
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
+  const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
+  const [focusedColumnIndex, setFocusedColumnIndex] = useState<number | null>(null);
+  const [focusedCell, setFocusedCell] = useState<{ row: number; col: number } | null>(null);
+
+  // 列の配置調整機能
+  const {
+    handleAlignmentChange,
+    getCurrentAlignment,
+    getColumnAlignment,
+    onColumnInserted: onAlignmentColumnInserted,
+    onColumnDeleted: onAlignmentColumnDeleted,
+    onColumnMoved: onAlignmentColumnMoved,
+  } = useColumnAlignment(selectedColumnIndex);
+
+  // 列・行の挿入/削除/移動に合わせて、インデックスをキーにした設定（列幅・文字寄せ・行の高さ）を付け替える (#86)
+  // 範囲外の指定は元の操作が何もしないため、付け替えも行わない
+  const dataRowCount = isIgnoreHeaderRow ? csvArray.length : Math.max(csvArray.length - 1, 0);
+  const columnCount = csvArray[0]?.length ?? 0;
+
+  const _insertRow = useCallback(
+    (index: number) => {
+      _insertRowRaw(index);
+      onRowInserted(Math.min(Math.max(index, 0), dataRowCount));
+    },
+    [_insertRowRaw, onRowInserted, dataRowCount]
+  );
+
+  const _deleteRow = useCallback(
+    (index: number) => {
+      _deleteRowRaw(index);
+      if (index >= 0 && index < dataRowCount) {
+        onRowDeleted(index);
+      }
+    },
+    [_deleteRowRaw, onRowDeleted, dataRowCount]
+  );
+
+  const _moveRows = useCallback(
+    (from: number, to: number) => {
+      _moveRowsRaw(from, to);
+      const isValid =
+        from !== to && from >= 0 && to >= 0 && from < dataRowCount && to < dataRowCount;
+      if (isValid) {
+        onRowMoved(from, to);
+      }
+    },
+    [_moveRowsRaw, onRowMoved, dataRowCount]
+  );
+
+  const _insertCol = useCallback(
+    (index: number) => {
+      _insertColRaw(index);
+      const position = Math.min(Math.max(index, 0), columnCount);
+      onColumnInserted(position);
+      onAlignmentColumnInserted(position);
+    },
+    [_insertColRaw, onColumnInserted, onAlignmentColumnInserted, columnCount]
+  );
+
+  const _deleteCol = useCallback(
+    (index: number) => {
+      _deleteColRaw(index);
+      if (index >= 0 && index < columnCount) {
+        onColumnDeleted(index);
+        onAlignmentColumnDeleted(index);
+      }
+    },
+    [_deleteColRaw, onColumnDeleted, onAlignmentColumnDeleted, columnCount]
+  );
+
+  const _moveColumns = useCallback(
+    (from: number, to: number) => {
+      _moveColumnsRaw(from, to);
+      const isValid = from !== to && from >= 0 && to >= 0 && from < columnCount && to < columnCount;
+      if (isValid) {
+        onColumnMoved(from, to);
+        onAlignmentColumnMoved(from, to);
+      }
+    },
+    [_moveColumnsRaw, onColumnMoved, onAlignmentColumnMoved, columnCount]
+  );
+
+  // ヘッダー行の無視を切り替えると、データ行の位置が1つずれる（ヘッダー行がデータ行の先頭になる/ならなくなる）
+  const prevIsIgnoreHeaderRowRef = useRef(isIgnoreHeaderRow);
+  useEffect(() => {
+    if (prevIsIgnoreHeaderRowRef.current === isIgnoreHeaderRow) return;
+    prevIsIgnoreHeaderRowRef.current = isIgnoreHeaderRow;
+    if (isIgnoreHeaderRow) {
+      onRowInserted(0);
+    } else {
+      onRowDeleted(0);
+    }
+  }, [isIgnoreHeaderRow, onRowInserted, onRowDeleted]);
+
   // コンテキストメニュー機能
   const {
     isRowContextMenuOpen,
@@ -169,16 +271,6 @@ export const EditableTable: FC<EditableTableProps> = ({
       insertCol: _insertCol,
     }
   );
-
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
-  const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
-  const [focusedColumnIndex, setFocusedColumnIndex] = useState<number | null>(null);
-  const [focusedCell, setFocusedCell] = useState<{ row: number; col: number } | null>(null);
-
-  // 列の配置調整機能
-  const { handleAlignmentChange, getCurrentAlignment, getColumnAlignment } =
-    useColumnAlignment(selectedColumnIndex);
 
   // ヘッダー編集機能
   const {
