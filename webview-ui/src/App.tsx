@@ -1,16 +1,19 @@
 import {
   InitMessage,
+  OpenAsTextMessage,
   SaveMessage,
   UpdateMessage as UpdateToExtensionMessage,
 } from "@message/messageTypeToExtention";
 import { Message, ThemeKind, UpdateMessage } from "@message/messageTypeToWebview";
-import { parse as csvParseSync } from "csv-parse/browser/esm/sync";
 import { stringify as csvStringfy } from "csv-stringify/browser/esm/sync";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./App.module.scss";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
+import { ParseErrorView } from "./components/common/ParseErrorView";
 import { EditableTable } from "./components/editable-table/EditableTable";
 import { useEventListener } from "./hooks/useEventListener";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { CsvParseError, parseCsv } from "./utilities/csvFormat";
 import { vscode } from "./utilities/vscode";
 
 /** 編集内容を拡張機能(TextDocument)へ送るまでのデバウンス時間(ms) */
@@ -48,6 +51,8 @@ export default function App() {
   useEffect(() => cancelPendingSync, [cancelPendingSync]);
 
   const [csvArray, setCSVArray] = useState<Array<Array<string>>>([]);
+  // 直近の読み込みでCSVとして解析できなかった場合のエラー（この間はテーブルを表示せず、書き換えも行わない）
+  const [parseError, setParseError] = useState<CsvParseError | null>(null);
   const [theme, setTheme] = useState<ThemeKind>("light");
 
   // 拡張機能(TextDocument)側の内容を反映する
@@ -61,7 +66,15 @@ export default function App() {
       cancelPendingSync();
       rawTextRef.current = text;
       setRawText(text);
-      setCSVArray(csvParseSync(text));
+      const result = parseCsv(text);
+      if (result.ok) {
+        setParseError(null);
+        setCSVArray(result.rows);
+      } else {
+        // 解析失敗時はテーブルを破棄しエラー表示にする。拡張機能へは何も送らない
+        setParseError(result.error);
+        setCSVArray([]);
+      }
       // 外部変更はUndo履歴の基準を壊すため、履歴ごとEditableTableを作り直してクリアする
       setExternalRevision((revision) => revision + 1);
     },
@@ -125,6 +138,11 @@ export default function App() {
     element: window as unknown as HTMLElement,
   });
 
+  const handleOpenAsText = useCallback(() => {
+    cancelPendingSync();
+    vscode.postMessage({ type: "openAsText" } satisfies OpenAsTextMessage);
+  }, [cancelPendingSync]);
+
   const _handleReloadWebview = () => {
     vscode.postMessage({
       type: "reload",
@@ -141,18 +159,22 @@ export default function App() {
   }
 
   return (
-    <>
+    <ErrorBoundary onOpenAsText={handleOpenAsText}>
       <div className={styles.root}>
         <main className={styles.main}>
-          <EditableTable
-            key={externalRevision}
-            csvArray={csvArray}
-            theme={theme}
-            setCSVArray={updateCSVArray}
-            onApply={handleApply}
-          />
+          {parseError ? (
+            <ParseErrorView error={parseError} onOpenAsText={handleOpenAsText} />
+          ) : (
+            <EditableTable
+              key={externalRevision}
+              csvArray={csvArray}
+              theme={theme}
+              setCSVArray={updateCSVArray}
+              onApply={handleApply}
+            />
+          )}
         </main>
       </div>
-    </>
+    </ErrorBoundary>
   );
 }

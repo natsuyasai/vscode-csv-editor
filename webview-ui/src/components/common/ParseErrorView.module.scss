@@ -1,0 +1,31 @@
+.root {
+  padding: 16px;
+  color: var(--vscode-foreground);
+}
+
+.title {
+  margin: 0 0 8px;
+  color: var(--vscode-errorForeground);
+}
+
+.detail {
+  margin: 0 0 8px;
+  font-family: var(--vscode-editor-font-family, monospace);
+  white-space: pre-wrap;
+}
+
+.hint {
+  margin: 0 0 12px;
+}
+
+.button {
+  padding: 4px 12px;
+  color: var(--vscode-button-foreground);
+  cursor: pointer;
+  background: var(--vscode-button-background);
+  border: 1px solid var(--vscode-button-border, transparent);
+
+  &:hover {
+    background: var(--vscode-button-hoverBackground);
+  }
+}

@@ -148,6 +148,10 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
           case "reload":
             updateWebview();
             return;
+          case "openAsText":
+            // CSVとして解析できない場合の退避導線。既定のテキストエディタで開き直す
+            await vscode.commands.executeCommand("vscode.openWith", document.uri, "default");
+            return;
         }
       }
     );
