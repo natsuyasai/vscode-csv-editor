@@ -165,6 +165,10 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
             if (e.payload !== undefined) {
               const ok = await applyFromWebview(e.payload);
               if (!ok) {
+                // 外部変更との競合等で反映できなかった。キューを詰まらせないよう待たずに通知する
+                void vscode.window.showWarningMessage(
+                  "外部で内容が変更されたため保存できませんでした。内容を確認して再度保存してください"
+                );
                 return;
               }
             }
