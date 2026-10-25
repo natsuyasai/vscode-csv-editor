@@ -25,14 +25,23 @@ import { vscode } from "./utilities/vscode";
 const SYNC_DEBOUNCE_MS = 300;
 
 export default function App() {
-  const [rawText, setRawText] = useState("");
-  // 最新テキストへ同期的にアクセスするためのref
-  const rawTextRef = useRef("");
+  // 最新のCSV行データ。編集のたびに全体を文字列化すると大きなCSVで重くなるため、
+  // テキストは必要になった時(送信・保存・外部変更との比較)に生成してキャッシュする
+  const latestRowsRef = useRef<Array<Array<string>>>([]);
+  // 最新テキストのキャッシュ。null の場合は latestRowsRef から生成する
+  const rawTextCacheRef = useRef<string | null>("");
   // 外部変更を受けた際にEditableTable(Undo履歴・選択状態を保持)を作り直すためのキー
   const [externalRevision, setExternalRevision] = useState(0);
   // 読み込み時に検出した書式。保存(update送信)時に同じ形式で出力する
   const csvFormatRef = useRef<CsvFormat>(DEFAULT_CSV_FORMAT);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const getRawText = useCallback((): string => {
+    if (rawTextCacheRef.current === null) {
+      rawTextCacheRef.current = stringifyCsv(latestRowsRef.current, csvFormatRef.current);
+    }
+    return rawTextCacheRef.current;
+  }, []);
 
   const cancelPendingSync = useCallback(() => {
     if (syncTimerRef.current !== null) {
@@ -41,19 +50,16 @@ export default function App() {
     }
   }, []);
 
-  const scheduleSync = useCallback(
-    (text: string) => {
-      cancelPendingSync();
-      syncTimerRef.current = setTimeout(() => {
-        syncTimerRef.current = null;
-        vscode.postMessage({
-          type: "update",
-          payload: text,
-        } satisfies UpdateToExtensionMessage);
-      }, SYNC_DEBOUNCE_MS);
-    },
-    [cancelPendingSync]
-  );
+  const scheduleSync = useCallback(() => {
+    cancelPendingSync();
+    syncTimerRef.current = setTimeout(() => {
+      syncTimerRef.current = null;
+      vscode.postMessage({
+        type: "update",
+        payload: getRawText(),
+      } satisfies UpdateToExtensionMessage);
+    }, SYNC_DEBOUNCE_MS);
+  }, [cancelPendingSync, getRawText]);
 
   useEffect(() => cancelPendingSync, [cancelPendingSync]);
 
@@ -66,27 +72,28 @@ export default function App() {
   const updateCSVFromExtension = useCallback(
     (text: string) => {
       // 自分の編集と同一内容なら再パースしない（選択状態等を維持）
-      if (text === rawTextRef.current) {
+      if (text === getRawText()) {
         return;
       }
       // 外部変更が確定したので、未送信の自分の編集は破棄する
       cancelPendingSync();
-      rawTextRef.current = text;
-      setRawText(text);
+      rawTextCacheRef.current = text;
       const result = parseCsv(text);
       if (result.ok) {
         setParseError(null);
         csvFormatRef.current = result.format;
+        latestRowsRef.current = result.rows;
         setCSVArray(result.rows);
       } else {
         // 解析失敗時はテーブルを破棄しエラー表示にする。拡張機能へは何も送らない
         setParseError(result.error);
+        latestRowsRef.current = [];
         setCSVArray([]);
       }
       // 外部変更はUndo履歴の基準を壊すため、履歴ごとEditableTableを作り直してクリアする
       setExternalRevision((revision) => revision + 1);
     },
-    [cancelPendingSync]
+    [cancelPendingSync, getRawText]
   );
 
   const handleMessagesFromExtension = useCallback(
@@ -131,9 +138,9 @@ export default function App() {
     cancelPendingSync();
     vscode.postMessage({
       type: "save",
-      payload: rawTextRef.current,
+      payload: getRawText(),
     } satisfies SaveMessage);
-  }, [cancelPendingSync]);
+  }, [cancelPendingSync, getRawText]);
 
   // グローバルキーボードショートカット
   useKeyboardShortcuts({
@@ -157,16 +164,15 @@ export default function App() {
   const _handleReloadWebview = () => {
     vscode.postMessage({
       type: "reload",
-      payload: rawText,
+      payload: getRawText(),
     });
   };
 
   function updateCSVArray(csv: Array<Array<string>>) {
     setCSVArray(csv);
-    const text = stringifyCsv(csv, csvFormatRef.current);
-    rawTextRef.current = text;
-    setRawText(text);
-    scheduleSync(text);
+    latestRowsRef.current = csv;
+    rawTextCacheRef.current = null;
+    scheduleSync();
   }
 
   return (
