@@ -137,7 +137,7 @@ export default function App() {
     shortcuts: [
       {
         key: "s",
-        ctrl: true,
+        mod: true,
         handler: () => handleApply(),
         stopPropagation: true,
         preventDefault: true,

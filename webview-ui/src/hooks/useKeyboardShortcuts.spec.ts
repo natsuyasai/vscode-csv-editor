@@ -308,3 +308,89 @@ describe("useKeyboardShortcuts", () => {
     expect(mockHandler).not.toHaveBeenCalled();
   });
 });
+
+describe("useKeyboardShortcuts: mod / 入力要素の扱い (issue #84)", () => {
+  const fire = (target: EventTarget, init: KeyboardEventInit) => {
+    const event = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init });
+    target.dispatchEvent(event);
+    return event;
+  };
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("mod指定のショートカットはCtrlでもCmd(Meta)でも動作する", () => {
+    const handler = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ shortcuts: [{ key: "z", mod: true, handler }] }));
+    fire(document, { key: "z", ctrlKey: true });
+    fire(document, { key: "z", metaKey: true });
+    fire(document, { key: "z" });
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
+  it("mod指定でShift有無を区別できる(Ctrl+Shift+Zとctrl+Zを別扱い)", () => {
+    const undo = vi.fn();
+    const redo = vi.fn();
+    renderHook(() =>
+      useKeyboardShortcuts({
+        shortcuts: [
+          { key: "z", mod: true, handler: undo },
+          { key: "z", mod: true, shift: true, handler: redo },
+        ],
+      })
+    );
+    fire(document, { key: "Z", ctrlKey: true, shiftKey: true });
+    expect(redo).toHaveBeenCalledTimes(1);
+    expect(undo).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["input", () => document.createElement("input")],
+    ["textarea", () => document.createElement("textarea")],
+    ["select", () => document.createElement("select")],
+    [
+      "contenteditable",
+      () => {
+        const div = document.createElement("div");
+        div.setAttribute("contenteditable", "true");
+        return div;
+      },
+    ],
+    ["vscode-textfield", () => document.createElement("vscode-textfield")],
+  ])("ignoreWhenEditing指定のショートカットは%sにフォーカス中は実行されず標準動作が残る", (_n, create) => {
+    const handler = vi.fn();
+    renderHook(() =>
+      useKeyboardShortcuts({
+        shortcuts: [{ key: "c", mod: true, ignoreWhenEditing: true, preventDefault: true, handler }],
+      })
+    );
+    const el = create();
+    document.body.appendChild(el);
+    const event = fire(el, { key: "c", ctrlKey: true });
+    expect(handler).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("ignoreWhenEditing指定でも入力要素以外では実行される", () => {
+    const handler = vi.fn();
+    renderHook(() =>
+      useKeyboardShortcuts({
+        shortcuts: [{ key: "c", mod: true, ignoreWhenEditing: true, handler }],
+      })
+    );
+    const div = document.createElement("div");
+    document.body.appendChild(div);
+    fire(div, { key: "c", ctrlKey: true });
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignoreWhenEditing未指定のショートカットは入力要素でも実行される(保存・検索用)", () => {
+    const handler = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ shortcuts: [{ key: "s", mod: true, handler }] }));
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    fire(input, { key: "s", metaKey: true });
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+});
