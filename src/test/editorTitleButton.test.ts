@@ -85,6 +85,48 @@ function getOpenEditorTitleWhen(): string {
   return item.when;
 }
 
+/**
+ * 開いているエディタをすべて閉じ、タブ groups が空になるまで上限付きで待つ。
+ */
+async function closeAllEditorsAndWait(timeoutMs = 10000): Promise<void> {
+  await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+  const deadline = Date.now() + timeoutMs;
+  while (vscode.window.tabGroups.all.some((group) => group.tabs.length > 0)) {
+    if (Date.now() >= deadline) {
+      return;
+    }
+    await sleep(100);
+  }
+}
+
+/**
+ * 指定URIのタブが TabInputCustom（カスタムエディタ）になるまで、上限付きでポーリングする。
+ * タブ反映は非同期のため固定 sleep ではなく待機し、反映されなければ undefined を返す（ハングさせない）。
+ */
+async function waitForCustomEditorTab(
+  uri: vscode.Uri,
+  viewType: string,
+  timeoutMs = 10000
+): Promise<vscode.TabInputCustom | undefined> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const tabs = vscode.window.tabGroups.all.flatMap((group) => group.tabs);
+    const found = tabs.find(
+      (tab) =>
+        tab.input instanceof vscode.TabInputCustom &&
+        tab.input.viewType === viewType &&
+        tab.input.uri.toString() === uri.toString()
+    );
+    if (found?.input instanceof vscode.TabInputCustom) {
+      return found.input;
+    }
+    if (Date.now() >= deadline) {
+      return undefined;
+    }
+    await sleep(100);
+  }
+}
+
 suite("エディタタイトルボタンの表示条件 (issue #93)", () => {
   suite("package.json の when 条件", () => {
     test("CSVファイルは拡張子の大文字小文字や言語IDに関係なく表示条件を満たす", () => {
@@ -136,12 +178,16 @@ suite("エディタタイトルボタンの表示条件 (issue #93)", () => {
   suite("VSCode 上での動作", () => {
     let tempDir: string;
 
-    beforeEach(() => {
+    beforeEach(async function () {
+      this.timeout(15000);
+      // 前のテストが開いたエディタの残り（非同期のタブ反映を含む）が無い状態から始める
+      await closeAllEditorsAndWait();
       tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "csv-editor-title-button-"));
     });
 
-    afterEach(async () => {
-      await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+    afterEach(async function () {
+      this.timeout(15000);
+      await closeAllEditorsAndWait();
       fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     });
 
@@ -151,10 +197,9 @@ suite("エディタタイトルボタンの表示条件 (issue #93)", () => {
       fs.writeFileSync(uri.fsPath, "a,b\n1,2\n");
 
       await vscode.commands.executeCommand("vscode.openWith", uri, VIEW_TYPE);
-      await sleep(500);
 
-      const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
-      assert.ok(input instanceof vscode.TabInputCustom, "カスタムエディタで開いている");
+      const input = await waitForCustomEditorTab(uri, VIEW_TYPE);
+      assert.ok(input, "カスタムエディタで開いている");
       assert.strictEqual(input.viewType, VIEW_TYPE);
     });
 
@@ -170,10 +215,9 @@ suite("エディタタイトルボタンの表示条件 (issue #93)", () => {
       assert.strictEqual(csvDocument.languageId, "csv");
 
       await vscode.commands.executeCommand(COMMAND);
-      await sleep(500);
 
-      const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
-      assert.ok(input instanceof vscode.TabInputCustom, "カスタムエディタに切り替わっている");
+      const input = await waitForCustomEditorTab(uri, VIEW_TYPE);
+      assert.ok(input, "カスタムエディタに切り替わっている");
       assert.strictEqual(input.viewType, VIEW_TYPE);
     });
   });
