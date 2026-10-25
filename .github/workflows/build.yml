@@ -7,7 +7,8 @@ on:
       - develop
 
 jobs:
-  setup:
+  check:
+    name: type check and lint
     runs-on: ubuntu-latest
 
     steps:
@@ -16,56 +17,37 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      - name: Install root dependencies
-        run: npm ci
-
-      - name: Install webview-ui dependencies
-        run: |
-          cd webview-ui
-          npm ci
-
-  build:
-    name: build
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - uses: ./.github/actions/setup
-
-      - name: Build webview-ui
-        run: |
-          cd webview-ui
-          npm run build
-
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - uses: ./.github/actions/setup
-
-      - name: Build webview-ui
-        run: |
-          cd webview-ui
-          npm run build
+      - name: Type check root
+        run: npm run check-types
 
       - name: Lint root
         run: npm run lint
 
+      - name: Type check webview-ui
+        working-directory: webview-ui
+        run: npm run check-types
+
       - name: Lint webview-ui
-        run: |
-          cd webview-ui
-          npm run lint
+        working-directory: webview-ui
+        run: npm run lint
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      - name: Build extension (production)
+        run: npm run package
 
   test:
     name: test
     runs-on: ubuntu-latest
-    needs: setup
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -73,18 +55,19 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: Install playwright
-        run: |
-          cd webview-ui
-          npx playwright install --with-deps chromium
+        working-directory: webview-ui
+        run: npx playwright install --with-deps chromium
 
       - name: Run unit tests (webview-ui)
-        run: |
-          cd webview-ui
-          npm run test
+        working-directory: webview-ui
+        run: npx vitest --project unit --run
+
+      - name: Run storybook tests (webview-ui)
+        working-directory: webview-ui
+        run: npx vitest --project storybook --run
+
+      - name: Build webview-ui for extension tests
+        run: npm run build:webview
 
       - name: VSCode extension tests
-        run: |
-          /usr/bin/Xvfb :99 -screen 0 1024x768x24 & sleep 1
-          ps aux | grep Xvfb --color=always | grep -v grep
-          DISPLAY=:99.0 npm run test
-          killall Xvfb
+        run: timeout 400 xvfb-run -a npm test
