@@ -23,6 +23,9 @@
         "selector": [
           {
             "filenamePattern": "*.csv"
+          },
+          {
+            "filenamePattern": "*.CSV"
           }
         ],
         "priority": "option"
@@ -38,7 +41,7 @@
       "editor/title": [
         {
           "command": "csv-editor.openEditor",
-          "when": "resourceExtname == .csv && editorLangId == plaintext",
+          "when": "resourceExtname =~ /^\\.[cC][sS][vV]$/ && activeCustomEditorId != csv-editor.openEditor",
           "group": "navigation"
         }
       ]
