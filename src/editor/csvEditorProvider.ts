@@ -1,7 +1,7 @@
 // WebViewの内容を表示するためのクラス
 import * as vscode from "vscode";
-import { ThemeKind, UpdateMessage, UpdateTheameMessage } from "../message/messageTypeToWebview";
-import { isMessageToExtension } from "../message/messageTypeToExtention";
+import { ThemeKind, UpdateMessage, UpdateThemeMessage } from "../message/messageTypeToWebview";
+import { isMessageToExtension } from "../message/messageTypeToExtension";
 import { disposeAll } from "../util/dispose";
 import { getUri } from "../util/getUri";
 import { loggerDisposable, logWarning } from "../util/logger";
@@ -79,7 +79,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       webviewPanel.webview.postMessage({
         type: "updateTheme",
         payload: CSVEditorProvider.getThemeKind(),
-      } satisfies UpdateTheameMessage);
+      } satisfies UpdateThemeMessage);
     }
 
     // このパネルに紐づく購読。パネルを閉じたときにまとめて解除する

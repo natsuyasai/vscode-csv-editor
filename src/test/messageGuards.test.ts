@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import { suite, test } from "mocha";
-import { isMessageToExtension } from "../message/messageTypeToExtention";
+import { isMessageToExtension } from "../message/messageTypeToExtension";
 import { isMessageToWebview } from "../message/messageTypeToWebview";
 
 suite("メッセージ型ガード (issue #89)", () => {

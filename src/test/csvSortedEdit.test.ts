@@ -6,7 +6,7 @@ import * as path from "path";
 import * as os from "os";
 import { setTimeout as sleep } from "timers/promises";
 import { CSVEditorProvider } from "../editor/csvEditorProvider";
-import { Message } from "../message/messageTypeToExtention";
+import { Message } from "../message/messageTypeToExtension";
 
 /**
  * ソート・フィルター中の編集 (issue #79)

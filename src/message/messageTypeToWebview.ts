@@ -16,7 +16,7 @@ export interface UpdateMessage extends Message {
   payload: string;
 }
 
-export interface UpdateTheameMessage extends Message {
+export interface UpdateThemeMessage extends Message {
   type: "updateTheme";
   payload: ThemeKind;
 }

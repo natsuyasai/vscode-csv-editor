@@ -112,7 +112,6 @@ export const EditableTable: FC<EditableTableProps> = ({
 
   // 列のリサイズ機能
   const {
-    columnWidths,
     getColumnWidth,
     setColumnWidth: _setIndividualColumnWidth,
     startResize: startColumnResize,
@@ -521,11 +520,6 @@ export const EditableTable: FC<EditableTableProps> = ({
   useEffect(() => {
     rowVirtualizer.measure();
   }, [rowHeight, rowHeights, rowVirtualizer]);
-
-  // columnWidthsが変更されたときにテーブルを再レンダリング
-  useEffect(() => {
-    // 列幅の変更を反映するため、強制的に再レンダリング
-  }, [columnWidths]);
 
   function setRowSizeFromHeader(size: RowSizeType) {
     // rowSizeを設定すると、useEffectでrowHeightが自動的に更新される
