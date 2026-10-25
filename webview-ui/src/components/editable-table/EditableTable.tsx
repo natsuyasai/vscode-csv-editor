@@ -335,12 +335,19 @@ export const EditableTable: FC<EditableTableProps> = ({
   const isRowReorderDisabled = sorting.length > 0 || columnFilters.length > 0;
 
   // 行のドラッグ&ドロップハンドラー
+  // _moveRows は毎レンダリングで新しくなるため ref 経由で参照し、handleRowReorder の参照を安定させる。
+  // 参照が変わると columns が再生成され行番号セルが再マウントされて、
+  // mousedown〜mouseup の間に再レンダリングが起きた場合にクリックが失われる。
+  const moveRowsRef = useRef(_moveRows);
+  useEffect(() => {
+    moveRowsRef.current = _moveRows;
+  });
   const handleRowReorder = useCallback(
     (sourceIndex: number, targetIndex: number) => {
       if (isRowReorderDisabled || sourceIndex === targetIndex) return;
-      _moveRows(sourceIndex, targetIndex);
+      moveRowsRef.current(sourceIndex, targetIndex);
     },
-    [_moveRows, isRowReorderDisabled]
+    [isRowReorderDisabled]
   );
 
   // 列のドラッグ&ドロップハンドラー
