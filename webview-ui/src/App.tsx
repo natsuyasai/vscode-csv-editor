@@ -3,7 +3,7 @@ import {
   OpenAsTextMessage,
   SaveMessage,
   UpdateMessage as UpdateToExtensionMessage,
-} from "@message/messageTypeToExtention";
+} from "@message/messageTypeToExtension";
 import { isMessageToWebview, ThemeKind, UpdateMessage } from "@message/messageTypeToWebview";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./App.module.scss";
@@ -160,13 +160,6 @@ export default function App() {
     cancelPendingSync();
     vscode.postMessage({ type: "openAsText" } satisfies OpenAsTextMessage);
   }, [cancelPendingSync]);
-
-  const _handleReloadWebview = () => {
-    vscode.postMessage({
-      type: "reload",
-      payload: getRawText(),
-    });
-  };
 
   function updateCSVArray(csv: Array<Array<string>>) {
     setCSVArray(csv);

@@ -8,8 +8,6 @@ import * as os from "os";
 /* eslint-disable no-undef */
 
 suite("CSVエディター Webview統合テスト", () => {
-  vscode.window.showInformationMessage("CSVエディター Webview統合テストを開始します。");
-
   let tempDir: string;
   let testCsvFile: vscode.Uri;
 

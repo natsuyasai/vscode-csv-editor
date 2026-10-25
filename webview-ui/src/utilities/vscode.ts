@@ -1,5 +1,5 @@
 import type { WebviewApi } from "vscode-webview";
-import { Message } from "../../../src/message/messageTypeToExtention";
+import { Message } from "../../../src/message/messageTypeToExtension";
 
 /**
  * A utility wrapper around the acquireVsCodeApi() function, which enables

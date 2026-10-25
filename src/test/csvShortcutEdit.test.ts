@@ -6,7 +6,7 @@ import * as path from "path";
 import * as os from "os";
 import { setTimeout as sleep } from "timers/promises";
 import { CSVEditorProvider } from "../editor/csvEditorProvider";
-import { Message } from "../message/messageTypeToExtention";
+import { Message } from "../message/messageTypeToExtension";
 
 /**
  * ショートカットによる行・列の挿入/削除 (issue #87)

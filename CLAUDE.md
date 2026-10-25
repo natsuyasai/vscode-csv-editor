@@ -51,7 +51,7 @@
 
 メッセージパッシングは`src/message/`内の型付きインターフェースを使用します:
 - `messageTypeToWebview.ts`: 拡張機能 → Webview メッセージ (init, update, updateTheme)
-- `messageTypeToExtention.ts`: Webview → 拡張機能 メッセージ (init, update, reload, save)
+- `messageTypeToExtension.ts`: Webview → 拡張機能 メッセージ (init, update, reload, save)
 - データフロー: VSCode Document ↔ Extension ↔ Webview (デバウンス更新あり)
 
 ## ビルドコマンド

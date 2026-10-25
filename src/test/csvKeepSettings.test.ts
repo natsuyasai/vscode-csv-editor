@@ -6,7 +6,7 @@ import * as path from "path";
 import * as os from "os";
 import { setTimeout as sleep } from "timers/promises";
 import { CSVEditorProvider } from "../editor/csvEditorProvider";
-import { Message } from "../message/messageTypeToExtention";
+import { Message } from "../message/messageTypeToExtension";
 
 /**
  * 列・行の挿入/削除/移動の結果の反映 (issue #86)
