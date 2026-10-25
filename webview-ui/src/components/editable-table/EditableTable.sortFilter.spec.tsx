@@ -45,6 +45,7 @@ vi.mock("../common/PortalManager", () => ({
       <button onClick={() => p.rowContextMenuProps.onSelect("insertRowAbove")}>
         ctx insert above
       </button>
+      <button onClick={() => p.rowContextMenuProps.onSelect("deleteRow")}>ctx delete</button>
     </div>
   ),
 }));
@@ -268,6 +269,34 @@ describe("EditableTable ソート中の表示位置整合性", () => {
   });
 });
 
+describe("EditableTable ソート中の行挿入・削除", () => {
+  it("行選択後のヘッダーからの行挿入は選択した行の位置に挿入される", () => {
+    const { setCSVArray } = setup();
+    sortByNum();
+    fireEvent.click(rowIndexCellOf("c"));
+    fireEvent.click(screen.getByText("insert row"));
+    expect(setCSVArray).toHaveBeenLastCalledWith([
+      ["name", "num"],
+      ["a", "3"],
+      ["b", "1"],
+      ["", ""],
+      ["c", "2"],
+    ]);
+  });
+
+  it("コンテキストメニューの行削除はクリックした表示行を削除する", () => {
+    const { setCSVArray } = setup();
+    sortByNum();
+    fireEvent.contextMenu(rowIndexCellOf("b"));
+    fireEvent.click(screen.getByText("ctx delete"));
+    expect(setCSVArray).toHaveBeenLastCalledWith([
+      ["name", "num"],
+      ["a", "3"],
+      ["c", "2"],
+    ]);
+  });
+});
+
 describe("EditableTable フィルター中の表示位置整合性", () => {
   const filterNumBy2 = () => {
     fireEvent.click(screen.getByText("toggle filters"));
@@ -364,5 +393,35 @@ describe("EditableTable 仮想スクロールとフォーカス", () => {
     const tops = scrollTo.mock.calls.map((c) => (c[0] as { top: number }).top);
     // 表示位置40行目(40行 * 40px)付近まで下方向へスクロールが要求される
     expect(Math.max(...tops)).toBeGreaterThan(1000);
+  });
+});
+
+describe("EditableTable 行のドラッグ&ドロップ", () => {
+  const dataTransfer = {
+    setData: vi.fn(),
+    getData: vi.fn(),
+    setDragImage: vi.fn(),
+    effectAllowed: "all",
+    dropEffect: "move",
+    types: [],
+  };
+
+  it("ソート・フィルターなしでは行をドラッグできる", () => {
+    setup();
+    expect(fireEvent.dragStart(rowIndexCellOf("a"), { dataTransfer })).toBe(true);
+  });
+
+  it("ソート中は行をドラッグできない", () => {
+    setup();
+    sortByNum();
+    expect(fireEvent.dragStart(rowIndexCellOf("c"), { dataTransfer })).toBe(false);
+  });
+
+  it("フィルター中は行をドラッグできない", () => {
+    setup(filterCsv);
+    fireEvent.click(screen.getByText("toggle filters"));
+    const inputs = screen.getAllByPlaceholderText("フィルター...");
+    fireEvent.change(inputs[inputs.length - 1], { target: { value: "2" } });
+    expect(fireEvent.dragStart(rowIndexCellOf("b"), { dataTransfer })).toBe(false);
   });
 });

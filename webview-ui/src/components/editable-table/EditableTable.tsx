@@ -238,13 +238,16 @@ export const EditableTable: FC<EditableTableProps> = ({
     return newRows;
   }, [csvArray, isIgnoreHeaderRow]);
 
+  // ソート・フィルター適用中は表示順とデータ順が異なるため、行のドラッグ&ドロップによる並び替えを無効にする
+  const isRowReorderDisabled = sorting.length > 0 || columnFilters.length > 0;
+
   // 行のドラッグ&ドロップハンドラー
   const handleRowReorder = useCallback(
     (sourceIndex: number, targetIndex: number) => {
-      if (sourceIndex === targetIndex) return;
+      if (isRowReorderDisabled || sourceIndex === targetIndex) return;
       _moveRows(sourceIndex, targetIndex);
     },
-    [_moveRows]
+    [_moveRows, isRowReorderDisabled]
   );
 
   // 列のドラッグ&ドロップハンドラー
@@ -294,6 +297,7 @@ export const EditableTable: FC<EditableTableProps> = ({
               isSelected={isSelected}
               onSelect={onSelect}
               rowIndex={rowIndex}
+              isDragDisabled={isRowReorderDisabled}
               onRowReorder={handleRowReorder}
               onContextMenu={onContextMenu}
               onRowResizeStart={startResize}
@@ -322,6 +326,7 @@ export const EditableTable: FC<EditableTableProps> = ({
     csvArray,
     isIgnoreHeaderRow,
     handleRowReorder,
+    isRowReorderDisabled,
     openRowContextMenu,
     clearSelection,
     startResize,

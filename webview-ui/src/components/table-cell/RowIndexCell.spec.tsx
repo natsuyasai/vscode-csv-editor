@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -124,5 +124,62 @@ describe("RowIndexCell", () => {
 
     const cell = screen.getByText("1");
     expect(cell).toHaveAttribute("tabIndex", "-1");
+  });
+});
+
+describe("RowIndexCell ドラッグ&ドロップの有効/無効", () => {
+  const renderTwoCells = (isDragDisabled: boolean | undefined) => {
+    const onRowReorder = vi.fn();
+    render(
+      <DndProvider backend={HTML5Backend}>
+        <RowIndexCell
+          {...createMockProps({
+            rowIndex: 0,
+            getValue: (() => "first") as never,
+            onRowReorder,
+            isDragDisabled,
+          })}
+        />
+        <RowIndexCell
+          {...createMockProps({
+            rowIndex: 1,
+            getValue: (() => "second") as never,
+            onRowReorder,
+            isDragDisabled,
+          })}
+        />
+      </DndProvider>
+    );
+    const dataTransfer = {
+      setData: vi.fn(),
+      getData: vi.fn(),
+      setDragImage: vi.fn(),
+      effectAllowed: "all",
+      dropEffect: "move",
+      types: [],
+    };
+    const source = screen.getByText("first");
+    const target = screen.getByText("second");
+    // dragstart が受理されない(preventDefaultされる)場合、ブラウザは以降のdrag系イベントを発火しない
+    const isDragStarted = fireEvent.dragStart(source, { dataTransfer });
+    if (isDragStarted) {
+      fireEvent.dragEnter(target, { dataTransfer });
+      fireEvent.dragOver(target, { dataTransfer });
+      fireEvent.drop(target, { dataTransfer });
+      fireEvent.dragEnd(source, { dataTransfer });
+    }
+    return { onRowReorder, isDragStarted };
+  };
+
+  it("通常時はドロップで onRowReorder が呼ばれる", () => {
+    const { onRowReorder, isDragStarted } = renderTwoCells(false);
+    expect(isDragStarted).toBe(true);
+    expect(onRowReorder).toHaveBeenCalledWith(0, 1);
+  });
+
+  it("isDragDisabled のときはドラッグが開始されず onRowReorder も呼ばれない", () => {
+    const { onRowReorder, isDragStarted } = renderTwoCells(true);
+    expect(isDragStarted).toBe(false);
+    expect(onRowReorder).not.toHaveBeenCalled();
   });
 });
