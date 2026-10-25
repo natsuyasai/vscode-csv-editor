@@ -1,5 +1,5 @@
 import { renderHook, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { useCellSelection } from "@/hooks/useCellSelection";
 
 /**
@@ -19,10 +19,11 @@ describe("useCellSelection (表示位置とデータ位置が異なる場合)", 
   const setData = vi.fn() as React.Dispatch<React.SetStateAction<typeof data>>;
   const writeText = vi.fn();
   const readText = vi.fn();
-  let updateCells: ReturnType<typeof vi.fn>;
+  let updateCells: Mock<(cells: Array<{ rowIdx: number; colIdx: number; value: string }>) => void>;
 
   beforeEach(() => {
-    updateCells = vi.fn();
+    updateCells =
+      vi.fn<(cells: Array<{ rowIdx: number; colIdx: number; value: string }>) => void>();
     writeText.mockReset().mockResolvedValue(undefined);
     readText.mockReset();
     Object.defineProperty(navigator, "clipboard", {

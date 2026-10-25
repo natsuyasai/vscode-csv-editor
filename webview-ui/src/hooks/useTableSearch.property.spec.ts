@@ -1,14 +1,14 @@
 import { renderHook, act } from "@testing-library/react";
 import * as fc from "fast-check";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { useTableSearch } from "@/hooks/useTableSearch";
 import { ROW_IDX_KEY, ROW_ID_KEY } from "@/types";
 
 describe("useTableSearch - Property-Based Tests", () => {
-  let mockScrollToRow: ReturnType<typeof vi.fn>;
+  let mockScrollToRow: Mock<(viewRowIdx: number) => void>;
 
   beforeEach(() => {
-    mockScrollToRow = vi.fn();
+    mockScrollToRow = vi.fn<(viewRowIdx: number) => void>();
     vi.clearAllMocks();
   });
 
@@ -92,9 +92,7 @@ describe("useTableSearch - Property-Based Tests", () => {
             .map((searchText) => ({ data, searchText }))
         ),
         ({ data, searchText }) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, mockScrollToRow)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(searchText);
@@ -142,9 +140,7 @@ describe("useTableSearch - Property-Based Tests", () => {
             .map((searchText) => ({ data, searchText }))
         ),
         ({ data, searchText }) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, mockScrollToRow)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(searchText);
@@ -196,9 +192,7 @@ describe("useTableSearch - Property-Based Tests", () => {
             )
         ),
         ({ data, searchText, iterations }) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, mockScrollToRow)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(searchText);
@@ -258,9 +252,7 @@ describe("useTableSearch - Property-Based Tests", () => {
         tableDataArb,
         fc.constantFrom("", "  ", "\t", "\n", "   \t\n  "),
         (data, emptySearchText) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, mockScrollToRow)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(emptySearchText);
@@ -306,9 +298,7 @@ describe("useTableSearch - Property-Based Tests", () => {
             )
         ),
         ({ data, searchText, actions }) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, mockScrollToRow)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(searchText);
@@ -349,9 +339,7 @@ describe("useTableSearch - Property-Based Tests", () => {
         ),
         fc.constantFrom("apple", "APPLE", "Apple", "aPpLe"),
         (data, searchText) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, mockScrollToRow)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(searchText);
@@ -377,9 +365,7 @@ describe("useTableSearch - Property-Based Tests", () => {
           { minLength: 1, maxLength: 10 }
         ),
         (data) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, mockScrollToRow)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           // ROW_IDX_KEYの値を検索
           const rowIdxValue = data[0][ROW_IDX_KEY];
@@ -413,9 +399,7 @@ describe("useTableSearch - Property-Based Tests", () => {
         ),
         fc.integer({ min: 0, max: 999 }),
         (data, searchNumber) => {
-          const { result } = renderHook(() =>
-            useTableSearch(data, mockScrollToRow)
-          );
+          const { result } = renderHook(() => useTableSearch(data, mockScrollToRow));
 
           act(() => {
             result.current.handleSearch(String(searchNumber));

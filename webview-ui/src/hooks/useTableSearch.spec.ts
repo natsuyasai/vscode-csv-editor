@@ -1,11 +1,11 @@
 import { renderHook, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import { useTableSearch } from "@/hooks/useTableSearch";
 import { ROW_IDX_KEY, ROW_ID_KEY } from "@/types";
 
 describe("useTableSearch", () => {
   let mockData: Array<Record<string, unknown>>;
-  let mockScrollToRow: ReturnType<typeof vi.fn>;
+  let mockScrollToRow: Mock<(viewRowIdx: number) => void>;
 
   beforeEach(() => {
     mockData = [
@@ -20,7 +20,7 @@ describe("useTableSearch", () => {
       },
     ];
 
-    mockScrollToRow = vi.fn();
+    mockScrollToRow = vi.fn<(viewRowIdx: number) => void>();
   });
 
   afterEach(() => {

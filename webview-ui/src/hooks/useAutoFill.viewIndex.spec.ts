@@ -1,5 +1,5 @@
 import { renderHook, act } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, type Mock } from "vitest";
 import { useAutoFill } from "@/hooks/useAutoFill";
 
 /**
@@ -17,7 +17,7 @@ describe("useAutoFill (表示位置とデータ位置が異なる場合)", () =>
   const toDataIndex = (view: number) => viewToData[view];
 
   const fill = (
-    updateCells: ReturnType<typeof vi.fn>,
+    updateCells: Mock<(cells: Array<{ rowIdx: number; colIdx: number; value: string }>) => void>,
     from: [number, number],
     to: [number, number]
   ) => {
@@ -28,7 +28,8 @@ describe("useAutoFill (表示位置とデータ位置が異なる場合)", () =>
   };
 
   it("開始セルの値は表示位置からデータ位置へ変換して取得し、書き込み先もデータ位置になる", () => {
-    const updateCells = vi.fn();
+    const updateCells =
+      vi.fn<(cells: Array<{ rowIdx: number; colIdx: number; value: string }>) => void>();
     // 表示0行目(データ3行目, 値"3")から表示2行目まで縦フィル → 連番 4, 5
     fill(updateCells, [0, 0], [2, 0]);
     expect(updateCells).toHaveBeenCalledWith([
@@ -38,7 +39,8 @@ describe("useAutoFill (表示位置とデータ位置が異なる場合)", () =>
   });
 
   it("文字列は表示位置の範囲に対応するデータ位置へコピーされる", () => {
-    const updateCells = vi.fn();
+    const updateCells =
+      vi.fn<(cells: Array<{ rowIdx: number; colIdx: number; value: string }>) => void>();
     fill(updateCells, [1, 1], [2, 1]);
     expect(updateCells).toHaveBeenCalledWith([{ rowIdx: 2, colIdx: 1, value: "x1" }]);
   });

@@ -68,12 +68,17 @@ const filterCsv = [
 
 const writeText = vi.fn();
 const readText = vi.fn();
+const scrollToMock = vi.fn();
 
 beforeEach(() => {
   // jsdomでは要素サイズが0になり仮想スクロールが行を描画しないため、サイズを与える
   Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, value: 600 });
   Object.defineProperty(HTMLElement.prototype, "offsetWidth", { configurable: true, value: 800 });
-  Object.defineProperty(HTMLElement.prototype, "scrollTo", { configurable: true, value: vi.fn() });
+  Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+    configurable: true,
+    value: scrollToMock,
+  });
+  scrollToMock.mockClear();
   Object.defineProperty(navigator, "clipboard", {
     configurable: true,
     value: { writeText, readText },
@@ -382,15 +387,14 @@ describe("EditableTable 仮想スクロールとフォーカス", () => {
 
   it("描画範囲外の行へ矢印キーで移動するとその表示位置へスクロールする", () => {
     setup(bigCsv);
-    const scrollTo = HTMLElement.prototype.scrollTo as unknown as ReturnType<typeof vi.fn>;
     fireEvent.mouseDown(cellOf("row0", 0));
     fireEvent.mouseUp(cellOf("row0", 0));
-    scrollTo.mockClear();
+    scrollToMock.mockClear();
     // 描画範囲(約25行)を超える位置まで移動
     for (let i = 0; i < 40; i++) {
       fireEvent.keyDown(document.body, { key: "ArrowDown" });
     }
-    const tops = scrollTo.mock.calls.map((c) => (c[0] as { top: number }).top);
+    const tops = scrollToMock.mock.calls.map((c) => (c[0] as { top: number }).top);
     // 表示位置40行目(40行 * 40px)付近まで下方向へスクロールが要求される
     expect(Math.max(...tops)).toBeGreaterThan(1000);
   });
