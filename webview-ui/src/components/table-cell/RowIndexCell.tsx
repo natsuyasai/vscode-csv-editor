@@ -15,6 +15,8 @@ export const RowIndexCell: FC<RowIndexCellProps> = (props) => {
   const [{ isDragging }, drag] = useDrag({
     type: "ROW_DRAG",
     item: { index: props.rowIndex },
+    // ソート・フィルター適用中は並び替えできない
+    canDrag: !props.isDragDisabled,
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -22,6 +24,7 @@ export const RowIndexCell: FC<RowIndexCellProps> = (props) => {
 
   const [{ isOver }, drop] = useDrop({
     accept: "ROW_DRAG",
+    canDrop: () => !props.isDragDisabled,
     drop: (item: { index: number }) => {
       if (props.onRowReorder) {
         props.onRowReorder(item.index, props.rowIndex);
@@ -84,7 +87,7 @@ export const RowIndexCell: FC<RowIndexCellProps> = (props) => {
         ? styles.rowIndexCellHover
         : styles.rowIndexCellNormal
   } ${isDragging ? styles.rowIndexCellDragging : ""} ${
-    isDragging ? styles.cursorGrabbing : styles.cursorGrab
+    props.isDragDisabled ? "" : isDragging ? styles.cursorGrabbing : styles.cursorGrab
   }`;
 
   return (

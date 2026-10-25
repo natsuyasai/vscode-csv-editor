@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { identityRowIndexMapper } from "@/components/editable-table/rowIndexMapper";
 
 /**
  * オートフィル機能を提供するカスタムフック
@@ -6,10 +7,15 @@ import { useCallback, useState } from "react";
  * エクセルのようなオートフィル機能を実装します。
  * セルの右下のフィルハンドルをドラッグすることで、
  * 値のコピーまたは連番での自動入力が可能です。
+ *
+ * フィル範囲(fillStartCell/fillEndCell)は「表示位置」(ソート・フィルター後の並び)で保持し、
+ * `data` の参照と `updateCellsCallback` への書き込みは `viewToDataIndex` で
+ * データ位置へ変換して行う。
  */
 export const useAutoFill = <TData extends Record<string, unknown>>(
   data: TData[],
-  updateCellsCallback?: (cells: Array<{ rowIdx: number; colIdx: number; value: string }>) => void
+  updateCellsCallback?: (cells: Array<{ rowIdx: number; colIdx: number; value: string }>) => void,
+  viewToDataIndex: (viewIndex: number) => number | undefined = identityRowIndexMapper.toDataIndex
 ) => {
   const [fillStartCell, setFillStartCell] = useState<{ row: number; col: number } | null>(null);
   const [fillEndCell, setFillEndCell] = useState<{ row: number; col: number } | null>(null);
@@ -55,7 +61,11 @@ export const useAutoFill = <TData extends Record<string, unknown>>(
     }
 
     // 開始セルの値を取得
-    const startValue = data[fillStartCell.row]?.[`col${fillStartCell.col}`] as string;
+    const startDataRow = viewToDataIndex(fillStartCell.row);
+    const startValue =
+      startDataRow === undefined
+        ? undefined
+        : (data[startDataRow]?.[`col${fillStartCell.col}`] as string | undefined);
     if (startValue === undefined) {
       setIsFilling(false);
       setFillStartCell(null);
@@ -136,14 +146,19 @@ export const useAutoFill = <TData extends Record<string, unknown>>(
     }
 
     // セルを更新
-    if (cellsToFill.length > 0 && updateCellsCallback) {
-      updateCellsCallback(cellsToFill);
+    // 範囲は表示位置で計算済み。書き込み先をデータ位置へ変換する
+    const dataCellsToFill = cellsToFill.flatMap((cell) => {
+      const dataRow = viewToDataIndex(cell.rowIdx);
+      return dataRow === undefined ? [] : [{ ...cell, rowIdx: dataRow }];
+    });
+    if (dataCellsToFill.length > 0 && updateCellsCallback) {
+      updateCellsCallback(dataCellsToFill);
     }
 
     setIsFilling(false);
     setFillStartCell(null);
     setFillEndCell(null);
-  }, [isFilling, fillStartCell, fillEndCell, data, updateCellsCallback]);
+  }, [isFilling, fillStartCell, fillEndCell, data, updateCellsCallback, viewToDataIndex]);
 
   /**
    * フィル範囲に含まれるかチェック

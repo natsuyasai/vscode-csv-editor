@@ -1,13 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
+import { identityRowIndexMapper } from "@/components/editable-table/rowIndexMapper";
 
 /**
  * セル選択機能のカスタムフック
  * 複数セルの選択、一括編集、コピー&ペースト機能を提供
+ *
+ * 選択状態(selectedCells のキー)の行は「表示位置」(ソート・フィルター後の並び)で保持する。
+ * `data` や `updateCellsCallback` が扱う行は「データ位置」なので、
+ * `viewToDataIndex` で表示位置からデータ位置へ変換して読み書きする。
+ *
+ * @param data - 元データ（データ位置で参照）
+ * @param setData - 履歴管理なしのフォールバック用
+ * @param updateCellsCallback - セル更新コールバック（rowIdx はデータ位置）
+ * @param viewToDataIndex - 表示位置からデータ位置への変換（省略時は一致）
  */
 export const useCellSelection = <TData extends Record<string, unknown>>(
   data: TData[],
   setData: React.Dispatch<React.SetStateAction<TData[]>>,
-  updateCellsCallback?: (cells: Array<{ rowIdx: number; colIdx: number; value: string }>) => void
+  updateCellsCallback?: (cells: Array<{ rowIdx: number; colIdx: number; value: string }>) => void,
+  viewToDataIndex: (viewIndex: number) => number | undefined = identityRowIndexMapper.toDataIndex
 ) => {
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
   const [isSelecting, setIsSelecting] = useState(false);
@@ -102,13 +113,12 @@ export const useCellSelection = <TData extends Record<string, unknown>>(
     // 選択中のセルを更新
     if (updateCellsCallback) {
       // updateCellsCallbackがある場合はそれを使用（履歴管理あり）
-      const cellUpdates = Array.from(selectedCells).map((cellKey) => {
+      const cellUpdates: Array<{ rowIdx: number; colIdx: number; value: string }> = [];
+      selectedCells.forEach((cellKey) => {
         const [rowStr, colStr] = cellKey.split("-");
-        return {
-          rowIdx: parseInt(rowStr),
-          colIdx: parseInt(colStr),
-          value,
-        };
+        const dataRow = viewToDataIndex(parseInt(rowStr));
+        if (dataRow === undefined) return;
+        cellUpdates.push({ rowIdx: dataRow, colIdx: parseInt(colStr), value });
       });
       updateCellsCallback(cellUpdates);
     } else {
@@ -117,11 +127,11 @@ export const useCellSelection = <TData extends Record<string, unknown>>(
         const newData = [...old];
         selectedCells.forEach((cellKey) => {
           const [rowStr, colStr] = cellKey.split("-");
-          const rowIndex = parseInt(rowStr);
+          const rowIndex = viewToDataIndex(parseInt(rowStr));
           const colIndex = parseInt(colStr);
           const columnId = `col${colIndex}`;
 
-          if (newData[rowIndex]) {
+          if (rowIndex !== undefined && newData[rowIndex]) {
             newData[rowIndex] = {
               ...newData[rowIndex],
               [columnId]: value,
@@ -134,7 +144,7 @@ export const useCellSelection = <TData extends Record<string, unknown>>(
 
     // 選択をクリア
     setSelectedCells(new Set());
-  }, [selectedCells, setData, updateCellsCallback]);
+  }, [selectedCells, setData, updateCellsCallback, viewToDataIndex]);
 
   // 選択中のセルをコピー
   const handleCopy = useCallback(async () => {
@@ -181,7 +191,8 @@ export const useCellSelection = <TData extends Record<string, unknown>>(
       const cols: string[] = [];
       for (let col = minCol; col <= maxCol; col++) {
         const columnId = `col${col}`;
-        const value = (data[row]?.[columnId] as string) ?? "";
+        const dataRow = viewToDataIndex(row);
+        const value = (dataRow === undefined ? "" : (data[dataRow]?.[columnId] as string)) ?? "";
         cols.push(escapeTsvCell(value));
       }
       rows.push(cols.join("\t"));
@@ -195,7 +206,7 @@ export const useCellSelection = <TData extends Record<string, unknown>>(
     } catch (err) {
       console.error("クリップボードへのコピーに失敗しました:", err);
     }
-  }, [selectedCells, data]);
+  }, [selectedCells, data, viewToDataIndex]);
 
   // クリップボードからペースト
   const handlePaste = useCallback(async () => {
@@ -301,9 +312,10 @@ export const useCellSelection = <TData extends Record<string, unknown>>(
         const cellUpdates: Array<{ rowIdx: number; colIdx: number; value: string }> = [];
         rows.forEach((rowData, rowOffset) => {
           rowData.forEach((cellValue, colOffset) => {
-            const targetRow = minRow + rowOffset;
+            // 貼り付け位置は表示位置で計算し、書き込みはデータ位置へ変換する
+            const targetRow = viewToDataIndex(minRow + rowOffset);
             const targetCol = minCol + colOffset;
-            if (targetCol >= 0) {
+            if (targetRow !== undefined && targetCol >= 0) {
               cellUpdates.push({
                 rowIdx: targetRow,
                 colIdx: targetCol,
@@ -319,11 +331,11 @@ export const useCellSelection = <TData extends Record<string, unknown>>(
           const newData = [...old];
           rows.forEach((rowData, rowOffset) => {
             rowData.forEach((cellValue, colOffset) => {
-              const targetRow = minRow + rowOffset;
+              const targetRow = viewToDataIndex(minRow + rowOffset);
               const targetCol = minCol + colOffset;
               const columnId = `col${targetCol}`;
 
-              if (newData[targetRow] && targetCol >= 0) {
+              if (targetRow !== undefined && newData[targetRow] && targetCol >= 0) {
                 newData[targetRow] = {
                   ...newData[targetRow],
                   [columnId]: cellValue,
@@ -340,7 +352,7 @@ export const useCellSelection = <TData extends Record<string, unknown>>(
     } catch (err) {
       console.error("クリップボードからの読み取りに失敗しました:", err);
     }
-  }, [selectedCells, setData, updateCellsCallback]);
+  }, [selectedCells, setData, updateCellsCallback, viewToDataIndex]);
 
   // 選択をクリア
   const clearSelection = useCallback(() => {
