@@ -2,6 +2,7 @@
 import * as vscode from "vscode";
 import { ThemeKind, UpdateMessage, UpdateTheameMessage } from "../message/messageTypeToWebview";
 import { Message } from "../message/messageTypeToExtention";
+import { disposeAll } from "../util/dispose";
 import { getUri } from "../util/getUri";
 import { getNonce } from "../util/util";
 
@@ -14,7 +15,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
    */
   public static register(context: vscode.ExtensionContext): vscode.Disposable {
     // 現在アクティブなファイルを開くコマンドを登録
-    vscode.commands.registerCommand("csv-editor.openEditor", () => {
+    const openEditorCommand = vscode.commands.registerCommand("csv-editor.openEditor", () => {
       const activeEditor = vscode.window.activeTextEditor;
       if (!activeEditor) {
         vscode.window.showErrorMessage("csv-editor: No active editor.");
@@ -24,7 +25,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       vscode.commands.executeCommand("vscode.openWith", uri, CSVEditorProvider.viewType);
     });
 
-    return vscode.window.registerCustomEditorProvider(
+    const customEditorProvider = vscode.window.registerCustomEditorProvider(
       CSVEditorProvider.viewType,
       new CSVEditorProvider(context),
       {
@@ -35,6 +36,8 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
         supportsMultipleEditorsPerDocument: false, // 同一ドキュメントに対して複数のエディタをサポートするかどうか
       }
     );
+
+    return vscode.Disposable.from(openEditorCommand, customEditorProvider);
   }
 
   // package.jsonのviewTypeと一致させる
@@ -69,9 +72,14 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       } satisfies UpdateTheameMessage);
     }
 
-    vscode.window.onDidChangeActiveColorTheme(() => {
-      updateTheme();
-    });
+    // このパネルに紐づく購読。パネルを閉じたときにまとめて解除する
+    const disposables: vscode.Disposable[] = [];
+
+    disposables.push(
+      vscode.window.onDidChangeActiveColorTheme(() => {
+        updateTheme();
+      })
+    );
 
     function updateWebview() {
       webviewPanel.webview.postMessage({
@@ -85,24 +93,26 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     let editQueue: Promise<unknown> = Promise.resolve();
 
     // Update the webview when the document changes
-    const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
-      if (e.document.uri.toString() !== document.uri.toString()) {
-        return;
-      }
-      // 保存のみ等、内容に変更がない場合はwebviewへ通知しない
-      if (e.contentChanges.length === 0) {
-        return;
-      }
-      // webview自身が適用した編集は送り返さない
-      if (
-        appliedFromWebview !== undefined &&
-        CSVEditorProvider.normalizeEol(e.document.getText()) === appliedFromWebview
-      ) {
-        appliedFromWebview = undefined;
-        return;
-      }
-      updateWebview();
-    });
+    disposables.push(
+      vscode.workspace.onDidChangeTextDocument((e) => {
+        if (e.document.uri.toString() !== document.uri.toString()) {
+          return;
+        }
+        // 保存のみ等、内容に変更がない場合はwebviewへ通知しない
+        if (e.contentChanges.length === 0) {
+          return;
+        }
+        // webview自身が適用した編集は送り返さない
+        if (
+          appliedFromWebview !== undefined &&
+          CSVEditorProvider.normalizeEol(e.document.getText()) === appliedFromWebview
+        ) {
+          appliedFromWebview = undefined;
+          return;
+        }
+        updateWebview();
+      })
+    );
 
     const applyFromWebview = (csvText: string): Promise<boolean> => {
       const task = editQueue.then(async () => {
@@ -122,8 +132,8 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     };
 
     // Receive message from the webview.
-    const webviewReceiveMessageSubscription = webviewPanel.webview.onDidReceiveMessage(
-      async (e: Message) => {
+    disposables.push(
+      webviewPanel.webview.onDidReceiveMessage(async (e: Message) => {
         // console.log(`${e.type}:${e.payload}`);
         switch (e.type) {
           case "init":
@@ -153,13 +163,12 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
             await vscode.commands.executeCommand("vscode.openWith", document.uri, "default");
             return;
         }
-      }
+      })
     );
 
-    // Make sure we get rid of the listener when our editor is closed.
+    // Make sure we get rid of the listeners when our editor is closed.
     webviewPanel.onDidDispose(() => {
-      changeDocumentSubscription.dispose();
-      webviewReceiveMessageSubscription.dispose();
+      disposeAll(disposables);
     });
   }
 
