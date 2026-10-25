@@ -4,15 +4,8 @@ import { ThemeKind, UpdateMessage, UpdateTheameMessage } from "../message/messag
 import { isMessageToExtension } from "../message/messageTypeToExtention";
 import { disposeAll } from "../util/dispose";
 import { getUri } from "../util/getUri";
+import { loggerDisposable, logWarning } from "../util/logger";
 import { getNonce } from "../util/util";
-
-let outputChannel: vscode.OutputChannel | undefined;
-
-/** 不正メッセージなどの警告を出力するチャンネル（初回利用時に作成） */
-function logWarning(message: string): void {
-  outputChannel ??= vscode.window.createOutputChannel("CSV Editor");
-  outputChannel.appendLine(message);
-}
 
 /** ログ用に不正メッセージの概要だけを返す（payload の内容は出力しない） */
 function describeInvalidMessage(value: unknown): string {
@@ -54,7 +47,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       }
     );
 
-    return vscode.Disposable.from(openEditorCommand, customEditorProvider);
+    return vscode.Disposable.from(openEditorCommand, customEditorProvider, loggerDisposable());
   }
 
   // package.jsonのviewTypeと一致させる
