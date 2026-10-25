@@ -75,7 +75,7 @@ async function triggerRowContextMenu(canvasElement: HTMLElement, targetValue: st
   if (menuItem) {
     const link = menuItem.shadowRoot?.querySelector("a");
     if (link) {
-      await userEvent.click(link as HTMLElement);
+      await userEvent.click(link);
     } else {
       throw new Error(`Link not found in menu item "${targetValue}"`);
     }
