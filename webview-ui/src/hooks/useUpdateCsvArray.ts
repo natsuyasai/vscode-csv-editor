@@ -1,3 +1,4 @@
+import { inheritRowId } from "@/utilities/rowIdentity";
 import { useHistory } from "./useHistory";
 
 const NEW_COLUMN_HEADER = "new column";
@@ -90,12 +91,14 @@ export function useUpdateCsvArray(
     if (!isIgnoreHeaderRow) {
       correctionRowIdx += 1;
     }
+    // 変更のない行は同じ参照のまま使い、変更する行だけ行IDを引き継いで作り直す
     const updatedCSVArray = csvArray.map((row, idx) => {
-      const newRow = [...row];
-      if (idx === correctionRowIdx) {
-        newRow[colIdx] = text;
+      if (idx !== correctionRowIdx) {
+        return row;
       }
-      return newRow;
+      const newRow = [...row];
+      newRow[colIdx] = text;
+      return inheritRowId(row, newRow);
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
@@ -109,7 +112,7 @@ export function useUpdateCsvArray(
       const newRow = [...row];
       const isHeaderRow = !isIgnoreHeaderRow && rowIdx === 0;
       newRow.splice(insertColIdx, 0, isHeaderRow ? NEW_COLUMN_HEADER : "");
-      return newRow;
+      return inheritRowId(row, newRow);
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
@@ -121,7 +124,7 @@ export function useUpdateCsvArray(
     const updatedCSVArray = csvArray.map((row) => {
       const newRow = [...row];
       newRow.splice(deleteColIdx, 1);
-      return newRow;
+      return inheritRowId(row, newRow);
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
@@ -131,11 +134,12 @@ export function useUpdateCsvArray(
       return;
     }
     const updatedCSVArray = csvArray.map((row, rowIdx) => {
-      const newRow = [...row];
-      if (rowIdx === 0) {
-        newRow[idx] = text;
+      if (rowIdx !== 0) {
+        return row;
       }
-      return newRow;
+      const newRow = [...row];
+      newRow[idx] = text;
+      return inheritRowId(row, newRow);
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
@@ -145,7 +149,7 @@ export function useUpdateCsvArray(
       const newRow = [...row];
       const [movedCell] = newRow.splice(sourceIdx, 1);
       newRow.splice(targetIdx, 0, movedCell);
-      return newRow;
+      return inheritRowId(row, newRow);
     });
 
     setCSVArrayAndPushHistory(newCsvArray);
@@ -179,7 +183,9 @@ export function useUpdateCsvArray(
       return;
     }
 
-    const updatedCSVArray = csvArray.map((row) => [...row]);
+    // 変更のある行だけ、行IDを引き継いで作り直す。それ以外は同じ参照のまま使う
+    const updatedCSVArray = [...csvArray];
+    const copiedRows = new Set<number>();
 
     cells.forEach(({ rowIdx, colIdx, value }) => {
       let correctionRowIdx = rowIdx;
@@ -187,6 +193,12 @@ export function useUpdateCsvArray(
         correctionRowIdx += 1;
       }
       if (correctionRowIdx >= 0 && correctionRowIdx < updatedCSVArray.length) {
+        if (!copiedRows.has(correctionRowIdx)) {
+          copiedRows.add(correctionRowIdx);
+          updatedCSVArray[correctionRowIdx] = inheritRowId(csvArray[correctionRowIdx], [
+            ...csvArray[correctionRowIdx],
+          ]);
+        }
         updatedCSVArray[correctionRowIdx][colIdx] = value;
       }
     });
