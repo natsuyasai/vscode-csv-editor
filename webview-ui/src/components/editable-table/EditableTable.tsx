@@ -607,42 +607,21 @@ export const EditableTable: FC<EditableTableProps> = ({
   }, [isFilling, handleFillEnd]);
 
   // focusedCellが変更されたときに該当セルにフォーカスを当てる
+  // focusedCell.row は表示位置。DOM上の並び(仮想スクロールで描画中の行のみ)ではなく
+  // data-view-row-index 属性で対象を探し、未描画の行は仮想スクローラで描画対象にする
   useEffect(() => {
     if (focusedCell === null) {
       return;
     }
 
-    // セルのDOM要素を取得してフォーカスを当てる
-    // TanStack Tableのセル構造: td[role="gridcell"] > div[role="button"]
-    const allGridCells = document.querySelectorAll('td[role="gridcell"]');
+    scrollToViewRow(focusedCell.row);
 
-    for (const gridCell of Array.from(allGridCells)) {
-      const cellButton = gridCell.querySelector<HTMLElement>('div[role="button"]');
-      if (!cellButton) continue;
-
-      // セルの位置から判断する
-      const parentRow = gridCell.closest("tr");
-      if (!parentRow) continue;
-
-      // 行のインデックスを取得（tbodyの中での位置）
-      const tbody = parentRow.closest("tbody");
-      if (!tbody) continue;
-
-      const rows = Array.from(tbody.querySelectorAll("tr"));
-      const rowIndex = rows.indexOf(parentRow);
-
-      if (rowIndex !== focusedCell.row) continue;
-
-      // セルのインデックスを取得（行番号列を除く）
-      const cells = Array.from(parentRow.querySelectorAll('td[role="gridcell"]'));
-      const colIndex = cells.indexOf(gridCell) - 1; // -1 for row index column
-
-      if (colIndex === focusedCell.col) {
-        cellButton.focus();
-        return;
-      }
-    }
-  }, [focusedCell]);
+    const cellButton = tableContainerRef.current?.querySelector<HTMLElement>(
+      `tr[data-view-row-index="${focusedCell.row}"] td[data-col-index="${focusedCell.col}"] div[role="button"]`
+    );
+    // 未描画の行は、描画された時点で EditableCell が自身でフォーカスを取得する
+    cellButton?.focus();
+  }, [focusedCell, scrollToViewRow]);
 
   // 矢印キーでセル選択を移動
   useEffect(() => {
@@ -668,7 +647,8 @@ export const EditableTable: FC<EditableTableProps> = ({
 
       e.preventDefault();
 
-      const totalRows = data.length;
+      // 移動範囲は表示されている行(ソート・フィルター後)
+      const totalRows = viewRows.length;
       const totalCols = csvArray[0]?.length || 0;
 
       if (totalRows === 0 || totalCols === 0) {
@@ -712,7 +692,7 @@ export const EditableTable: FC<EditableTableProps> = ({
   }, [
     editingHeaderIndex,
     focusedCell,
-    data.length,
+    viewRows.length,
     csvArray,
     handleCellMouseDown,
     handleCellMouseUp,
@@ -829,6 +809,7 @@ export const EditableTable: FC<EditableTableProps> = ({
                   return (
                     <tr
                       key={row.id}
+                      data-view-row-index={virtualRow.index}
                       className={tableStyles.dataRow}
                       style={{
                         height: `${rowHeightValue}px`,
@@ -853,6 +834,7 @@ export const EditableTable: FC<EditableTableProps> = ({
                           <td
                             key={cell.id}
                             role="gridcell"
+                            data-col-index={colIndex}
                             className={tableStyles.dataCell}
                             onContextMenu={handleCellContextMenu}
                             style={{
