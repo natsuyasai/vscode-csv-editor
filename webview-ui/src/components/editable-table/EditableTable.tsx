@@ -10,7 +10,16 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { VscodeDivider } from "@vscode-elements/react-elements";
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Dispatch,
+  FC,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useAutoFill } from "@/hooks/useAutoFill";
@@ -32,12 +41,17 @@ import { RowIndexCell } from "../table-cell/RowIndexCell";
 import { FilterInput } from "../table-header/FilterInput";
 import { HeaderCell } from "../table-header/HeaderCell";
 import tableStyles from "./EditableTable.module.scss";
+import { buildRowData } from "./rowData";
 import {
   createRowIndexMapper,
   identityRowIndexMapper,
   type RowIndexMapper,
 } from "./rowIndexMapper";
 import type { EditableTableProps, RowData } from "./types";
+
+// データの正本は csvArray で、編集は常に updateCells 等のコールバック経由で行うため、
+// useCellSelection の setData フォールバック（履歴管理なし）は使われない
+const noopSetData: Dispatch<SetStateAction<RowData[]>> = () => {};
 
 export const EditableTable: FC<EditableTableProps> = ({
   csvArray,
@@ -64,7 +78,11 @@ export const EditableTable: FC<EditableTableProps> = ({
   } = useUpdateCsvArray(csvArray, setCSVArray, isIgnoreHeaderRow);
 
   const [rowHeight, setRowHeight] = useState(40);
-  const [data, setData] = useState<RowData[]>([]);
+  // TanStack Table用の行データ。csvArrayから導出し、状態としては二重に持たない
+  const data = useMemo(
+    () => buildRowData(csvArray, isIgnoreHeaderRow),
+    [csvArray, isIgnoreHeaderRow]
+  );
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
@@ -124,7 +142,7 @@ export const EditableTable: FC<EditableTableProps> = ({
     handleCopy,
     handlePaste,
     clearSelection,
-  } = useCellSelection(data, setData, _updateCells, viewToDataIndex);
+  } = useCellSelection(data, noopSetData, _updateCells, viewToDataIndex);
 
   // セルクリック時にfocusedCellも更新
   const handleCellMouseDown = useCallback(
@@ -282,55 +300,6 @@ export const EditableTable: FC<EditableTableProps> = ({
     changeEditingValue,
   } = useHeaderEditing(_updateCol);
 
-  // データの変更をCSV配列に反映
-  useEffect(() => {
-    if (data.length === 0) return;
-
-    const newCsvArray = [...csvArray];
-
-    // ヘッダー行を保持
-    const headerRow = isIgnoreHeaderRow ? [] : [csvArray[0]];
-
-    // データ行を更新
-    const dataRows = data.map((row) => {
-      const cells: string[] = [];
-      for (let i = 0; i < csvArray[0].length; i++) {
-        cells.push(row[`col${i}`] || "");
-      }
-      return cells;
-    });
-
-    const updatedCsvArray = [...headerRow, ...dataRows];
-
-    // 変更があった場合のみ更新
-    const hasChanges = JSON.stringify(newCsvArray) !== JSON.stringify(updatedCsvArray);
-    if (hasChanges) {
-      setCSVArray(updatedCsvArray);
-    }
-  }, [data, csvArray, isIgnoreHeaderRow, setCSVArray]);
-
-  // CSVデータから行データを生成
-  useMemo((): RowData[] => {
-    if (csvArray.length === 0) {
-      return [];
-    }
-    const startIndex = isIgnoreHeaderRow ? 0 : 1;
-    const newRows = csvArray.slice(startIndex).map((row, index) =>
-      row.reduce(
-        (acc, cell, colIndex) => {
-          acc[`col${colIndex}`] = cell;
-          return acc;
-        },
-        {
-          [ROW_IDX_KEY]: (index + 1).toString(),
-          [ROW_ID_KEY]: crypto.randomUUID(),
-        } as RowData
-      )
-    );
-    setData(newRows);
-    return newRows;
-  }, [csvArray, isIgnoreHeaderRow]);
-
   // ソート・フィルター適用中は表示順とデータ順が異なるため、行のドラッグ&ドロップによる並び替えを無効にする
   const isRowReorderDisabled = sorting.length > 0 || columnFilters.length > 0;
 
@@ -359,9 +328,10 @@ export const EditableTable: FC<EditableTableProps> = ({
     [_moveColumns]
   );
 
-  // 列定義を生成
+  // 列定義を生成。データ行の編集では作り直さないよう、ヘッダー行(列構成)だけに依存させる
+  const headerRow: readonly string[] | undefined = csvArray[0];
   const columns = useMemo((): ColumnDef<RowData>[] => {
-    if (csvArray.length === 0 || csvArray[0].length === 0) {
+    if (headerRow === undefined || headerRow.length === 0) {
       return [];
     }
 
@@ -409,7 +379,7 @@ export const EditableTable: FC<EditableTableProps> = ({
       },
     ];
 
-    csvArray[0].forEach((header, index) => {
+    headerRow.forEach((header, index) => {
       cols.push({
         id: `col${index}`,
         accessorKey: `col${index}`,
@@ -423,7 +393,7 @@ export const EditableTable: FC<EditableTableProps> = ({
 
     return cols;
   }, [
-    csvArray,
+    headerRow,
     isIgnoreHeaderRow,
     handleRowReorder,
     isRowReorderDisabled,
@@ -439,6 +409,8 @@ export const EditableTable: FC<EditableTableProps> = ({
   const table = useReactTable({
     data,
     columns,
+    // 行IDを行のキーにして、行の追加・削除・編集でも他の行を作り直さない
+    getRowId: (row) => row[ROW_ID_KEY],
     state: {
       sorting,
       columnFilters,
