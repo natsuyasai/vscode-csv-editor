@@ -127,7 +127,7 @@ suite("CSVEditorProvider", () => {
 
     test("webviewから拡張機能へのメッセージ送信", async () => {
       const document = await vscode.workspace.openTextDocument(testCsvFile);
-      let messageHandler: ((message: Message) => void) | undefined;
+      let messageHandler: ((message: Message) => unknown) | undefined;
 
       const mockWebview = {
         html: "",
@@ -175,7 +175,7 @@ suite("CSVEditorProvider", () => {
       };
 
       // メッセージハンドラーを呼び出し
-      messageHandler(updateMessage);
+      await messageHandler(updateMessage);
 
       // 適切な編集が適用されたか確認
       assert.ok(appliedEdit);
@@ -186,7 +186,7 @@ suite("CSVEditorProvider", () => {
 
     test("webviewメッセージを通じてフィルター操作を実行", async () => {
       const document = await vscode.workspace.openTextDocument(testCsvFile);
-      let messageHandler: ((message: Message) => void) | undefined;
+      let messageHandler: ((message: Message) => unknown) | undefined;
       const sentMessages: { type: string; payload?: string }[] = [];
 
       const mockWebview = {
@@ -234,77 +234,139 @@ suite("CSVEditorProvider", () => {
 
       // フィルター操作をシミュレート
       if (messageHandler) {
-        messageHandler(updateMessage);
+        await messageHandler(updateMessage);
       }
 
       // メッセージが送信されたか確認
       assert.ok(sentMessages.length > 0);
     });
 
-    test("保存実行", async () => {
-      const document = await vscode.workspace.openTextDocument(testCsvFile);
-      let messageHandler: ((message: Message) => void) | undefined;
-
+    function createHarness(document: vscode.TextDocument) {
+      const sentMessages: { type: string; payload?: string }[] = [];
+      let messageHandler: ((message: Message) => unknown) | undefined;
       const mockWebview = {
         html: "",
         cspSource: "vscode-resource:",
         asWebviewUri: (uri: vscode.Uri) => uri,
-        postMessage: () => Promise.resolve(true),
-        onDidReceiveMessage: (handler: (message: Message) => void) => {
+        postMessage: (message: { type: string; payload?: string }) => {
+          sentMessages.push(message);
+          return Promise.resolve(true);
+        },
+        onDidReceiveMessage: (handler: (message: Message) => unknown) => {
           messageHandler = handler;
           return { dispose: () => {} };
         },
       } as unknown as vscode.Webview;
-
+      let disposeHandler: (() => void) | undefined;
       const mockPanel = {
         webview: mockWebview,
         title: "CSV Editor",
-        onDidDispose: () => ({ dispose: () => {} }),
+        onDidDispose: (handler: () => void) => {
+          disposeHandler = handler;
+          return { dispose: () => {} };
+        },
         onDidChangeViewState: () => ({ dispose: () => {} }),
         dispose: () => {},
       } as unknown as vscode.WebviewPanel;
-
       provider.resolveCustomTextEditor(document, mockPanel, {
         isCancellationRequested: false,
         onCancellationRequested: () => ({ dispose: () => {} }),
       });
+      return {
+        sentMessages,
+        send: async (message: Message) => {
+          assert.ok(messageHandler, "Message handler should be registered");
+          await messageHandler(message);
+        },
+        dispose: () => disposeHandler?.(),
+      };
+    }
 
-      // 保存メッセージをシミュレート
+    const waitForEvents = () => new Promise((resolve) => setTimeout(resolve, 100));
+
+    test("updateメッセージはドキュメントを更新してダーティにするが保存しない", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      const harness = createHarness(document);
+      const newText = "Name,Age\n田中太郎,31";
+
+      await harness.send({ type: "update", payload: newText } satisfies UpdateMessage);
+
+      assert.strictEqual(document.getText(), newText);
+      assert.strictEqual(document.isDirty, true);
+      assert.strictEqual(
+        fs.readFileSync(testCsvFile.fsPath, "utf8").includes("田中太郎,31"),
+        false,
+        "ファイルは保存されていない"
+      );
+      harness.dispose();
+    });
+
+    test("末尾の内容も含めて全置換される", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      const harness = createHarness(document);
+
+      await harness.send({ type: "update", payload: "A\n" } satisfies UpdateMessage);
+
+      assert.strictEqual(document.getText(), "A\n");
+      harness.dispose();
+    });
+
+    test("自分が適用した編集はwebviewへ送り返さない", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      const harness = createHarness(document);
+
+      await harness.send({ type: "update", payload: "A,B\n1,2" } satisfies UpdateMessage);
+      await waitForEvents();
+
+      assert.strictEqual(
+        harness.sentMessages.filter((m) => m.type === "update").length,
+        0,
+        "エコーのupdateは送られない"
+      );
+      harness.dispose();
+    });
+
+    test("外部からの変更はwebviewへupdateとして送る", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      const harness = createHarness(document);
+
+      const edit = new vscode.WorkspaceEdit();
+      edit.insert(document.uri, new vscode.Position(0, 0), "X");
+      await vscode.workspace.applyEdit(edit);
+      await waitForEvents();
+
+      const updates = harness.sentMessages.filter((m) => m.type === "update");
+      assert.strictEqual(updates.length, 1);
+      assert.strictEqual(updates[0].payload, document.getText());
+      harness.dispose();
+    });
+
+    test("同じ内容のupdateではドキュメントを変更しない", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      const harness = createHarness(document);
+
+      await harness.send({ type: "update", payload: document.getText() } satisfies UpdateMessage);
+
+      assert.strictEqual(document.isDirty, false);
+      harness.dispose();
+    });
+
+    test("saveメッセージはドキュメントへ反映して保存する", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      const harness = createHarness(document);
       const saveData = "Name,Age,Department\n田中太郎,31,Engineering";
-      const saveMessage: SaveMessage = {
-        type: "save",
-        payload: saveData,
-      };
 
-      // モックワークスペース操作
-      let appliedEdit: vscode.WorkspaceEdit | undefined;
-      let savedUri: vscode.Uri | undefined;
+      await harness.send({ type: "save", payload: saveData } satisfies SaveMessage);
 
-      const originalApplyEdit = vscode.workspace.applyEdit;
-      const originalSave = vscode.workspace.save;
-
-      vscode.workspace.applyEdit = (edit: vscode.WorkspaceEdit) => {
-        appliedEdit = edit;
-        return Promise.resolve(true);
-      };
-
-      // @ts-expect-error: access private static
-      vscode.workspace.save = (uri: vscode.Uri) => {
-        savedUri = uri;
-        return Promise.resolve(true);
-      };
-
-      if (messageHandler) {
-        messageHandler(saveMessage);
-      }
-
-      // 編集と保存が実行されたか確認
-      assert.ok(appliedEdit);
-      assert.strictEqual(savedUri?.toString(), document.uri.toString());
-
-      // クリーンアップ
-      vscode.workspace.applyEdit = originalApplyEdit;
-      vscode.workspace.save = originalSave;
+      assert.strictEqual(document.isDirty, false);
+      assert.strictEqual(fs.readFileSync(testCsvFile.fsPath, "utf8"), saveData);
+      await waitForEvents();
+      assert.strictEqual(
+        harness.sentMessages.filter((m) => m.type === "update").length,
+        0,
+        "保存時もupdateは送り返さない"
+      );
+      harness.dispose();
     });
 
     test("テーマ変更", async () => {
@@ -363,7 +425,7 @@ suite("CSVEditorProvider", () => {
       const complexCsvUri = vscode.Uri.file(complexCsvPath);
 
       const document = await vscode.workspace.openTextDocument(complexCsvUri);
-      let messageHandler: ((message: Message) => void) | undefined;
+      let messageHandler: ((message: Message) => unknown) | undefined;
 
       const mockWebview = {
         html: "",
@@ -406,7 +468,7 @@ suite("CSVEditorProvider", () => {
       };
 
       if (messageHandler) {
-        messageHandler(updateMessage);
+        await messageHandler(updateMessage);
       }
 
       assert.ok(appliedEdit);
@@ -430,7 +492,7 @@ suite("CSVEditorProvider", () => {
       const largeCsvUri = vscode.Uri.file(largeCsvPath);
 
       const document = await vscode.workspace.openTextDocument(largeCsvUri);
-      let messageHandler: ((message: Message) => void) | undefined;
+      let messageHandler: ((message: Message) => unknown) | undefined;
 
       const mockWebview = {
         html: "",
@@ -479,7 +541,7 @@ suite("CSVEditorProvider", () => {
       };
 
       if (messageHandler) {
-        messageHandler(updateMessage);
+        await messageHandler(updateMessage);
       }
 
       assert.ok(appliedEdit);

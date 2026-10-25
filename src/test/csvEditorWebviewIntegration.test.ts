@@ -32,14 +32,14 @@ suite("CSVエディター Webview統合テスト", () => {
     testCsvFile = vscode.Uri.file(csvPath);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // 開いているエディターを閉じる（Windowsではファイルが掴まれたままだと削除に失敗するため先に閉じる）
+    await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+
     // 一時ファイルをクリーンアップ
     if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
-
-    // 開いているエディターを閉じる
-    vscode.commands.executeCommand("workbench.action.closeAllEditors");
   });
 
   test("CSVファイルをカスタムエディターで開く", async function () {

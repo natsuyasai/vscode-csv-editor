@@ -79,16 +79,51 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
         payload: document.getText(),
       } satisfies UpdateMessage);
     }
+    // webviewから適用した編集のテキスト（エコー抑止用）
+    let appliedFromWebview: string | undefined;
+    // 編集の適用を直列化するためのキュー
+    let editQueue: Promise<unknown> = Promise.resolve();
+
     // Update the webview when the document changes
     const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
-      if (e.document.uri.toString() === document.uri.toString()) {
-        updateWebview();
+      if (e.document.uri.toString() !== document.uri.toString()) {
+        return;
       }
+      // 保存のみ等、内容に変更がない場合はwebviewへ通知しない
+      if (e.contentChanges.length === 0) {
+        return;
+      }
+      // webview自身が適用した編集は送り返さない
+      if (
+        appliedFromWebview !== undefined &&
+        CSVEditorProvider.normalizeEol(e.document.getText()) === appliedFromWebview
+      ) {
+        appliedFromWebview = undefined;
+        return;
+      }
+      updateWebview();
     });
+
+    const applyFromWebview = (csvText: string): Promise<boolean> => {
+      const task = editQueue.then(async () => {
+        const normalized = CSVEditorProvider.normalizeEol(csvText);
+        if (normalized === CSVEditorProvider.normalizeEol(document.getText())) {
+          return true;
+        }
+        appliedFromWebview = normalized;
+        const ok = await CSVEditorProvider.replaceWholeDocument(document, csvText);
+        if (!ok) {
+          appliedFromWebview = undefined;
+        }
+        return ok;
+      });
+      editQueue = task.catch(() => undefined);
+      return task;
+    };
 
     // Receive message from the webview.
     const webviewReceiveMessageSubscription = webviewPanel.webview.onDidReceiveMessage(
-      (e: Message) => {
+      async (e: Message) => {
         // console.log(`${e.type}:${e.payload}`);
         switch (e.type) {
           case "init":
@@ -96,14 +131,19 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
             updateWebview();
             return;
           case "update":
+            // ドキュメントへ反映のみ行う（保存はしない。ダーティ状態になる）
             if (e.payload !== undefined) {
-              this.updateTextDocument(document, e.payload);
+              await applyFromWebview(e.payload);
             }
             return;
           case "save":
             if (e.payload !== undefined) {
-              this.updateTextDocument(document, e.payload);
+              const ok = await applyFromWebview(e.payload);
+              if (!ok) {
+                return;
+              }
             }
+            await document.save();
             return;
           case "reload":
             updateWebview();
@@ -169,14 +209,23 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     `;
   }
 
-  private updateTextDocument(document: vscode.TextDocument, csvText: string) {
+  private static normalizeEol(text: string): string {
+    return text.replace(/\r\n/g, "\n");
+  }
+
+  /**
+   * ドキュメント全体を置換する。保存はしない。
+   */
+  private static replaceWholeDocument(
+    document: vscode.TextDocument,
+    csvText: string
+  ): Thenable<boolean> {
     const edit = new vscode.WorkspaceEdit();
-
-    // Just replace the entire document every time for this example extension.
-    // A more complete extension should compute minimal edits instead.
-    edit.replace(document.uri, new vscode.Range(0, 0, document.lineCount, 0), csvText);
-    vscode.workspace.applyEdit(edit);
-
-    return vscode.workspace.save(document.uri);
+    const fullRange = new vscode.Range(
+      new vscode.Position(0, 0),
+      document.positionAt(document.getText().length)
+    );
+    edit.replace(document.uri, fullRange, csvText);
+    return vscode.workspace.applyEdit(edit);
   }
 }
