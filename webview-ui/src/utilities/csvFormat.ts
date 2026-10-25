@@ -11,9 +11,7 @@ export interface CsvParseError {
 }
 
 /** CSVパース結果（成功/失敗の判別可能なユニオン） */
-export type ParseCsvResult =
-  | { ok: true; rows: string[][] }
-  | { ok: false; error: CsvParseError };
+export type ParseCsvResult = { ok: true; rows: string[][] } | { ok: false; error: CsvParseError };
 
 /**
  * CSVテキストをパースする。例外は投げず、結果を判別可能なユニオン型で返す。
@@ -21,7 +19,7 @@ export type ParseCsvResult =
  */
 export function parseCsv(text: string): ParseCsvResult {
   try {
-    const rows = csvParseSync(text, { relax_column_count: true }) as string[][];
+    const rows: string[][] = csvParseSync(text, { relax_column_count: true });
     return { ok: true, rows: padRows(rows) };
   } catch (error) {
     return { ok: false, error: toCsvParseError(error) };
