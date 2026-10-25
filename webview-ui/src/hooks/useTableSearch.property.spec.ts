@@ -432,7 +432,11 @@ describe("useTableSearch - Property-Based Tests", () => {
           expect(result.current.matchedItemPositions.length).toBe(expectedMatches);
         }
       ),
-      { numRuns: 30 }
+      {
+        numRuns: 30,
+        // 過去の反例（数値の0がfalsyとして検索対象から漏れる）を固定して常に検証する
+        examples: [[[{ [ROW_IDX_KEY]: "", [ROW_ID_KEY]: "", col0: 0, col1: "" }], 0]],
+      }
     );
   });
 });

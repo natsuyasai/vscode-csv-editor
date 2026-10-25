@@ -45,7 +45,6 @@ export const useTableSearch = <TData extends Record<string, unknown>>(
           const colIdx = parseInt(key.replace("col", ""));
           const value = row[key];
           if (
-            value &&
             (typeof value === "string" || typeof value === "number") &&
             String(value).toLowerCase().includes(lowerText)
           ) {
