@@ -11,7 +11,7 @@ suite("保存・連続updateと外部変更の競合", () => {
   /** showWarningMessage をスタブ化して呼び出しを記録する。必ず restore() で復元する */
   function stubWarning() {
     const windowApi = vscode.window as unknown as {
-      showWarningMessage: (...args: unknown[]) => Thenable<undefined>;
+      showWarningMessage: (...args: unknown[]) => Promise<undefined>;
     };
     const original = windowApi.showWarningMessage;
     const calls: unknown[][] = [];
