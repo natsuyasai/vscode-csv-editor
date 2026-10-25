@@ -134,3 +134,37 @@ describe("useColumnAlignment", () => {
     expect(result.current.columnAlignments[0]).toEqual(alignment2);
   });
 });
+
+describe("useColumnAlignment 列の挿入・削除・移動への追従 (#86)", () => {
+  const right = { vertical: "center", horizontal: "right" } as const;
+  const setup = () => {
+    const hook = renderHook(({ columnIndex }) => useColumnAlignment(columnIndex), {
+      initialProps: { columnIndex: 1 as number | null },
+    });
+    act(() => hook.result.current.handleAlignmentChange(right));
+    return hook.result;
+  };
+
+  it("列挿入で文字寄せが同じ列に付いたままになる", () => {
+    const result = setup();
+    act(() => result.current.onColumnInserted(0));
+    expect(result.current.getColumnAlignment(1)).toBeUndefined();
+    expect(result.current.getColumnAlignment(2)).toEqual(right);
+  });
+
+  it("列削除で文字寄せが同じ列に付いたままになり、削除列の設定は消える", () => {
+    const result = setup();
+    act(() => result.current.onColumnDeleted(0));
+    expect(result.current.getColumnAlignment(0)).toEqual(right);
+    expect(result.current.getColumnAlignment(1)).toBeUndefined();
+    act(() => result.current.onColumnDeleted(0));
+    expect(result.current.columnAlignments).toEqual({});
+  });
+
+  it("列移動で文字寄せが列に付いていく", () => {
+    const result = setup();
+    act(() => result.current.onColumnMoved(1, 0));
+    expect(result.current.getColumnAlignment(0)).toEqual(right);
+    expect(result.current.getColumnAlignment(1)).toBeUndefined();
+  });
+});
