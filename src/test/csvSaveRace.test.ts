@@ -8,6 +8,57 @@ import { createProviderHarness, openCsv, replaceAll, useTempDir } from "./helper
 suite("保存・連続updateと外部変更の競合", () => {
   const temp = useTempDir("save-race");
 
+  /** showWarningMessage をスタブ化して呼び出しを記録する。必ず restore() で復元する */
+  function stubWarning() {
+    const windowApi = vscode.window as unknown as {
+      showWarningMessage: (...args: unknown[]) => Thenable<undefined>;
+    };
+    const original = windowApi.showWarningMessage;
+    const calls: unknown[][] = [];
+    windowApi.showWarningMessage = (...args: unknown[]) => {
+      calls.push(args);
+      return Promise.resolve(undefined);
+    };
+    return {
+      calls,
+      restore: () => {
+        windowApi.showWarningMessage = original;
+      },
+    };
+  }
+
+  test("競合で保存が破棄されたときは警告を1回表示する（モーダルにしない）", async () => {
+    const document = await openCsv(temp.writeCsv("warn.csv", "a,b\n1,2\n"));
+    const harness = createProviderHarness(document);
+    const warning = stubWarning();
+    try {
+      const savePromise = harness.send({ type: "save", payload: "a,b\n1,2\n3,4\n" });
+      const externalPromise = replaceAll(document, "ext,ext\n0,0\n");
+      await Promise.all([savePromise, externalPromise]);
+
+      assert.strictEqual(warning.calls.length, 1);
+      assert.ok((warning.calls[0][0] as string).includes("保存できませんでした"));
+      assert.strictEqual(warning.calls[0].length, 1, "モーダル等のオプションを渡さない");
+    } finally {
+      warning.restore();
+    }
+  });
+
+  test("正常なsave/updateでは警告を表示しない", async () => {
+    const document = await openCsv(temp.writeCsv("nowarn.csv", "a,b\n1,2\n"));
+    const harness = createProviderHarness(document);
+    const warning = stubWarning();
+    try {
+      await harness.send({ type: "update", payload: "a,b\n1,2\n3,4\n" });
+      await harness.send({ type: "save", payload: "a,b\n9,9\n" });
+
+      assert.strictEqual(document.isDirty, false);
+      assert.strictEqual(warning.calls.length, 0);
+    } finally {
+      warning.restore();
+    }
+  });
+
   test("save送信中に外部変更が入っても例外・デッドロックなく完了する", async () => {
     const filePath = temp.writeCsv("race.csv", "a,b\n1,2\n");
     const document = await openCsv(filePath);
