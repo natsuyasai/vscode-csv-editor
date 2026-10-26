@@ -1,11 +1,11 @@
-import { isLargeMessageToWebview, type LargeMessageToWebview } from "@message/largeMessages";
+import type { LargeMessageToWebview } from "@message/largeMessages";
 import type { ThemeKind } from "@message/messageTypeToWebview";
-import { useCallback, useState } from "react";
-import { useEventListener } from "../../hooks/useEventListener";
+import { useCallback, useEffect, useState } from "react";
 import { LargeModeBanner } from "../LargeModeBanner/LargeModeBanner";
 import { LargeTable } from "../LargeTable/LargeTable";
 import { RemoteRowSource } from "../rowSource/RemoteRowSource";
 import styles from "./LargeApp.module.scss";
+import type { LargeMessageHub } from "./largeMessageHub";
 
 export type LargeInitMessage = Extract<LargeMessageToWebview, { type: "large/init" }>;
 
@@ -13,6 +13,8 @@ export interface LargeAppProps {
   /** 大容量モードに切り替えるきっかけになった最初の `large/init` */
   init: LargeInitMessage;
   theme: ThemeKind;
+  /** AppRouter が検証済みのメッセージを渡す中継（切り替え直後に届いたものもためてある） */
+  messages: LargeMessageHub;
 }
 
 /** `large/progress`（kind: index）の進捗を、バナーに渡す値（完了なら null）にする */
@@ -24,7 +26,7 @@ const toIndexingRatio = (ratio: number): number | null => (ratio >= 1 ? null : r
  * - キーボードショートカットは登録しない。特に Ctrl+Z / Ctrl+Y は処理も preventDefault /
  *   stopPropagation もせず、VSCode の Undo/Redo に委ねる（スパイク S1 の決定）
  */
-export function LargeApp({ init, theme }: LargeAppProps) {
+export function LargeApp({ init, theme, messages }: LargeAppProps) {
   const [error, setError] = useState<string | null>(null);
   const [restrictions, setRestrictions] = useState(init.restrictions);
   const [encoding, setEncoding] = useState(init.encoding);
@@ -40,12 +42,7 @@ export function LargeApp({ init, theme }: LargeAppProps) {
   );
 
   const handleMessage = useCallback(
-    (event: MessageEvent<unknown>) => {
-      // 想定外のメッセージ（他の送信元・不正な形式・通常モードのメッセージ）は無視する
-      if (!isLargeMessageToWebview(event.data)) {
-        return;
-      }
-      const message = event.data;
+    (message: LargeMessageToWebview) => {
       switch (message.type) {
         case "large/init":
           // 開き直し（revert 等）。表のキャッシュは RemoteRowSource が破棄する
@@ -68,7 +65,8 @@ export function LargeApp({ init, theme }: LargeAppProps) {
     [source]
   );
 
-  useEventListener("message", handleMessage, window);
+  // 受け手を付けた時点で、描画前に届いていたメッセージも順に処理される
+  useEffect(() => messages.attach(handleMessage), [messages, handleMessage]);
 
   return (
     <div className={styles.root}>

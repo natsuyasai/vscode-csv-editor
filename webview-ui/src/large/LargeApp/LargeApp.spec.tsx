@@ -1,6 +1,7 @@
 import type { LargeMessageToExtension, LargeMessageToWebview } from "@message/largeMessages";
 import { act, render, screen } from "@testing-library/react";
 import { LargeApp } from "./LargeApp";
+import { createLargeMessageHub, type LargeMessageHub } from "./largeMessageHub";
 
 const postMessage = vi.hoisted(() => vi.fn());
 
@@ -20,9 +21,17 @@ const INIT: LargeInit = {
   restrictions: ["列の挿入・削除", "オートフィル"],
 };
 
-function receive(data: unknown) {
+// メッセージの検証と振り分けは AppRouter が行い、LargeApp は中継（hub）から受け取る
+let hub: LargeMessageHub;
+
+function show(init: LargeInit = INIT) {
+  hub = createLargeMessageHub();
+  return render(<LargeApp init={init} theme="light" messages={hub} />);
+}
+
+function receive(data: LargeMessageToWebview) {
   act(() => {
-    window.dispatchEvent(new MessageEvent("message", { data }));
+    hub.dispatch(data);
   });
 }
 
@@ -44,7 +53,7 @@ describe("LargeApp", () => {
   });
 
   test("large/init の内容でバナーと表を表示し、先頭の行を要求する", () => {
-    render(<LargeApp init={INIT} theme="light" />);
+    show();
     expect(screen.getByText("大容量モード（一部機能制限中）")).toBeInTheDocument();
     expect(screen.getByText("文字コード: UTF-8")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "name" })).toBeInTheDocument();
@@ -56,7 +65,7 @@ describe("LargeApp", () => {
   });
 
   test("届いた行を表示する", () => {
-    render(<LargeApp init={INIT} theme="light" />);
+    show();
     const request = getRowsRequests()[0];
     receive({
       type: "large/rows",
@@ -69,7 +78,7 @@ describe("LargeApp", () => {
   });
 
   test("インデックス作成の進捗を表示し、完了したら消す", () => {
-    render(<LargeApp init={INIT} theme="light" />);
+    show();
     expect(screen.getByRole("progressbar")).toHaveAttribute("value", "0");
     receive({ type: "large/progress", kind: "index", ratio: 0.5 });
     expect(screen.getByRole("progressbar")).toHaveAttribute("value", "50");
@@ -81,26 +90,30 @@ describe("LargeApp", () => {
   });
 
   test("インデックス作成済みなら進捗を表示しない", () => {
-    render(<LargeApp init={{ ...INIT, indexing: false }} theme="light" />);
+    show({ ...INIT, indexing: false });
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
 
   test("行数の変化（無効化）を表に反映する", () => {
-    render(<LargeApp init={{ ...INIT, rowCount: 3 }} theme="light" />);
+    show({ ...INIT, rowCount: 3 });
     expect(screen.queryByRole("rowheader", { name: "5" })).not.toBeInTheDocument();
     receive({ type: "large/invalidate", revision: 1, rowCount: 5 });
     expect(screen.getByRole("rowheader", { name: "5" })).toBeInTheDocument();
   });
 
   test("拡張機能からのエラーを表示する", () => {
-    render(<LargeApp init={INIT} theme="light" />);
+    show();
     receive({ type: "large/error", message: "読み込みに失敗しました" });
     expect(screen.getByRole("alert")).toHaveTextContent("読み込みに失敗しました");
   });
 
-  test("不正なメッセージは無視する", () => {
-    render(<LargeApp init={INIT} theme="light" />);
-    receive({ type: "large/progress", kind: "index", ratio: 5 });
+  test("window に直接届いたメッセージは処理しない（受信は AppRouter の中継だけ）", () => {
+    show();
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", { data: { type: "large/progress", kind: "index", ratio: 1 } })
+      );
+    });
     expect(screen.getByRole("progressbar")).toHaveAttribute("value", "0");
   });
 
@@ -112,7 +125,7 @@ describe("LargeApp", () => {
   ])(
     "Ctrl+%s（Shift: %s）は処理せず止めもしない（VSCode の Undo/Redo に委ねる）",
     (key, shiftKey) => {
-      render(<LargeApp init={INIT} theme="light" />);
+      show();
       postMessage.mockClear();
       const reached = vi.fn();
       window.addEventListener("keydown", reached);
