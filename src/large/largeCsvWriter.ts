@@ -14,11 +14,11 @@ import type { RowIndex, RowIndexSummary } from "./rowIndex";
 
 /**
  * 書き出す行の並びの1区間。
- * - `original`: 元ファイルの行 `[startRow, endRow)`（ファイル上の行番号。0 はヘッダー行）。バイト列をそのままコピーする
+ * - `original`: 元ファイルの行 `[start, end)`（ファイル上の行番号。0 はヘッダー行）。バイト列をそのままコピーする
  * - `row`: 編集した行・追加した行。`stringifyRow` → エンコードして書く
  */
 export type WriteSegment =
-  { kind: "original"; startRow: number; endRow: number } | { kind: "row"; row: readonly string[] };
+  { kind: "original"; start: number; end: number } | { kind: "row"; row: readonly string[] };
 
 export interface WriteProgress {
   /** 書いた行数 */
@@ -169,33 +169,33 @@ async function writeContent(
       await output.flushIfFull();
       continue;
     }
-    const { startRow, endRow } = segment;
+    const { start, end } = segment;
     if (
-      !Number.isInteger(startRow) ||
-      !Number.isInteger(endRow) ||
-      startRow < 0 ||
-      endRow < startRow ||
-      endRow > index.rowCount
+      !Number.isInteger(start) ||
+      !Number.isInteger(end) ||
+      start < 0 ||
+      end < start ||
+      end > index.rowCount
     ) {
       throw new RangeError(
-        `元の行の区間が不正です: [${String(startRow)}, ${String(endRow)})（行数 ${String(index.rowCount)}）`
+        `元の行の区間が不正です: [${String(start)}, ${String(end)})（行数 ${String(index.rowCount)}）`
       );
     }
-    if (startRow === endRow) {
+    if (start === end) {
       continue;
     }
     if (starts.count > 0) {
       output.write(eol);
     }
-    const base = index.getRowRange(startRow).start;
+    const base = index.getRowRange(start).start;
     const offset = output.position - base;
-    let lastRange = index.getRowRange(startRow);
-    for (let r = startRow; r < endRow; r++) {
+    let lastRange = index.getRowRange(start);
+    for (let r = start; r < end; r++) {
       lastRange = index.getRowRange(r);
       starts.push(lastRange.start + offset);
     }
     await output.copyFrom(source, base, lastRange.end, chunkSize, signal);
-    output.rowsWritten += endRow - startRow;
+    output.rowsWritten += end - start;
     lastRowEmpty = lastRange.end === lastRange.start;
   }
 

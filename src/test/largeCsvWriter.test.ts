@@ -18,6 +18,10 @@ import { skipsBom, type LargeEncoding } from "../large/largeEncoding";
 import { encodeText } from "../large/largeTextEncoder";
 import { RowIndex, type RowIndexSummary } from "../large/rowIndex";
 import type { RecordDelimiter } from "../shared/csv/rowScanner";
+import type { RowSegment } from "../shared/large/rowStore";
+
+/** RowStore.segments() の区間をそのまま渡せること（型の互換性をコンパイル時に確かめる） */
+const _rowStoreSegmentsAreWritable: Iterable<WriteSegment> = [] as RowSegment[];
 
 const hex = (bytes: Uint8Array) => Buffer.from(bytes).toString("hex").toUpperCase();
 
@@ -32,11 +36,11 @@ interface Opened {
 const all = (opened: Opened): WriteSegment[] =>
   opened.summary.rowCount === 0
     ? []
-    : [{ kind: "original", startRow: 0, endRow: opened.summary.rowCount }];
-const original = (startRow: number, endRow: number): WriteSegment => ({
+    : [{ kind: "original", start: 0, end: opened.summary.rowCount }];
+const original = (start: number, end: number): WriteSegment => ({
   kind: "original",
-  startRow,
-  endRow,
+  start,
+  end,
 });
 const row = (...cells: string[]): WriteSegment => ({ kind: "row", row: cells });
 
@@ -554,8 +558,8 @@ suite("LargeCsvWriter（大容量CSVの保存）", () => {
             continue;
           }
           const last = segments[segments.length - 1] as WriteSegment | undefined;
-          if (last?.kind === "original" && last.endRow === i) {
-            last.endRow++;
+          if (last?.kind === "original" && last.end === i) {
+            last.end++;
           } else {
             segments.push(original(i, i + 1));
           }
