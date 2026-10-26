@@ -1,10 +1,11 @@
 import { useId, useState, type ReactNode } from "react";
+import { toEncodingLabel } from "./encodingLabel";
 import styles from "./LargeModeBanner.module.scss";
 
 export interface LargeModeBannerProps {
   /** 制限している機能の表示名一覧（拡張機能の `large/init` の restrictions） */
   restrictions: string[];
-  /** 読み込みに使った文字コード */
+  /** 読み込みに使った文字コード（拡張機能の内部値。表示名に変換して表示する） */
   encoding: string;
   /** 行インデックス作成の進捗（0〜1）。作成中でなければ null */
   indexingRatio: number | null;
@@ -29,7 +30,7 @@ export function LargeModeBanner({
     <section className={styles.container} aria-label="大容量モード">
       <div className={styles.summary}>
         <span className={styles.title}>大容量モード（一部機能制限中）</span>
-        <span className={styles.encoding}>文字コード: {encoding}</span>
+        <span className={styles.encoding}>文字コード: {toEncodingLabel(encoding)}</span>
         <button
           type="button"
           className={styles.toggle}

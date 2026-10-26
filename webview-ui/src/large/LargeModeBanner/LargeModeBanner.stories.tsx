@@ -12,7 +12,7 @@ const meta: Meta<typeof LargeModeBanner> = {
   },
   args: {
     restrictions: RESTRICTIONS,
-    encoding: "UTF-8",
+    encoding: "utf-8",
     indexingRatio: null,
   },
 };
@@ -27,6 +27,15 @@ export const Default: Story = {
     await expect(canvas.getByText("大容量モード（一部機能制限中）")).toBeVisible();
     await expect(canvas.getByText("文字コード: UTF-8")).toBeVisible();
     await expect(canvas.queryByRole("progressbar")).not.toBeInTheDocument();
+  },
+};
+
+export const EncodingLabel: Story = {
+  name: "文字コードの表示名（UTF-8 BOM付き）",
+  args: { encoding: "utf-8-bom" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("文字コード: UTF-8 (BOM付き)")).toBeVisible();
   },
 };
 

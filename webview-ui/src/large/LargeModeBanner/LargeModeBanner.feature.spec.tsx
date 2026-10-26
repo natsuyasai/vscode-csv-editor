@@ -29,6 +29,18 @@ describeFeature(feature, ({ Scenario, AfterEachScenario }) => {
     });
   });
 
+  Scenario("文字コードは選択肢と同じ表示名で表示される", ({ Given, Then }) => {
+    Given("文字コード utf-8-bom の大容量ファイルを開いている", () => {
+      render(
+        <LargeModeBanner restrictions={RESTRICTIONS} encoding="utf-8-bom" indexingRatio={null} />
+      );
+    });
+    Then("文字コードは「UTF-8 (BOM付き)」と表示される", () => {
+      expect(screen.getByText("文字コード: UTF-8 (BOM付き)")).toBeInTheDocument();
+      expect(screen.queryByText(/utf-8-bom/)).not.toBeInTheDocument();
+    });
+  });
+
   Scenario("制限している機能の一覧を確認できる", ({ Given, When, Then }) => {
     Given("大容量モードで開いている", () => {
       render(<LargeModeBanner restrictions={RESTRICTIONS} encoding="UTF-8" indexingRatio={null} />);
