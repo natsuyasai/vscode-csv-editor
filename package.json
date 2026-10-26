@@ -80,7 +80,8 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "eslint src && node scripts/check-feature-sync.mjs",
+    "test:scripts": "node --test scripts/*.test.mjs",
     "test": "vscode-test",
     "format": "prettier --write \"src/**/*.ts\""
   },

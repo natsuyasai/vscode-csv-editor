@@ -46,6 +46,7 @@ t-wada（和田卓人）が推奨するTDDの進め方に従って実装を行�
 - ユーティリティテスト: `webview-ui/src/utilities/<utilName>.spec.ts`
 - Storybookテスト: `webview-ui/src/components/<dir>/<Name>.stories.tsx`（play function）
 - プロパティベーステスト: `webview-ui/src/<dir>/<Name>.property.spec.ts`
+- Gherkin: webview は `<Name>.feature` + `<Name>.feature.spec.ts(x)`、拡張機能は `src/test/<name>.feature` + `<name>.test.ts`
 - Story/テスト共通ヘルパー: `webview-ui/src/test-utils/`
 
 ### テスト実行コマンド
@@ -83,6 +84,10 @@ describe("対象の名前", () => {
 - 外部パッケージ → vitest → ローカルインポート
 - 同グループ内はアルファベット順
 - グループ間の空行は不要（`newlines-between: "never"`）
+
+### Gherkin（仕様駆動）で進める場合
+
+振る舞い・結合寄りの仕様は「`.feature` 作成 → ステップ定義（レッド）→ 実装（グリーン）→ リファクタリング」の順に進める。未実装のシナリオ/ステップはスイート失敗になるので、これをレッドとして使う。書き方・注意点・使い分けは CLAUDE.md「Gherkin による仕様駆動テスト」を参照。
 
 ## 進め方の例
 

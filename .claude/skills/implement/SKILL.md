@@ -34,11 +34,13 @@ git checkout -b <type>/<feature>   # 例: feat/csv-export, fix/column-resize
 ### Step 3: TDD で実装（`/tdd` 準拠）
 
 各ステップは Red → Green → Refactor を厳守する。詳細は `/tdd` を参照。
+プランに `.feature` がある場合は「`.feature` 作成 → ステップ定義（レッド）→ 実装（グリーン）→ リファクタリング」の順で進める（CLAUDE.md「Gherkin による仕様駆動テスト」参照）。
 
 ### Step 4: 多層テストの作成
 
 | 種別 | 目的 | 配置（コロケーション） | 実行 |
 |------|------|------------------------|------|
+| Gherkin（仕様） | 振る舞い・結合寄りの仕様 | webview: `<Name>.feature` + `<Name>.feature.spec.ts(x)` / 拡張機能: `src/test/<name>.feature` + `<name>.test.ts` | `npm run test:unit` / `npm test`（整合検査は `npm run lint`） |
 | vitest 単体テスト | hooks / stores / utilities / 純ロジック | `webview-ui/src/<dir>/<Name>.spec.ts(x)` | `npm run test:unit` |
 | Storybook カタログ | コンポーネントの各バリエーション・テーマ | `webview-ui/src/<dir>/<Name>.stories.tsx` | Storybook |
 | play function（画面単体） | 各コンポーネントのインタラクション検証 | 上記 Story 内の `play` | `npm run test:story` |
