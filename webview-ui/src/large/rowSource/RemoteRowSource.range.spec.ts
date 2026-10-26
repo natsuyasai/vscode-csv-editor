@@ -187,3 +187,29 @@ describe("RemoteRowSource.fetchRows（貼り付け用）", () => {
     expect(onError).not.toHaveBeenCalled();
   });
 });
+
+describe("RemoteRowSource.fetchRows（応答がすぐ届く場合）", () => {
+  it("分けた要求の応答が送った直後に届いても、全ての応答がそろってから解決する", async () => {
+    const holder: { source?: RemoteRowSource } = {};
+    const source = new RemoteRowSource({
+      postMessage: (message) => {
+        if (message.type === "large/getRows") {
+          holder.source?.handleMessage({
+            type: "large/rows",
+            reqId: message.reqId,
+            start: message.start,
+            rows: Array.from({ length: message.count }, (_, i) => [String(message.start + i)]),
+            handles: Array.from({ length: message.count }, (_, i) => message.start + i + 1),
+          });
+        }
+      },
+      header: ["a"],
+      rowCount: 12000,
+      pageSize: PAGE,
+    });
+    holder.source = source;
+    const result = await source.fetchRows(0, 12000);
+    expect(result.rows).toHaveLength(12000);
+    expect(result.rows[11999]).toEqual(["11999"]);
+  });
+});

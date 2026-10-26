@@ -278,13 +278,18 @@ export class RemoteRowSource extends ObservableRowSource implements RowSource {
       this.settleFetch(job);
       return;
     }
+    // 応答がすぐ届いても数え終わる前に完了しないよう、全ての要求を登録してから送る
+    const requests: LargeMessageToExtension[] = [];
     for (let start = job.start, part = 0; start < to; start += MAX_ROWS_PER_REQUEST, part++) {
       const count = Math.min(MAX_ROWS_PER_REQUEST, to - start);
       const reqId = this.nextReqId++;
       job.parts.push(undefined);
       job.remaining += 1;
       this.sideRequests.set(reqId, { kind: "fetch", job, part });
-      this.postMessage({ type: "large/getRows", reqId, start, count });
+      requests.push({ type: "large/getRows", reqId, start, count });
+    }
+    for (const request of requests) {
+      this.postMessage(request);
     }
   }
 
