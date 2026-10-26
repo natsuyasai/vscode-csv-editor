@@ -4,7 +4,7 @@ import { parseCsv } from "@/utilities/csvFormat";
 import { applyRowOpsToText, applyTextEdits, verifyAppliedRows } from "./applyRowOpsToText";
 import { detectCsvFormat } from "./csvFormat";
 import type { RowOp } from "./ops";
-import { parseRow, stringifyRow } from "./rowCodec";
+import { stringifyRow } from "./rowCodec";
 import { scanRows } from "./rowScanner";
 
 /*
@@ -12,8 +12,9 @@ import { scanRows } from "./rowScanner";
  * （verifyAppliedRows が成功する場合に限る。失敗すれば拡張機能は全文を送り直す）。
  *
  * verifyAppliedRows が失敗する既知の例外（これ以外では失敗しない）:
- * (a) 末尾改行なしのテキストで、適用後の最終行が空文字列に書き出される行（[""]）になる。
- *     末尾改行を足さない方針のため、再パースでその行が消える（BOM のみのファイルへの [""] 追加も含む）
+ * (a) 末尾改行なしのテキストで、適用後の最終行のテキストが空になる（[""] を書き出した行、または元の空行が最終行になる）。
+ *     末尾改行を足さない方針のため、再パースでその行が消える（BOM のみのファイルへの [""] 追加も含む）。
+ *     元の行 `""`（クォートした空セル）はテキストが空でないので消えない
  * (b) 改行コードが混在するテキストで、編集によってクォート外の最初の改行が変わり、検出される行区切りが変わる
  * (c) セル0個の行 [] は [""] として書き出される（行数は変わらないので検査では検出しない）。
  *     webview の行は必ず1セル以上なので、生成器は1セル以上の行だけを作る
@@ -122,15 +123,13 @@ describe("applyRowOpsToText - Property-Based Tests", () => {
         return (bom ? BOM : "") + body + (trailingNewline && rows.length > 0 ? eol : "");
       });
 
-    it("既知の例外(a)以外では検査が成功し、パース結果が配列への適用と一致する", () => {
+    it("既知の例外(a)のときだけ検査が失敗し、それ以外ではパース結果が配列への適用と一致する", () => {
       let exceptions = 0;
       fc.assert(
         fc.property(csvArb, opSeedsArb(20), (text, seeds) => {
           const format = detectCsvFormat(text);
           const scan = scanRows(text);
-          // parseCsv の列揃え前の各行（既知の例外の判定用）
-          const rawRows = scan.rows.map((row) => parseRow(text.slice(row.start, row.end)));
-          const ops = toOps(seeds, rawRows.length);
+          const ops = toOps(seeds, scan.rows.length);
           const expected = applyRowOps(parseRows(text), ops);
 
           const result = applyRowOpsToText(text, ops, format);
@@ -141,11 +140,16 @@ describe("applyRowOpsToText - Property-Based Tests", () => {
 
           const last = scan.rows.at(-1);
           const hasTrailingNewline = last ? last.end < last.next : format.trailingNewline;
-          const expectedRaw = applyRowOps(rawRows, ops);
-          const lastRaw = expectedRaw.at(-1);
-          const isKnownException =
-            !hasTrailingNewline && lastRaw !== undefined && stringifyRow(lastRaw) === "";
+          // 適用後の各行のテキスト（元の行はそのまま残り、新しい行は書き出される）
+          const rowTexts = applyRowOps(
+            scan.rows.map((row) => [text.slice(row.start, row.end)]),
+            ops.map((op) => ({ ...op, rows: op.rows.map((row) => [stringifyRow(row)]) }))
+          );
+          const lastRowText = rowTexts.at(-1)?.[0];
+          const isKnownException = !hasTrailingNewline && lastRowText === "";
           if (isKnownException) {
+            // 既知の例外では必ず検査が失敗する（＝検査の失敗は既知の例外のときだけ）
+            expect(ok).toBe(false);
             exceptions++;
             return;
           }
