@@ -109,3 +109,50 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+// 選択中のセル（通常モードの選択と同じ色）
+.selected {
+  outline: 1px solid var(--vscode-list-activeSelectionBackground);
+  outline-offset: -1px;
+  background-color: var(--vscode-list-inactiveSelectionBackground);
+}
+
+// 編集中のセル（編集欄を内容に合わせて下へはみ出させる）
+.editing {
+  position: relative;
+  overflow: visible;
+}
+
+// セルの編集欄（行の高さを最小に、内容に合わせて高さを広げる）
+.cellEditor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--vscode-focusBorder);
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: 13px;
+  line-height: 1.5;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+}
+
+// ヘッダーの編集欄
+.headerEditor {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 2px 4px;
+  border: 1px solid var(--vscode-focusBorder);
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+  outline: none;
+}

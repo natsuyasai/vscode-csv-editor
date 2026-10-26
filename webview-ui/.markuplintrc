@@ -25,6 +25,18 @@
           }
         }
       }
+    },
+    {
+      "selector": "td[role=gridcell], th[scope=col]",
+      "rules": {
+        "invalid-attr": {
+          "options": {
+            "allowAttrs": [
+              "onDoubleClick"
+            ]
+          }
+        }
+      }
     }
   ],
   "overrides": {
