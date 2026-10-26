@@ -89,6 +89,24 @@ export const MillionRows: Story = {
   },
 };
 
+/** 性能目標の規模（500MB・約500万行）でも末尾まで移動できる */
+export const FiveMillionRows: Story = {
+  name: "500万行（性能目標の規模で末尾まで）",
+  args: { source: new GeneratedRowSource(HEADER, 5 * MILLION), theme: "light" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const element = scroller(canvasElement);
+    await waitFor(() => expect(canvas.getByRole("rowheader", { name: "1" })).toBeVisible());
+    await expect(element.scrollHeight).toBeLessThanOrEqual(MAX_SCROLL_HEIGHT + 100);
+
+    element.scrollTop = element.scrollHeight;
+    await waitFor(() =>
+      expect(canvas.getByRole("rowheader", { name: String(5 * MILLION) })).toBeInTheDocument()
+    );
+    await expect(canvas.getByText(`name-${String(5 * MILLION)}`)).toBeVisible();
+  },
+};
+
 export const PendingRows: Story = {
   name: "未取得の行がある状態",
   args: { source: new PendingRowSource(HEADER, MILLION), theme: "light" },
