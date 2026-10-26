@@ -3,9 +3,11 @@ import * as vscode from "vscode";
 import { getThemeKind } from "../editor/webviewContent";
 import {
   isLargeMessageToExtension,
+  MAX_RANGE_CELLS,
   type LargeMessageToWebview,
   type LargeOp,
   type LargeProgressKind,
+  type LargeRange,
 } from "../message/largeMessages";
 import { isMessageToExtension } from "../message/messageTypeToExtension";
 import type { UpdateThemeMessage } from "../message/messageTypeToWebview";
@@ -47,6 +49,30 @@ interface SessionJob {
   run: LargeQueryRun<unknown>;
 }
 
+/** 10万セル（MAX_RANGE_CELLS）を超える範囲を要求されたときのメッセージ */
+const RANGE_TOO_LARGE_MESSAGE = `一度に扱えるのは${String(MAX_RANGE_CELLS / 10_000)}万セルまでです。範囲を狭めてください`;
+
+/**
+ * 型ガードで弾かれた `large/getRange` の reqId（reqId が読めなければ undefined）。
+ * 範囲が上限を超えるなどで弾かれても、webview が応答を待ち続けないよう large/error を返すのに使う
+ */
+function rejectedRangeRequestId(value: unknown): number | undefined {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  const { type, reqId } = value as { type?: unknown; reqId?: unknown };
+  return type === "large/getRange" &&
+    typeof reqId === "number" &&
+    Number.isInteger(reqId) &&
+    reqId >= 0
+    ? reqId
+    : undefined;
+}
+
+/** 行を [startCol, endCol) で切る。列が足りない分は空のセルで埋める */
+const sliceColumns = (row: readonly string[], startCol: number, endCol: number): string[] =>
+  Array.from({ length: endCol - startCol }, (_, i) => row[startCol + i] ?? "");
+
 /** ログ用に不正メッセージの概要だけを返す（内容は出力しない） */
 function describeMessage(value: unknown): string {
   if (typeof value !== "object" || value === null) {
@@ -74,6 +100,9 @@ function describeMessage(value: unknown): string {
  *   終わったら（完了・取り消し・失敗のいずれでも）ratio: 1 を送る。検索は先に `large/searchResult` を送る。
  *   失敗と、保存・revert による取り消しは jobId 付きの `large/error` で知らせる（webview の取り消しは知らせない）
  * - `large/cancel` は実行中のジョブ（jobId が一致するもの）を取り消す。パネルを閉じたときも取り消す
+ * - `large/getRange`（コピー）は表示順の位置の行を文書の並びで読み、列の範囲で切って `large/range` で返す
+ *   （行の取得と同じく文書が届いた順に処理する。作成中は確定するまで待ち、末尾を超える行は切り詰める）。
+ *   10万セルを超える範囲（型ガードで弾かれる）や読めなかったときは reqId 付きの `large/error` を返す
  */
 export class LargeEditorSession {
   private readonly disposables: vscode.Disposable[] = [];
@@ -149,6 +178,10 @@ export class LargeEditorSession {
     }
     if (!isLargeMessageToExtension(message)) {
       logWarning(`想定外のメッセージを無視しました (${describeMessage(message)})`);
+      const rangeReqId = rejectedRangeRequestId(message);
+      if (rangeReqId !== undefined && this.ready) {
+        this.post({ type: "large/error", message: RANGE_TOO_LARGE_MESSAGE, reqId: rangeReqId });
+      }
       return;
     }
     switch (message.type) {
@@ -189,8 +222,10 @@ export class LargeEditorSession {
           this.job.run.cancel();
         }
         return;
+      case "large/getRange":
+        await this.handleGetRange(message.reqId, message.range);
+        return;
       default:
-        // 範囲コピーは後続フェーズ（2-4）で対応する
         logWarning(`大容量モードで未対応のメッセージを無視しました (${message.type})`);
         return;
     }
@@ -252,6 +287,37 @@ export class LargeEditorSession {
         start: result.start,
         rows: result.rows,
         handles: result.handles,
+      });
+    } catch (error) {
+      if (this.disposed) {
+        return;
+      }
+      this.post({ type: "large/error", message: errorMessage(error), reqId });
+    }
+  }
+
+  private async handleGetRange(reqId: number, range: LargeRange): Promise<void> {
+    const { startRow, endRow, startCol, endCol } = range;
+    // 型ガードでも弾いているが、念のためここでも上限を確かめる
+    if ((endRow - startRow) * (endCol - startCol) > MAX_RANGE_CELLS) {
+      this.post({ type: "large/error", message: RANGE_TOO_LARGE_MESSAGE, reqId });
+      return;
+    }
+    try {
+      const result =
+        endRow > startRow
+          ? await this.document.readDataRows(startRow, endRow - startRow)
+          : { rows: [], invalidRows: [] };
+      if (this.disposed) {
+        return;
+      }
+      if (result.invalidRows.length > 0) {
+        this.options.onInvalidRows(result.invalidRows);
+      }
+      this.post({
+        type: "large/range",
+        reqId,
+        rows: result.rows.map((row) => sliceColumns(row, startCol, endCol)),
       });
     } catch (error) {
       if (this.disposed) {
