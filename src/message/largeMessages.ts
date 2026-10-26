@@ -77,7 +77,11 @@ export type LargeMessageToWebview =
     }
   | { type: "large/rows"; reqId: number; start: number; rows: string[][]; handles: number[] }
   | { type: "large/progress"; kind: LargeProgressKind; ratio: number; jobId?: number }
-  | { type: "large/invalidate"; revision: number; rowCount: number }
+  /**
+   * 行のキャッシュを捨てさせる（インデックス作成中の行数の増加、編集の適用、Undo/Redo の後）。
+   * header はヘッダーが変わったかもしれないとき（setHeader の適用・Undo/Redo）に載せる。省略は「変わっていない」
+   */
+  | { type: "large/invalidate"; revision: number; rowCount: number; header?: string[] }
   | { type: "large/searchResult"; jobId: number; match: { row: number; col: number } | null }
   | { type: "large/range"; reqId: number; rows: string[][] }
   | { type: "large/error"; message: string; reqId?: number };
@@ -231,7 +235,11 @@ export function isLargeMessageToWebview(value: unknown): value is LargeMessageTo
         (value.jobId === undefined || isNonNegInt(value.jobId))
       );
     case "large/invalidate":
-      return isNonNegInt(value.revision) && isNonNegInt(value.rowCount);
+      return (
+        isNonNegInt(value.revision) &&
+        isNonNegInt(value.rowCount) &&
+        (value.header === undefined || isStringArray(value.header))
+      );
     case "large/searchResult":
       return (
         isNonNegInt(value.jobId) &&
