@@ -247,7 +247,7 @@ suite("VSCodeの大容量ファイルの挙動（大容量モードの入口の�
   });
 
   suite("通常のproviderから大容量用のproviderへの振り分け", () => {
-    test("上限未満ならresolveCustomTextEditorの中でパネルを閉じてopenWithし直せる", async () => {
+    test("上限未満ならresolveCustomTextEditorの中でパネルを閉じてopenWithし直せ、TextDocumentは解放される", async () => {
       const probe = createProbeCustomProvider();
       disposables.push(
         vscode.window.registerCustomEditorProvider(PROBE_CUSTOM, probe.provider),
@@ -270,6 +270,13 @@ suite("VSCodeの大容量ファイルの挙動（大容量モードの入口の�
       assert.strictEqual(inputs.length, 1);
       assert.ok(inputs[0] instanceof vscode.TabInputCustom);
       assert.strictEqual(inputs[0].viewType, PROBE_CUSTOM);
+      // 通常の provider が受け取った TextDocument（全文）は、振り分けた後に拡張ホストから解放される
+      await waitFor(
+        () =>
+          !vscode.workspace.textDocuments.some(
+            (d) => d.uri.fsPath === vscode.Uri.file(smallProbe).fsPath
+          )
+      );
     });
 
     test("上限超えで壊れたタブはonDidChangeTabsで検出して閉じ、openWithし直せる", async () => {
@@ -363,15 +370,24 @@ suite("VSCodeの大容量ファイルの挙動（大容量モードの入口の�
       assert.strictEqual(globalThis.TextDecoder, TextDecoder);
     });
 
+    test("ICUの日本語ロケールデータを持っている（full-icu）", () => {
+      assert.strictEqual(
+        new Intl.DateTimeFormat("ja", { month: "long" }).format(new Date(2020, 0, 1)),
+        "1月"
+      );
+    });
+
     const cases: Array<[label: string, bytes: number[], expected: string]> = [
       ["shift_jis", [0x82, 0xa0, 0x8a, 0xbf], "あ漢"],
       ["shift_jis", [0x87, 0x40], "①"], // NEC特殊文字（CP932）
       ["shift_jis", [0xfa, 0x40], "ⅰ"], // IBM拡張文字（CP932）
+      ["shift_jis", [0xed, 0x40], "纊"], // NEC選定IBM拡張文字（CP932）
       ["shift_jis", [0x81, 0x60], "～"], // 全角チルダ（CP932 と同じ割り当て）
       ["shift_jis", [0x5c], "\\"],
       ["shift_jis", [0xb1], "ｱ"], // 半角カナ
       ["euc-jp", [0xa4, 0xa2, 0xb4, 0xc1], "あ漢"],
       ["euc-jp", [0x8e, 0xb1], "ｱ"],
+      ["euc-jp", [0xa1, 0xc1], "～"],
     ];
     for (const [label, bytes, expected] of cases) {
       test(`${label} の ${bytes.map((b) => b.toString(16)).join(" ")} を ${expected} にデコードできる`, () => {
