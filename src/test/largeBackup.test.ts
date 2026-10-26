@@ -606,5 +606,12 @@ suite("大容量モードの未保存変更とファイルの外部変更", func
     assert.match(editor.warns[0], /削除/);
     assert.strictEqual(editor.picker.calls.length, 0);
     assert.strictEqual(editor.initCount(), 1, "読み直さない");
+    assert.match(editor.warns[0], /保存/, "保存できないことも伝える");
+
+    // 元の行をコピーするファイルが無いので保存は失敗する（作り直さない。既知の制約）
+    await editor.apply([{ type: "setRow", handle: 2, row: ["r1", "編集"] }]);
+    await assert.rejects(editor.save());
+    assert.strictEqual(fs.existsSync(uri.fsPath), false);
+    assert.strictEqual(editor.document.isDirty, true, "編集内容は残る");
   });
 });

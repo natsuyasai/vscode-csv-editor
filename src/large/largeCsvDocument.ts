@@ -439,7 +439,8 @@ export class LargeCsvDocument implements vscode.CustomDocument {
 
   /** 保存した状態と違うか */
   get isDirty(): boolean {
-    return this.stack?.isDirty ?? false;
+    // 復元の op を当てる前（インデックスの作成中）も、未保存の変更があるとみなす（外部変更で黙って捨てない）
+    return this.pendingRestore !== undefined || (this.stack?.isDirty ?? false);
   }
 
   /** データ行数（作成中は確定済みの行数。ヘッダーを除く） */
@@ -709,7 +710,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
   async reload(keepEdits: boolean): Promise<LargeReloadResult> {
     const { ops, done } = await this.serial(async () => {
       this.throwIfDisposed();
-      const kept = keepEdits ? (this.stack?.appliedOps() ?? []) : [];
+      const kept = keepEdits ? (this.stack?.appliedOps() ?? this.pendingRestore ?? []) : [];
       return { ops: kept, done: await this.restartIndex() };
     });
     try {

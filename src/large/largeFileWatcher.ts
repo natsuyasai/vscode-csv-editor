@@ -52,7 +52,8 @@ const errorMessage = (error: unknown) => (error instanceof Error ? error.message
  * - 未保存の変更があれば選ばせる。「再読み込み」は VSCode の revert で変更を破棄して読み直す（タブの未保存の
  *   状態も戻る）。「保持」（Esc も同じ）は、変わった後のファイルを読み直して自分の変更を当て直す
  *   （行の番号がずれると別の行に当たる。当て直せなければ変更を破棄する）
- * - 削除されたら一度だけ警告する（ファイルが戻ってくるまで繰り返さない）
+ * - 削除されたら一度だけ警告する（ファイルが戻ってくるまで繰り返さない）。保存は元の行をファイルからコピーするので、
+ *   削除された後は保存・別名で保存とも失敗する（作り直さない。既知の制約）
  * - 選択を求めている間・読み直している間に届いたイベントは、終わってからもう一度調べる
  */
 export class LargeFileWatcher implements vscode.Disposable {
@@ -164,7 +165,7 @@ export class LargeFileWatcher implements vscode.Disposable {
       if (!this.deletedWarned) {
         this.deletedWarned = true;
         this.deps.warn(
-          `${name} が外部で削除されました。表示していない行は読めなくなることがあります（編集内容は残っています）`
+          `${name} が外部で削除されました。元の行を読めないため、保存（別名で保存を含む）はできません。ファイルを元に戻すと続けて編集・保存できます`
         );
       }
       return;
