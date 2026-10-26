@@ -95,6 +95,8 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       webviewPanel.webview.postMessage({
         type: "update",
         payload: document.getText(),
+        // 差分同期（ステップ8）でエポック管理を実装するまでは 0 固定
+        epoch: 0,
       } satisfies UpdateMessage);
     }
     // webviewから適用した編集のテキスト（エコー抑止用）

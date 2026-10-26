@@ -13,6 +13,17 @@ suite("メッセージ型ガード (issue #89)", () => {
       { type: "update", payload: "a,b\n1,2" },
       { type: "update", payload: "" },
       { type: "save", payload: "a,b" },
+      { type: "save" },
+      { type: "applyOps", epoch: 0, ops: [] },
+      { type: "applyOps", epoch: 3, ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: [] }] },
+      {
+        type: "applyOps",
+        epoch: 1,
+        ops: [
+          { type: "replaceRows", start: 2, deleteCount: 1, rows: [["a", ""], ["b"]] },
+          { type: "replaceRows", start: 0, deleteCount: 0, rows: [[]] },
+        ],
+      },
     ];
     valid.forEach((v) => {
       test(`有効: ${JSON.stringify(v)}`, () => {
@@ -33,8 +44,27 @@ suite("メッセージ型ガード (issue #89)", () => {
       { type: "update" },
       { type: "update", payload: 1 },
       { type: "update", payload: null },
-      { type: "save" },
       { type: "save", payload: {} },
+      { type: "save", payload: 1 },
+      { type: "applyOps" },
+      { type: "applyOps", epoch: 0 },
+      { type: "applyOps", ops: [] },
+      { type: "applyOps", epoch: "1", ops: [] },
+      { type: "applyOps", epoch: 1.5, ops: [] },
+      { type: "applyOps", epoch: Number.NaN, ops: [] },
+      { type: "applyOps", epoch: Infinity, ops: [] },
+      { type: "applyOps", epoch: 0, ops: {} },
+      { type: "applyOps", epoch: 0, ops: [null] },
+      { type: "applyOps", epoch: 0, ops: [{}] },
+      { type: "applyOps", epoch: 0, ops: [{ type: "x", start: 0, deleteCount: 0, rows: [] }] },
+      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: -1, deleteCount: 0, rows: [] }] },
+      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0.5, deleteCount: 0, rows: [] }] },
+      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: -1, rows: [] }] },
+      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: "1", rows: [] }] },
+      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: 0 }] },
+      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: ["a"] }] },
+      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: [[1]] }] },
+      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: [["a"]] }, 1] },
       { type: "reload", payload: 1 },
     ];
     invalid.forEach((v) => {
@@ -46,8 +76,8 @@ suite("メッセージ型ガード (issue #89)", () => {
 
   suite("isMessageToWebview", () => {
     test("有効なメッセージを受理する", () => {
-      assert.strictEqual(isMessageToWebview({ type: "init", payload: "a" }), true);
-      assert.strictEqual(isMessageToWebview({ type: "update", payload: "a" }), true);
+      assert.strictEqual(isMessageToWebview({ type: "init", payload: "a", epoch: 1 }), true);
+      assert.strictEqual(isMessageToWebview({ type: "update", payload: "a", epoch: 0 }), true);
       assert.strictEqual(isMessageToWebview({ type: "updateTheme", payload: "dark" }), true);
       assert.strictEqual(isMessageToWebview({ type: "updateTheme", payload: "light" }), true);
     });
@@ -57,6 +87,11 @@ suite("メッセージ型ガード (issue #89)", () => {
       assert.strictEqual(isMessageToWebview({ type: "nope" }), false);
       assert.strictEqual(isMessageToWebview({ type: "update", payload: 1 }), false);
       assert.strictEqual(isMessageToWebview({ type: "init", payload: 1 }), false);
+      assert.strictEqual(isMessageToWebview({ type: "update", payload: "a" }), false);
+      assert.strictEqual(isMessageToWebview({ type: "init", epoch: 1.5 }), false);
+      assert.strictEqual(isMessageToWebview({ type: "init", epoch: "1" }), false);
+      assert.strictEqual(isMessageToWebview({ type: "update", payload: "a", epoch: -1 }), false);
+      assert.strictEqual(isMessageToWebview({ type: "update", payload: "a", epoch: Number.NaN }), false);
       assert.strictEqual(isMessageToWebview({ type: "updateTheme", payload: "blue" }), false);
       assert.strictEqual(isMessageToWebview({ type: "updateTheme" }), false);
     });

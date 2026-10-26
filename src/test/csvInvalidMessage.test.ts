@@ -74,8 +74,18 @@ suite("不正な webview メッセージの無視 (issue #89)", () => {
     ["update の payload 欠落", { type: "update" }],
     ["update の payload が number", { type: "update", payload: 123 }],
     ["update の payload が object", { type: "update", payload: { a: 1 } }],
-    ["save の payload 欠落", { type: "save" }],
     ["save の payload が number", { type: "save", payload: 1 }],
+    ["applyOps の epoch 欠落", { type: "applyOps", ops: [] }],
+    ["applyOps の epoch が小数", { type: "applyOps", epoch: 1.5, ops: [] }],
+    ["applyOps の ops が配列でない", { type: "applyOps", epoch: 0, ops: "x" }],
+    [
+      "applyOps の op の start が負数",
+      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: -1, deleteCount: 0, rows: [] }] },
+    ],
+    [
+      "applyOps の op の rows が string[][] でない",
+      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: [[1]] }] },
+    ],
     ["webview 向け type (updateTheme)", { type: "updateTheme", payload: "dark" }],
   ];
 

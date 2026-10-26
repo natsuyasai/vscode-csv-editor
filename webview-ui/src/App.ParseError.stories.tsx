@@ -26,7 +26,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 function postCsv(payload: string) {
-  window.postMessage({ type: "update", payload }, "*");
+  window.postMessage({ type: "update", payload, epoch: 0 }, "*");
 }
 
 export const QuoteNotClosed: Story = {

@@ -56,7 +56,7 @@ vi.mock("./components/editable-table/EditableTable", async () => {
 
 function receive(type: "init" | "update", payload: string) {
   act(() => {
-    window.dispatchEvent(new MessageEvent("message", { data: { type, payload } }));
+    window.dispatchEvent(new MessageEvent("message", { data: { type, payload, epoch: 0 } }));
   });
 }
 

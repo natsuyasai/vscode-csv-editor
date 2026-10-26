@@ -16,7 +16,7 @@ vi.mock("./components/editable-table/EditableTable", () => ({
 
 function receive(type: "init" | "update", payload: string) {
   act(() => {
-    window.dispatchEvent(new MessageEvent("message", { data: { type, payload } }));
+    window.dispatchEvent(new MessageEvent("message", { data: { type, payload, epoch: 0 } }));
   });
 }
 
