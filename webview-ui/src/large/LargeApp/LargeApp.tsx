@@ -58,7 +58,13 @@ export function LargeApp({ init, theme, messages, postMessage }: LargeAppProps) 
   const [post] = useState(
     () => postMessage ?? ((message: LargeMessageToExtension) => vscode.postMessage(message))
   );
-  const [controller] = useState(() => new LargeQueryController(post));
+  const [controller] = useState(() => {
+    const created = new LargeQueryController(post);
+    if (init.query) {
+      created.reset(init.query);
+    }
+    return created;
+  });
   const query = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const selectedRef = useRef<CellPosition | null>(null);
   const [source] = useState(
@@ -85,7 +91,7 @@ export function LargeApp({ init, theme, messages, postMessage }: LargeAppProps) 
       switch (message.type) {
         case "large/init":
           // 開き直し（revert 等）。表のキャッシュは RemoteRowSource が破棄し、ソート・フィルタ・検索の状態は捨てる
-          controller.reset();
+          controller.reset(message.query);
           setRestrictions(message.restrictions);
           setEncoding(message.encoding);
           setIndexingRatio(message.indexing ? 0 : null);
@@ -104,6 +110,11 @@ export function LargeApp({ init, theme, messages, postMessage }: LargeAppProps) 
           break;
         case "large/searchResult":
           controller.handleMessage(message);
+          break;
+        case "large/invalidate":
+          // 拡張機能が持つソート・フィルタの状態（query）が変わったときは、表示と注記を合わせる
+          controller.handleMessage(message);
+          source.handleMessage(message);
           break;
         case "large/error":
           // 実行中のジョブが取り消された・失敗したとき（保存の前など）の表示を戻し、メッセージも表示する

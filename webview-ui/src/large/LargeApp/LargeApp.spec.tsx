@@ -265,7 +265,11 @@ describe("LargeApp", () => {
       type: "large/rows",
       reqId: request.reqId,
       start: request.start,
-      rows: [["inserted", "x"], ["0", "row0"], ["1", "row1"]],
+      rows: [
+        ["inserted", "x"],
+        ["0", "row0"],
+        ["1", "row1"],
+      ],
       handles: [1, 2, 3],
     });
     fireEvent.change(screen.getByRole("textbox", { name: "セルの編集" }), {
@@ -330,4 +334,41 @@ describe("LargeApp", () => {
       expect(sent()).toEqual([]);
     }
   );
+
+  test("large/invalidate の query（拡張機能が持つソート・フィルタ）に注記と表示を合わせる", () => {
+    show({ ...INIT, indexing: false });
+    expect(screen.queryByRole("button", { name: "再適用" })).not.toBeInTheDocument();
+    receive({
+      type: "large/invalidate",
+      revision: 1,
+      rowCount: 10,
+      query: { sort: { column: 1, direction: "desc" }, filters: [] },
+    });
+    expect(screen.getByRole("button", { name: "再適用" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "name" })).toHaveAttribute(
+      "aria-sort",
+      "descending"
+    );
+    // revert などで解除された
+    receive({
+      type: "large/invalidate",
+      revision: 2,
+      rowCount: 1_000_000,
+      query: { sort: null, filters: [] },
+    });
+    expect(screen.queryByRole("button", { name: "再適用" })).not.toBeInTheDocument();
+  });
+
+  test("開き直し（large/init）の query を適用中の条件として表示する", () => {
+    show({
+      ...INIT,
+      indexing: false,
+      query: { sort: { column: 0, direction: "asc" }, filters: [] },
+    });
+    expect(screen.getByRole("columnheader", { name: "id" })).toHaveAttribute(
+      "aria-sort",
+      "ascending"
+    );
+    expect(screen.getByRole("button", { name: "再適用" })).toBeInTheDocument();
+  });
 });

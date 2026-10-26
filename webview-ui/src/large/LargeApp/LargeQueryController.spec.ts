@@ -464,6 +464,76 @@ describe("LargeQueryController", () => {
     });
   });
 
+  describe("拡張機能が持つ条件との同期", () => {
+    test("古いジョブの jobId つき large/error は実行中のジョブに影響しない", () => {
+      const { controller } = setup();
+      controller.toggleSort(1);
+      controller.handleMessage({ type: "large/error", message: "取り消し", jobId: 99 });
+      expect(controller.getSnapshot().job).not.toBeNull();
+    });
+
+    test("実行中のジョブの jobId つき large/error はそのジョブを終わらせ、表示を戻す", () => {
+      const { controller } = setup();
+      controller.toggleSort(1);
+      controller.handleMessage({ type: "large/error", message: "取り消し", jobId: 1 });
+      expect(controller.getSnapshot().job).toBeNull();
+      expect(controller.getSnapshot().sort).toBeNull();
+    });
+
+    test("large/invalidate の query で適用済みの条件・表示・注記を合わせる", () => {
+      const { controller } = setup();
+      controller.handleMessage({
+        type: "large/invalidate",
+        revision: 1,
+        rowCount: 10,
+        query: { sort: { column: 2, direction: "desc" }, filters: [{ column: 1, text: "a" }] },
+      });
+      const snapshot = controller.getSnapshot();
+      expect(snapshot.sort).toEqual({ column: 2, direction: "desc" });
+      expect(snapshot.filterTexts[1]).toBe("a");
+      expect(snapshot.snapshotNotice).toBe(true);
+    });
+
+    test("query が空なら条件を解除する（revert など）。query が無い invalidate は何も変えない", () => {
+      const { controller, progress } = setup();
+      controller.toggleSort(1);
+      progress("sort", 1, 1);
+      controller.handleMessage({ type: "large/invalidate", revision: 1, rowCount: 10 });
+      expect(controller.getSnapshot().snapshotNotice).toBe(true);
+      controller.handleMessage({
+        type: "large/invalidate",
+        revision: 2,
+        rowCount: 10,
+        query: { sort: null, filters: [] },
+      });
+      expect(controller.getSnapshot().sort).toBeNull();
+      expect(controller.getSnapshot().snapshotNotice).toBe(false);
+    });
+
+    test("ジョブの実行中の query は適用済みだけを更新し、実行中のジョブの表示は変えない", () => {
+      const { controller } = setup();
+      controller.toggleSort(1);
+      controller.handleMessage({
+        type: "large/invalidate",
+        revision: 1,
+        rowCount: 10,
+        query: { sort: null, filters: [{ column: 0, text: "x" }] },
+      });
+      expect(controller.getSnapshot().sort).toEqual({ column: 1, direction: "asc" });
+      expect(controller.getSnapshot().job).not.toBeNull();
+      expect(controller.getSnapshot().snapshotNotice).toBe(true);
+    });
+
+    test("reset に query を渡すと、その条件が適用済みの状態から始まる", () => {
+      const { controller, ofType } = setup();
+      controller.reset({ sort: { column: 1, direction: "asc" }, filters: [] });
+      expect(controller.getSnapshot().sort).toEqual({ column: 1, direction: "asc" });
+      expect(controller.getSnapshot().snapshotNotice).toBe(true);
+      controller.reapply();
+      expect(ofType("large/sort")).toHaveLength(1);
+    });
+  });
+
   describe("購読", () => {
     test("状態が変わると通知し、変わらない間は同じスナップショットを返す", () => {
       const { controller } = setup();

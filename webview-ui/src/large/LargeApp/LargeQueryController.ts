@@ -2,6 +2,7 @@ import type {
   LargeFilterCondition,
   LargeMessageToExtension,
   LargeMessageToWebview,
+  LargeQueryState,
   LargeSearchDirection,
 } from "@message/largeMessages";
 import { searchFrom, toFilterConditions, nextSort, type SortState } from "./largeQuery";
@@ -214,9 +215,19 @@ export class LargeQueryController {
         this.handleSearchResult(message.jobId, message.match);
         return;
       case "large/error":
-        // reqId つきは行取得などの失敗。ジョブの失敗・取り消し（保存の前など）だけを扱う
-        if (message.reqId === undefined && this.snapshot.job) {
+        // reqId つきは行取得などの失敗。ジョブの失敗・取り消し（保存の前など）だけを扱う。
+        // jobId つきなら、実行中のジョブのものだけ（古いジョブのエラーは無視する）
+        if (
+          message.reqId === undefined &&
+          this.snapshot.job &&
+          (message.jobId === undefined || message.jobId === this.snapshot.job.jobId)
+        ) {
           this.abandonJob();
+        }
+        return;
+      case "large/invalidate":
+        if (message.query) {
+          this.syncQuery(message.query);
         }
         return;
       default:
@@ -224,23 +235,45 @@ export class LargeQueryController {
     }
   }
 
-  /** 開き直し（revert など）で、条件・ジョブ・検索の状態を捨てる。jobId は進め続ける */
-  reset(): void {
+  /**
+   * 開き直し（revert など）で、ジョブ・検索の状態を捨てる。jobId は進め続ける。
+   * query は拡張機能が持つ適用中のソート・フィルタ（省略はなし）
+   */
+  reset(query?: LargeQueryState): void {
     this.clearDebounce();
     this.jobRequest = null;
     this.waiting = {};
-    this.applied = { sort: null, filters: [] };
-    this.requestedFilters = [];
     this.lastQuery = null;
+    this.applied = { sort: query?.sort ?? null, filters: query?.filters ?? [] };
+    this.requestedFilters = this.applied.filters;
     this.update({
-      sort: null,
-      filterTexts: [],
+      sort: this.applied.sort,
+      filterTexts: textsOf(this.applied.filters),
       job: null,
-      snapshotNotice: false,
+      snapshotNotice: this.hasApplied(),
       searchStatus: "idle",
       match: null,
       jump: null,
     });
+  }
+
+  /**
+   * 拡張機能が持つ適用中の条件（ソート・フィルタの適用・解除、revert による解除）に合わせる。
+   * ジョブの実行中は、実行中のジョブの表示（要求した条件）は変えない。行の位置が変わるので一致の記憶は捨てる
+   */
+  private syncQuery(query: LargeQueryState): void {
+    this.applied = { sort: query.sort, filters: query.filters };
+    const partial: Partial<QuerySnapshot> = {
+      snapshotNotice: this.hasApplied(),
+      match: null,
+      searchStatus: this.snapshot.job?.kind === "search" ? this.snapshot.searchStatus : "idle",
+    };
+    if (!this.snapshot.job) {
+      this.requestedFilters = query.filters;
+      partial.sort = query.sort;
+      partial.filterTexts = textsOf(query.filters);
+    }
+    this.update(partial);
   }
 
   dispose(): void {
