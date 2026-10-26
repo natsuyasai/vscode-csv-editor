@@ -5,12 +5,14 @@ import * as os from "os";
 import * as path from "path";
 import * as vscode from "vscode";
 import { CSVEditorProvider } from "../../editor/csvEditorProvider";
-import { Message } from "../../message/messageTypeToExtension";
+import { ApplyOpsMessage, Message } from "../../message/messageTypeToExtension";
 
 /** webviewへ送られたメッセージ */
 export interface PostedMessage {
   type: string;
   payload?: unknown;
+  /** 全文送信（update）の世代番号 */
+  epoch?: unknown;
 }
 
 /**
@@ -56,7 +58,7 @@ export function createProviderHarness(document: vscode.TextDocument) {
 
   return {
     posted,
-    send: async (message: Message) => {
+    send: async (message: Message | ApplyOpsMessage) => {
       assert.ok(messageHandler, "Message handler should be registered");
       await messageHandler(message);
     },
