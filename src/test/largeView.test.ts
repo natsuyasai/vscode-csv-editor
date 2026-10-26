@@ -247,8 +247,19 @@ suite("大容量モードでの閲覧", function () {
 
     const { init } = await openInWebview(uri, "shift_jis");
 
+    // 定数どうしの比較では一覧の中身を確かめられないため、表示する一覧を書き下して比べる
+    assert.deepStrictEqual(init.restrictions, [
+      "列の挿入・削除",
+      "行・列のドラッグ&ドロップによる並び替え",
+      "オートフィル",
+      "列の配置（左・中央・右揃え）",
+      "行の高さ・列幅の変更",
+      "ヘッダー行を無視する設定（Ignore Header Row）",
+      "行・列の全体選択",
+      "一括編集",
+      "検索の一致件数の表示・すべての一致の強調",
+    ]);
     assert.deepStrictEqual(init.restrictions, [...LARGE_MODE_RESTRICTIONS]);
-    assert.ok(Array.isArray(init.restrictions) && init.restrictions.length > 0);
     assert.strictEqual(init.encoding, "shift_jis");
   });
 });
