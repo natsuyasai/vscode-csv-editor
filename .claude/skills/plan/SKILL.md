@@ -20,7 +20,8 @@ arg: "プラン対象の機能名（.tmp/plans/<feature>.md のファイル名�
 
 1. 受け入れ条件を満たすための実装方針を検討する。
 2. 既存の関数・hooks・ユーティリティ・コンポーネントで再利用できるものを優先する（新規追加は最小限に）。
-3. 影響ファイル、テスト戦略（vitest 単体 / Storybook カタログ / play function / 結合）、リスクを整理する。
+3. 影響ファイル、テスト戦略（Gherkin / vitest 単体 / Storybook カタログ / play function / 結合）、リスクを整理する。
+4. 作成・変更する `.feature` を一覧にする（配置・使い分けは CLAUDE.md「Gherkin による仕様駆動テスト」を参照）。
 
 ### Step 2: 複数案がある場合の確認
 
@@ -50,7 +51,12 @@ arg: "プラン対象の機能名（.tmp/plans/<feature>.md のファイル名�
 1. ...
 2. ...
 
+## 作成・変更する .feature
+- webview-ui/src/.../<Name>.feature（新規 / 変更）
+- src/test/<name>.feature（新規 / 変更）
+
 ## テスト戦略
+- Gherkin: 上記 .feature とステップ定義（<Name>.feature.spec.ts(x) / src/test/<name>.test.ts）
 - vitest 単体: src/.../<Name>.spec.ts(x)
 - Storybook カタログ: src/.../<Name>.stories.tsx
 - play function（画面単体）: 各 Story の play

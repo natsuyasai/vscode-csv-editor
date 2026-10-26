@@ -30,14 +30,59 @@
 
 アプリ開発は以下の標準フローに従って進めてください。各フェーズには対応するスキルがあり、`/dev-flow` がフロー全体を統括します。
 
-1. **要求内容を明確にする** — `/clarify-requirements`（背景・目的・受け入れ条件を確定。疑問は中断して質問）
-2. **実装プランを策定する** — `/plan`（複数案はどれで進めるか確認。別セッションへ引き継げるよう一時ドキュメントを `.tmp/plans/<feature>.md` に出力）
-3. **実装作業** — `/implement`（作業用ブランチを作成。実装はサブエージェントに委譲しメインはレビュー・全体管理。t-wada推奨TDDで、vitest単体テスト・Storybookカタログ・play functionによる画面単体テスト・機能の結合テストを作成。作業毎にコミット）
+1. **要求内容を明確にする** — `/clarify-requirements`（背景・目的・受け入れ条件を確定。受け入れ条件は Gherkin のシナリオで書く。疑問は中断して質問）
+2. **実装プランを策定する** — `/plan`（複数案はどれで進めるか確認。作成・変更する `.feature` を一覧にし、別セッションへ引き継げるよう一時ドキュメントを `.tmp/plans/<feature>.md` に出力）
+3. **実装作業** — `/implement`（作業用ブランチを作成。実装はサブエージェントに委譲しメインはレビュー・全体管理。`.feature` 作成→ステップ定義（レッド）→実装（グリーン）→リファクタリングの順で、t-wada推奨TDDで、vitest単体テスト・Storybookカタログ・play functionによる画面単体テスト・機能の結合テストを作成。作業毎にコミット）
 4. **プロパティベーステスト** — `/property-test`（仕様が明確かつコードから実装可能な場合に作成）
 5. **最終チェック** — `/check-creation`（フォーマッター適用・テスト実行・型/lint・ビルド確認）
 
 テスト・Story は対象コードと同じディレクトリに配置（コロケーション）。共通ヘルパーは `webview-ui/src/test-utils/`。
 
+## Gherkin による仕様駆動テスト
+
+受け入れ条件・振る舞いの仕様は日本語の Gherkin（`.feature`）で書き、実行可能なテストにする。
+
+### 進め方
+
+- 受け入れ条件は Gherkin のシナリオとして書く（`/clarify-requirements`）。
+- プランには作成・変更する `.feature` を一覧にする（`/plan`）。
+- 実装は「`.feature` 作成 → ステップ定義（レッド）→ 実装（グリーン）→ リファクタリング」の順に進める（`/implement`、`/tdd`）。
+
+### 配置とファイル名
+
+- **webview**: `Foo.feature` と `Foo.feature.spec.ts(x)` を同じディレクトリに置く。ステップ定義は `@amiceli/vitest-cucumber` の `loadFeature` / `describeFeature` で書く。unit プロジェクト（`npm run test:unit`）で実行される。参照例: `webview-ui/src/utilities/csvFormat.feature` / `csvFormat.feature.spec.ts`
+- **拡張機能**: `src/test/foo.feature` と `src/test/foo.test.ts` を対にし、`機能:` 名 = `suite("…")`、シナリオ名（シナリオアウトライン含む）= `test("…")` を完全一致させる。
+  - `.feature` は mocha では実行されない。`scripts/check-feature-sync.mjs` が名前の整合を検査する（`npm run lint` に組み込み済み。不足・余剰・不一致で失敗）。
+  - `.feature` の無い既存 `.test.ts` は検査対象外。
+  - 名前は文字列リテラルで書く（`${}` 入りテンプレートや変数は拾われない）。
+  - スクリプトを変更したら `npm run test:scripts` を実行する。
+
+### 使い分け
+
+- 振る舞い・結合寄りの仕様は Gherkin で書く。
+- 純粋関数の細かい分岐は従来の vitest、画面単体は Storybook の play function、性質はプロパティテスト（fast-check）で書く。
+- 既存テストは Gherkin に書き換えない。
+
+### 日本語キーワードと API
+
+| キーワード | vitest-cucumber の API |
+|------------|------------------------|
+| 背景 | `Background` |
+| シナリオ | `Scenario` |
+| シナリオアウトライン（例） | `ScenarioOutline` |
+| 前提 / もし / ならば / かつ | `Given` / `When` / `Then` / `And` |
+
+`機能:` は `describeFeature` が受け取る Feature に対応する。
+
+ステップ文字列はキーワードを除いた本文で `.feature` と完全一致させる。
+
+### 注意点
+
+1. `# language: ja` ヘッダーだけでは言語は切り替わらない。`webview-ui/src/test-utils/setup.ts` の `setVitestCucumberConfiguration({ language: "ja", ... })` が効いている（設定は全置換のため、変更時は `language` を残す）。外れると `MissingExamplesError` などの分かりにくいエラーになる。`.feature` 先頭には慣習として `# language: ja` を書く。
+2. 未実装のシナリオ/ステップはスイート失敗（`ScenarioNotCalledError` / `Missing steps in Scenario` / `StepAbleUnknowStepError` 等、テスト数0）になる。これをレッドとして使う。
+3. シナリオアウトラインのステップは `<列名>` のまま書き、値は第2引数 `vars` から文字列で受け取る（`any` なので `String()` / `Number()` で変換し、lint の no-unsafe-* を避ける）。
+4. `.feature` 中の `\n` などはライブラリが解釈しない（バックスラッシュ文字のまま）。TS 側のステップ文字列では `\\n` と書き、必要な変換は自前で行う。BOM などの不可視文字は `.feature` に直接書かず文言で表す。
+5. import/order: `@amiceli/vitest-cucumber` の import は `react` などより前に置く（lint で確認）。
 
 ## プロジェクト構造
 
