@@ -1,7 +1,10 @@
 // WebViewの内容を表示するためのクラス
 import * as vscode from "vscode";
 import { ThemeKind, UpdateMessage, UpdateThemeMessage } from "../message/messageTypeToWebview";
-import { isMessageToExtension } from "../message/messageTypeToExtension";
+import { ApplyOpsMessage, isMessageToExtension } from "../message/messageTypeToExtension";
+import { applyRowOpsToText, verifyAppliedRows } from "../shared/csv/applyRowOpsToText";
+import type { RowOpsTextEdits } from "../shared/csv/applyRowOpsToText";
+import { CsvFormat, DEFAULT_CSV_FORMAT, detectCsvFormat } from "../shared/csv/csvFormat";
 import { disposeAll } from "../util/dispose";
 import { getUri } from "../util/getUri";
 import { loggerDisposable, logWarning } from "../util/logger";
@@ -91,16 +94,37 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       })
     );
 
+    // 全文送信の世代。webview はこの値を applyOps に付けて送り、古い前提の操作を検出する
+    let epoch = 0;
+    // 最後に全文を送った時点の書式。applyOps のたびに検出し直さない
+    // （全行削除の後に行を追加しても、元の改行コード・末尾改行の有無を保つため）
+    let format: CsvFormat = DEFAULT_CSV_FORMAT;
+    // webview への全文送信。送るたびにエポックを進め、その時点の書式を保持する
     function updateWebview() {
+      const text = document.getText();
+      epoch += 1;
+      format = CSVEditorProvider.detectDocumentFormat(document, text);
       webviewPanel.webview.postMessage({
         type: "update",
-        payload: document.getText(),
+        payload: text,
+        epoch,
       } satisfies UpdateMessage);
     }
-    // webviewから適用した編集のテキスト（エコー抑止用）
-    let appliedFromWebview: string | undefined;
+    // 外部変更と競合して webview の編集を反映できなかった（次の保存で警告して保存しない）
+    let editDiscarded = false;
+    function resync(reason: string) {
+      logWarning(`webview の編集を差分で反映できなかったため全文を送り直します (${reason})`);
+      updateWebview();
+    }
+    // 自分（webview 由来）で適用した編集の後の document.version（エコー抑止用）
+    let ownVersion: number | undefined;
     // 編集の適用を直列化するためのキュー
     let editQueue: Promise<unknown> = Promise.resolve();
+    function enqueue<T>(work: () => Promise<T>): Promise<T> {
+      const task = editQueue.then(work);
+      editQueue = task.catch(() => undefined);
+      return task;
+    }
 
     // Update the webview when the document changes
     disposables.push(
@@ -112,34 +136,97 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
         if (e.contentChanges.length === 0) {
           return;
         }
-        // webview自身が適用した編集は送り返さない
-        if (
-          appliedFromWebview !== undefined &&
-          CSVEditorProvider.normalizeEol(e.document.getText()) === appliedFromWebview
-        ) {
-          appliedFromWebview = undefined;
+        // webview自身が適用した編集は送り返さない（変更イベントは applyEdit の解決前に届く）
+        if (ownVersion !== undefined && e.document.version === ownVersion) {
           return;
         }
         updateWebview();
       })
     );
 
-    const applyFromWebview = (csvText: string): Promise<boolean> => {
-      const task = editQueue.then(async () => {
-        const normalized = CSVEditorProvider.normalizeEol(csvText);
-        if (normalized === CSVEditorProvider.normalizeEol(document.getText())) {
-          return true;
-        }
-        appliedFromWebview = normalized;
-        const ok = await CSVEditorProvider.replaceWholeDocument(document, csvText);
-        if (!ok) {
-          appliedFromWebview = undefined;
-        }
-        return ok;
-      });
-      editQueue = task.catch(() => undefined);
-      return task;
+    /**
+     * webview 由来の編集を適用する。適用後のバージョンを先に記録してエコーを抑止する。
+     * 失敗（外部変更と競合）したときは記録を消す。外部変更の通知を抑止していた可能性があるため、
+     * 呼び出し側は webview に全文を送り直すこと。
+     */
+    const applyOwnEdit = async (edit: vscode.WorkspaceEdit): Promise<boolean> => {
+      // getText 等の読み取りと同じ同期区間で記録する（1つの WorkspaceEdit でバージョンは1つ進む）
+      const expectedVersion = document.version + 1;
+      ownVersion = expectedVersion;
+      const ok = await vscode.workspace.applyEdit(edit);
+      if (!ok) {
+        ownVersion = undefined;
+        return false;
+      }
+      if (document.version !== expectedVersion) {
+        // 想定外にバージョンが進んだ（他の変更が割り込んだ等）。webview の表示がずれている可能性がある
+        resync(`適用後のバージョンが想定と異なります: ${String(document.version)}`);
+      }
+      return true;
     };
+
+    const applyOps = (message: ApplyOpsMessage): Promise<void> =>
+      enqueue(async () => {
+        if (message.epoch !== epoch) {
+          // 外部変更の前提で作られた操作は適用せず、現在の全文で webview を作り直させる
+          editDiscarded = true;
+          resync(`エポック不一致: 受信=${String(message.epoch)}, 現在=${String(epoch)}`);
+          return;
+        }
+        // 現在のエポックの操作＝webview は作り直した後の内容を前提に編集している（以前の破棄は確認済み）
+        editDiscarded = false;
+        // 性能の計測ポイント: getText と applyRowOpsToText（内部で全文を scanRows）は毎回全文を走査する
+        // （50MB の走査は node で約226ms）。問題があれば document.version をキーに行オフセット表をキャッシュする
+        const text = document.getText();
+        let result: RowOpsTextEdits;
+        try {
+          result = applyRowOpsToText(text, message.ops, format);
+        } catch (error) {
+          editDiscarded = true;
+          resync(error instanceof Error ? error.message : String(error));
+          return;
+        }
+        const edits = result.edits.filter(({ start, end, text: replacement }) => {
+          return text.slice(start, end) !== replacement;
+        });
+        if (edits.length === 0) {
+          return;
+        }
+        const workspaceEdit = new vscode.WorkspaceEdit();
+        for (const { start, end, text: replacement } of edits) {
+          workspaceEdit.replace(
+            document.uri,
+            new vscode.Range(document.positionAt(start), document.positionAt(end)),
+            replacement
+          );
+        }
+        if (!(await applyOwnEdit(workspaceEdit))) {
+          editDiscarded = true;
+          resync("差分の適用が拒否されました");
+          return;
+        }
+        if (!verifyAppliedRows(document.getText(), result.rowCount, result.delimiter)) {
+          resync("適用後の行構造が操作の結果と一致しません");
+        }
+      });
+
+    const warnSaveDiscarded = () => {
+      // 外部変更との競合等で反映できなかった。キューを詰まらせないよう待たずに通知する
+      void vscode.window.showWarningMessage(
+        "外部で内容が変更されたため保存できませんでした。内容を確認して再度保存してください"
+      );
+    };
+
+    /** 先に並んだ編集の適用を待ってから保存する（反映できなかった編集があれば警告して保存しない） */
+    const saveAfterQueuedEdits = (): Promise<void> =>
+      enqueue(async () => {
+        if (editDiscarded) {
+          editDiscarded = false;
+          warnSaveDiscarded();
+          return;
+        }
+        await document.save();
+      });
 
     // Receive message from the webview.
     disposables.push(
@@ -155,24 +242,11 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
             updateTheme();
             updateWebview();
             return;
-          case "update":
-            // ドキュメントへ反映のみ行う（保存はしない。ダーティ状態になる）
-            if (e.payload !== undefined) {
-              await applyFromWebview(e.payload);
-            }
+          case "applyOps":
+            await applyOps(e as ApplyOpsMessage);
             return;
           case "save":
-            if (e.payload !== undefined) {
-              const ok = await applyFromWebview(e.payload);
-              if (!ok) {
-                // 外部変更との競合等で反映できなかった。キューを詰まらせないよう待たずに通知する
-                void vscode.window.showWarningMessage(
-                  "外部で内容が変更されたため保存できませんでした。内容を確認して再度保存してください"
-                );
-                return;
-              }
-            }
-            await document.save();
+            await saveAfterQueuedEdits();
             return;
           case "reload":
             updateWebview();
@@ -243,23 +317,15 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     `;
   }
 
-  private static normalizeEol(text: string): string {
-    return text.replace(/\r\n/g, "\n");
-  }
-
   /**
-   * ドキュメント全体を置換する。保存はしない。
+   * 文書の書式を検出する。改行コードは文書のもの（document.eol）を使う。
+   * VSCode は読み込み時に改行を1種類へ揃え、挿入した改行も文書の改行コードへ変換するため、
+   * 改行を含まないテキスト（空ファイル等）でもテキストからの検出（既定 LF）と食い違わないようにする。
    */
-  private static replaceWholeDocument(
-    document: vscode.TextDocument,
-    csvText: string
-  ): Promise<boolean> {
-    const edit = new vscode.WorkspaceEdit();
-    const fullRange = new vscode.Range(
-      new vscode.Position(0, 0),
-      document.positionAt(document.getText().length)
-    );
-    edit.replace(document.uri, fullRange, csvText);
-    return Promise.resolve(vscode.workspace.applyEdit(edit));
+  private static detectDocumentFormat(document: vscode.TextDocument, text: string): CsvFormat {
+    return {
+      ...detectCsvFormat(text),
+      eol: document.eol === vscode.EndOfLine.CRLF ? "\r\n" : "\n",
+    };
   }
 }

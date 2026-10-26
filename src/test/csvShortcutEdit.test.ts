@@ -5,8 +5,8 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { setTimeout as sleep } from "timers/promises";
-import { CSVEditorProvider } from "../editor/csvEditorProvider";
-import { Message } from "../message/messageTypeToExtension";
+import type { RowOp } from "../shared/csv/ops";
+import { createProviderHarness, replaceRows } from "./helpers/providerHarness";
 
 /**
  * ショートカットによる行・列の挿入/削除 (issue #87)
@@ -14,7 +14,8 @@ import { Message } from "../message/messageTypeToExtension";
  * Ctrl/Cmd+Shift+D/I/B/L/R のキー処理自体は webview 内部（DOMのkeydown）で行われるため、
  * 拡張機能テストからは観測できない（webview側は vitest の結合テストで検証）。
  * ここでは観測可能な部分として、ショートカット操作の結果として webview から送られる
- * `update` がドキュメントへ反映・保存されることを検証する。
+ * 差分の操作（applyOps）がドキュメントへ反映・保存されることを検証する。
+ * 操作は webview が diffRows で作るものと同じ形にする（列の構造変更は全行の置換になる）。
  */
 suite("ショートカット操作結果の反映 (issue #87)", () => {
   const ORIGINAL = "name,num\na,3\nb,1\nc,2\n";
@@ -38,41 +39,6 @@ suite("ショートカット操作結果の反映 (issue #87)", () => {
     fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
-  function createHarness(document: vscode.TextDocument) {
-    let messageHandler: ((message: Message) => unknown) | undefined;
-    const mockWebview = {
-      html: "",
-      cspSource: "vscode-resource:",
-      asWebviewUri: (uri: vscode.Uri) => uri,
-      postMessage: () => Promise.resolve(true),
-      onDidReceiveMessage: (handler: (message: Message) => unknown) => {
-        messageHandler = handler;
-        return { dispose: () => {} };
-      },
-    } as unknown as vscode.Webview;
-    const mockPanel = {
-      webview: mockWebview,
-      title: "CSV Editor",
-      onDidDispose: () => ({ dispose: () => {} }),
-      onDidChangeViewState: () => ({ dispose: () => {} }),
-      dispose: () => {},
-    } as unknown as vscode.WebviewPanel;
-    const context = {
-      subscriptions: [],
-      extensionUri: vscode.Uri.parse("file:///fake"),
-    } as unknown as vscode.ExtensionContext;
-    new CSVEditorProvider(context).resolveCustomTextEditor(document, mockPanel, {
-      isCancellationRequested: false,
-      onCancellationRequested: () => ({ dispose: () => {} }),
-    });
-    return {
-      send: async (message: Message) => {
-        assert.ok(messageHandler, "Message handler should be registered");
-        await messageHandler(message);
-      },
-    };
-  }
-
   async function openDocument() {
     const filePath = path.join(tempDir, "shortcut.csv");
     fs.writeFileSync(filePath, ORIGINAL, "utf8");
@@ -82,20 +48,32 @@ suite("ショートカット操作結果の反映 (issue #87)", () => {
     };
   }
 
-  const cases: Array<[string, string]> = [
-    ["行削除 (Ctrl+Shift+D)", ROW_DELETED],
-    ["行挿入 (Ctrl+Shift+I/B)", ROW_INSERTED],
-    ["列挿入 (Ctrl+Shift+L/R)", COL_INSERTED],
-    ["列削除 (Ctrl+Shift+D)", COL_DELETED],
+  const ROW_DELETE_OPS: RowOp[] = [replaceRows(2, 1, [])];
+  const cases: Array<[string, RowOp[], string]> = [
+    ["行削除 (Ctrl+Shift+D)", ROW_DELETE_OPS, ROW_DELETED],
+    ["行挿入 (Ctrl+Shift+I/B)", [replaceRows(3, 0, [["", ""]])], ROW_INSERTED],
+    [
+      "列挿入 (Ctrl+Shift+L/R)",
+      [
+        replaceRows(0, 4, [
+          ["name", "new column", "num"],
+          ["a", "", "3"],
+          ["b", "", "1"],
+          ["c", "", "2"],
+        ]),
+      ],
+      COL_INSERTED,
+    ],
+    ["列削除 (Ctrl+Shift+D)", [replaceRows(0, 4, [["num"], ["3"], ["1"], ["2"]])], COL_DELETED],
   ];
 
-  for (const [name, edited] of cases) {
-    test(`${name} の結果のupdateがドキュメントへ反映される`, async () => {
+  for (const [name, ops, edited] of cases) {
+    test(`${name} の結果の操作がドキュメントへ反映される`, async () => {
       const { document } = await openDocument();
-      const harness = createHarness(document);
+      const harness = createProviderHarness(document);
 
       await harness.send({ type: "init" });
-      await harness.send({ type: "update", payload: edited });
+      await harness.sendOps(ops);
       await sleep(100);
 
       assert.strictEqual(document.getText(), edited);
@@ -105,12 +83,12 @@ suite("ショートカット操作結果の反映 (issue #87)", () => {
   test("ショートカット操作後に保存するとディスクへ書き込まれる", async function () {
     this.timeout(10000);
     const { filePath, document } = await openDocument();
-    const harness = createHarness(document);
+    const harness = createProviderHarness(document);
 
     await harness.send({ type: "init" });
-    await harness.send({ type: "update", payload: ROW_DELETED });
+    await harness.sendOps(ROW_DELETE_OPS);
     await sleep(100);
-    await harness.send({ type: "save", payload: ROW_DELETED });
+    await harness.send({ type: "save" });
     await sleep(300);
 
     assert.strictEqual(document.isDirty, false);

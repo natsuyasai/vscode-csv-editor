@@ -3,7 +3,13 @@ import * as fs from "fs";
 import * as vscode from "vscode";
 import { setTimeout as sleep } from "timers/promises";
 import { suite, test } from "mocha";
-import { createProviderHarness, openCsv, replaceAll, useTempDir } from "./helpers/providerHarness";
+import {
+  createProviderHarness,
+  openCsv,
+  replaceAll,
+  replaceRows,
+  useTempDir,
+} from "./helpers/providerHarness";
 
 suite("エディタを閉じた後・ファイル削除後の挙動", () => {
   const temp = useTempDir("removal");
@@ -21,13 +27,14 @@ suite("エディタを閉じた後・ファイル削除後の挙動", () => {
     assert.strictEqual(harness.posted.length, 0);
   });
 
-  test("ディスク上のファイル削除後にupdateを送っても未処理例外にならずドキュメントへ反映される", async () => {
+  test("ディスク上のファイル削除後に編集を送っても未処理例外にならずドキュメントへ反映される", async () => {
     const filePath = temp.writeCsv("deleted-update.csv", "a,b\n1,2\n");
     const document = await openCsv(filePath);
     const harness = createProviderHarness(document);
     fs.rmSync(filePath);
 
-    await harness.send({ type: "update", payload: "a,b\n3,4\n" });
+    await harness.send({ type: "init" });
+    await harness.sendOps([replaceRows(1, 1, [["3", "4"]])]);
 
     assert.strictEqual(document.getText(), "a,b\n3,4\n");
     assert.ok(document.isDirty);
@@ -40,7 +47,9 @@ suite("エディタを閉じた後・ファイル削除後の挙動", () => {
     fs.rmSync(filePath);
 
     // reject しないことを確認する。保存結果は環境依存のため内容のみ検証
-    await harness.send({ type: "save", payload: "a,b\n3,4\n" });
+    await harness.send({ type: "init" });
+    await harness.sendOps([replaceRows(1, 1, [["3", "4"]])]);
+    await harness.send({ type: "save" });
 
     assert.strictEqual(document.getText(), "a,b\n3,4\n");
     if (fs.existsSync(filePath)) {

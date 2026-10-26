@@ -21,6 +21,7 @@ export function setInitData() {
     {
       type: "update",
       payload: sampleCSVData,
+      epoch: 0,
     },
     "*"
   );

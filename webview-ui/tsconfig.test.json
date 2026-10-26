@@ -12,7 +12,8 @@
   "include": [
     "__mocks__/**/*",
     "./src/**/*",
-    "../src/message/**/*"
+    "../src/message/**/*",
+    "../src/shared/**/*"
   ],
   "exclude": [
     "node_modules",

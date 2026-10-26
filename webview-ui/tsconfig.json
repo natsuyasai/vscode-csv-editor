@@ -20,6 +20,15 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "paths": {
+      "fast-check": [
+        "./node_modules/fast-check"
+      ],
+      "@amiceli/vitest-cucumber": [
+        "./node_modules/@amiceli/vitest-cucumber"
+      ],
+      "@shared/*": [
+        "../src/shared/*"
+      ],
       "@message/*": [
         "../src/message/*"
       ],

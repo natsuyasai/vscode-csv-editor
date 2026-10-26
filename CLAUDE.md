@@ -25,6 +25,7 @@
 - **改行コードを変えない**: Windows 上でスクリプト置換するとファイルが CRLF 化し、全行差分・マージ時の全体衝突が複数回発生した。既存ファイルの LF/CRLF を維持し、コミット前に `git diff --stat` で行数が不自然に多くないか確認する。
 - **Storybook テストも必ず実行する**: play function を未実行のまま PR にして CI（実ブラウザ）で失敗した。jsdom の vitest が通っても実ブラウザでは挙動が異なるため、`cd webview-ui && npx vitest --project storybook --run` を完了条件に含める（初回は `npx playwright install chromium`）。
 - **VSCode 側テストは webview をビルドしてから実行する**: `npm run build:webview` 前の `npm test` は実 webview を読み込まず検証が不十分になる。ハング対策に時間制限を付ける（例: `timeout 400 npm test`）。
+- **テストを実装より先に書き、全テストファイルでレッドを確認する**: サブエージェントが `.feature` のステップ定義だけレッドを確認し、単体テスト・プロパティテスト・Story を実装後に書いたことが複数回あった（テストが実装をなぞるだけになり、仕様の検証にならない）。委譲時に「各テストファイルについてレッドの出力を報告に含める」ことを完了条件にし、メインはレビューで確認する。実装後に足すテストは、実装を一時的に壊して失敗することを確かめ、その旨を報告する。
 
 ## 開発手順
 
@@ -98,12 +99,26 @@
 - 拡張機能とwebview間の通信はpostMessage APIを介して行う
 - 状態管理にはZustand、データ操作にはカスタムフックを使用
 
+### 共通モジュール `src/shared/`
+
+拡張機能と webview の両方から使う純粋ロジックの置き場。
+
+- **npm パッケージを一切 import しない**（ルートに実行時依存はなく、`src/` から `webview-ui/node_modules` は解決できない）。標準 JS/TS のみで書く。環境はルートの `lib: ES2022`（DOM なし）と webview の `isolatedModules`（型の re-export は `export type`）の両方で通ること。
+- **参照方法**: 拡張機能側は**相対 import**（`../shared/csv/xxx`）。ルートの `tsc -p . --outDir out`（`compile-tests`）はパスエイリアスを書き換えないため、`@shared` は webview 専用（vite / tsconfig のエイリアス）。
+- **テスト**: `*.spec.ts` / `*.feature.spec.ts` / `.feature` は同じディレクトリに置き、webview の vitest unit プロジェクト（`webview-ui` で `npx vitest --project unit --run shared/`）で実行・型検査（`tsconfig.test.json`）される。spec はルートの tsconfig / eslint の対象外（本体は対象）。spec が使う npm パッケージ（`fast-check` と `@amiceli/vitest-cucumber` 以外を使うときは `webview-ui/vite.config.ts` の alias と `webview-ui/tsconfig.json` の paths に追加する）。`.feature` の `loadFeature` は `./xxx.feature` の相対パスで書く。
+- **spec の注意**: `src/shared` 配下の spec からは `vitest` を import できない（解決されず型検査が失敗する）ので、`describe` / `it` / `expect` はグローバルを使う。shared の spec はどの eslint の対象にも入らない（lint されない）ので、import 順や型安全は自分で確認する。
+
 ## 通信アーキテクチャ
 
 メッセージパッシングは`src/message/`内の型付きインターフェースを使用します:
-- `messageTypeToWebview.ts`: 拡張機能 → Webview メッセージ (init, update, updateTheme)
-- `messageTypeToExtension.ts`: Webview → 拡張機能 メッセージ (init, update, reload, save)
-- データフロー: VSCode Document ↔ Extension ↔ Webview (デバウンス更新あり)
+- `messageTypeToWebview.ts`: 拡張機能 → Webview メッセージ (init, update（全文＋epoch）, updateTheme)
+- `messageTypeToExtension.ts`: Webview → 拡張機能 メッセージ (init, applyOps, reload, save)
+- データフロー: VSCode Document ↔ Extension ↔ Webview
+  - 拡張機能 → Webview は全文（init / 外部変更 / resync）。送るたびに epoch を +1 する
+  - Webview → 拡張機能は編集差分（`applyOps { epoch, ops: RowOp[] }`、300ms デバウンスでまとめて送る）。拡張機能は該当行の範囲だけを `WorkspaceEdit` で置き換える
+  - epoch 不一致・適用失敗・適用後の行構造の不一致では、拡張機能が全文を送り直し、webview は保留中の操作を捨てて作り直す
+  - `save` は payload を持たない。webview は保留中の操作を送ってから `save` を送る
+  - エコー抑止は自分で適用した編集後の `document.version` で行う
 
 ## ビルドコマンド
 

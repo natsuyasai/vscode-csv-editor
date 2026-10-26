@@ -5,12 +5,15 @@ import * as os from "os";
 import * as path from "path";
 import * as vscode from "vscode";
 import { CSVEditorProvider } from "../../editor/csvEditorProvider";
-import { Message } from "../../message/messageTypeToExtension";
+import { ApplyOpsMessage, Message } from "../../message/messageTypeToExtension";
+import type { RowOp } from "../../shared/csv/ops";
 
 /** webviewへ送られたメッセージ */
 export interface PostedMessage {
   type: string;
   payload?: unknown;
+  /** 全文送信（update）の世代番号 */
+  epoch?: unknown;
 }
 
 /**
@@ -54,12 +57,23 @@ export function createProviderHarness(document: vscode.TextDocument) {
     onCancellationRequested: () => ({ dispose: () => {} }),
   });
 
+  const send = async (message: Message | ApplyOpsMessage) => {
+    assert.ok(messageHandler, "Message handler should be registered");
+    await messageHandler(message);
+  };
+  /** 最後に webview へ送られた全文（update）のエポック。init を送った後で使う */
+  const latestEpoch = (): number => {
+    const epoch = posted.filter((m) => m.type === "update").at(-1)?.epoch;
+    assert.strictEqual(typeof epoch, "number", "全文の送信にエポックが付いている（init 済み）");
+    return epoch as number;
+  };
+
   return {
     posted,
-    send: async (message: Message) => {
-      assert.ok(messageHandler, "Message handler should be registered");
-      await messageHandler(message);
-    },
+    send,
+    latestEpoch,
+    /** webview の編集を、最後に受け取ったエポック付きの applyOps として送る */
+    sendOps: (ops: RowOp[]) => send({ type: "applyOps", epoch: latestEpoch(), ops }),
     /** webviewパネルが閉じられたことを模擬する */
     disposePanel: () => {
       for (const handler of disposeHandlers) {
@@ -69,6 +83,11 @@ export function createProviderHarness(document: vscode.TextDocument) {
     /** 種別ごとの送信済みメッセージ */
     postedOf: (type: string) => posted.filter((m) => m.type === type),
   };
+}
+
+/** 行の置換操作を作る（行番号はヘッダー行を含むファイル上の行番号） */
+export function replaceRows(start: number, deleteCount: number, rows: string[][]): RowOp {
+  return { type: "replaceRows", start, deleteCount, rows };
 }
 
 /** 一時ファイルパスのドキュメントを開く */
