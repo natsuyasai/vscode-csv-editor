@@ -287,6 +287,12 @@ function expectMatches(store: RowStore, model: Model, lineCount: number) {
   expectSegments(store, model, lineCount);
 }
 
+/**
+ * 同期の fc.assert は単独で約5秒かかり、全体の並列実行では既定の 5000ms を超えて失敗することがある
+ * （同期のため打ち切れず、終わった後にタイムアウトとして報告される）。実行回数は減らさずに上限を延ばす
+ */
+const PROPERTY_TIMEOUT_MS = 30_000;
+
 describe("RowStore - Property-Based Tests", () => {
   it("op 列の各段階で配列モデルと一致し、逆操作を逆順に当てると元に戻る", () => {
     fc.assert(
@@ -319,7 +325,7 @@ describe("RowStore - Property-Based Tests", () => {
       ),
       { numRuns: 800 }
     );
-  });
+  }, PROPERTY_TIMEOUT_MS);
 });
 
 type Command =
@@ -419,5 +425,5 @@ describe("EditStack - Property-Based Tests", () => {
       ),
       { numRuns: 500 }
     );
-  });
+  }, PROPERTY_TIMEOUT_MS);
 });
