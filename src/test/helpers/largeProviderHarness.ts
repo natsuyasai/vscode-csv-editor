@@ -22,8 +22,16 @@ const token: vscode.CancellationToken = {
 /**
  * LargeCsvEditorProvider の openCustomDocument → resolveCustomEditor を、
  * モックの webview / panel で駆動するハーネス。
+ * openContext でバックアップからの復元（backupId）を渡せる。
  */
-export async function openLargeEditor(uri: vscode.Uri, options: LargeCsvEditorProviderOptions) {
+export async function openLargeEditor(
+  uri: vscode.Uri,
+  options: LargeCsvEditorProviderOptions,
+  openContext: vscode.CustomDocumentOpenContext = {
+    backupId: undefined,
+    untitledDocumentData: undefined,
+  }
+) {
   let messageHandler: ((message: unknown) => unknown) | undefined;
   const disposeHandlers: Array<() => void> = [];
   const posted: LargePosted[] = [];
@@ -69,11 +77,7 @@ export async function openLargeEditor(uri: vscode.Uri, options: LargeCsvEditorPr
   const editSubscription = provider.onDidChangeCustomDocument((event) => {
     edits.push(event);
   });
-  const document: LargeEditorDocument = await provider.openCustomDocument(
-    uri,
-    { backupId: undefined, untitledDocumentData: undefined },
-    token
-  );
+  const document: LargeEditorDocument = await provider.openCustomDocument(uri, openContext, token);
   provider.resolveCustomEditor(document, panel, token);
 
   const send = async (message: unknown) => {
