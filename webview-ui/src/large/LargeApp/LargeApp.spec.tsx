@@ -3,10 +3,11 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { LargeApp } from "./LargeApp";
 import { createLargeMessageHub, type LargeMessageHub } from "./largeMessageHub";
 
-const { postMessage, webviewState } = vi.hoisted(() => ({
-  postMessage: vi.fn(),
-  webviewState: { value: undefined as unknown },
-}));
+const { postMessage, webviewState } = vi.hoisted(() => {
+  // webview の状態（vscode.getState / setState）の代わり
+  const state: { value: unknown } = { value: undefined };
+  return { postMessage: vi.fn(), webviewState: state };
+});
 
 vi.mock("@/utilities/vscode", () => ({
   vscode: {
