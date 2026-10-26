@@ -96,6 +96,8 @@ export class PendingRowSource extends ObservableRowSource implements RowSource {
  */
 export class RecordingRowSource extends InMemoryRowSource {
   readonly applied: LargeOp[] = [];
+  /** applyOps 1回ごとの op（1回の編集＝Undo の1単位になる） */
+  readonly batches: LargeOp[][] = [];
 
   constructor(header: string[], rows: string[][], handles = rows.map((_, i) => i + 1)) {
     super(header, rows, handles);
@@ -103,6 +105,7 @@ export class RecordingRowSource extends InMemoryRowSource {
 
   applyOps(ops: LargeOp[]): void {
     this.applied.push(...ops);
+    this.batches.push(ops);
     super.applyOps(ops);
   }
 }

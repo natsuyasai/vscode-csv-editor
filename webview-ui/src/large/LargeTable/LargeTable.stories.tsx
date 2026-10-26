@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
-import { LargeTable } from "@/large/LargeTable/LargeTable";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+import { LargeTable, type LargeTableClipboard } from "@/large/LargeTable/LargeTable";
 import { MAX_SCROLL_HEIGHT } from "@/large/LargeTable/scrollScaling";
 import { InMemoryRowSource } from "@/large/rowSource/InMemoryRowSource";
 import {
@@ -330,5 +330,128 @@ export const KeyboardNavigationMillion: Story = {
     await waitFor(() => expect(cellAt(canvasElement, target, 1)).toHaveFocus());
     await expect(isVisible(cellAt(canvasElement, target, 1))).toBe(true);
     await expect(canvas.getByText(`name-${String(target)}`)).toBeVisible();
+  },
+};
+
+/** 書き込んだ内容を持つだけのクリップボード（Story の実行環境ではクリップボードの権限が無いため） */
+class MemoryClipboard implements LargeTableClipboard {
+  text = "";
+  writes = 0;
+  constructor(text = "") {
+    this.text = text;
+  }
+  readText(): Promise<string> {
+    return Promise.resolve(this.text);
+  }
+  writeText(text: string): Promise<void> {
+    this.text = text;
+    this.writes += 1;
+    return Promise.resolve();
+  }
+}
+
+const quotedRows = () =>
+  new RecordingRowSource(HEADER, [
+    ["1", 'say "hi"', "Tokyo", "multi\nline"],
+    ["2", "Bob", "Osaka", "tab\there"],
+    ["3", "Carol", "Kyoto", "third"],
+  ]);
+
+export const DragSelectAndCopy: Story = {
+  name: "ドラッグで範囲を選択して Ctrl+C でコピー（TSV）",
+  args: { source: quotedRows(), theme: "light", clipboard: new MemoryClipboard() },
+  play: async ({ canvasElement, args }) => {
+    const clipboard = args.clipboard as MemoryClipboard;
+    // 1行目の name 列から2行目の note 列までドラッグする
+    await userEvent.pointer([
+      { keys: "[MouseLeft>]", target: cellAt(canvasElement, 1, 1) },
+      { target: cellAt(canvasElement, 2, 2) },
+      { target: cellAt(canvasElement, 2, 3) },
+      { keys: "[/MouseLeft]", target: cellAt(canvasElement, 2, 3) },
+    ]);
+    for (const [row, col] of [
+      [1, 1],
+      [1, 3],
+      [2, 1],
+      [2, 3],
+    ]) {
+      await expect(cellAt(canvasElement, row, col)).toHaveAttribute("aria-selected", "true");
+    }
+    await expect(cellAt(canvasElement, 1, 0)).toHaveAttribute("aria-selected", "false");
+    await expect(cellAt(canvasElement, 3, 1)).toHaveAttribute("aria-selected", "false");
+
+    await userEvent.keyboard("{Control>}c{/Control}");
+    // 通常モードと同じ TSV（改行・タブ・引用符を含むセルはクォートし、引用符は2つ重ねる）
+    await waitFor(() =>
+      expect(clipboard.text).toBe('"say ""hi"""\tTokyo\t"multi\nline"\nBob\tOsaka\t"tab\there"')
+    );
+  },
+};
+
+export const ShiftSelectAndPaste: Story = {
+  name: "Shift+矢印キーで範囲を選択して Ctrl+V で貼り付け（1回の編集）",
+  args: {
+    source: editableRows(),
+    theme: "light",
+    clipboard: new MemoryClipboard("A\tB\nC\tD\nE\tF"),
+  },
+  play: async ({ canvasElement, args }) => {
+    const source = args.source as RecordingRowSource;
+    await userEvent.click(cellAt(canvasElement, 2, 2));
+    await userEvent.keyboard("{Shift>}{ArrowUp}{ArrowLeft}{/Shift}");
+    await expect(cellAt(canvasElement, 1, 1)).toHaveFocus();
+    await expect(cellAt(canvasElement, 2, 2)).toHaveAttribute("aria-selected", "true");
+
+    await userEvent.keyboard("{Control>}v{/Control}");
+    // 選択の左上（1行目の name 列）から貼り付ける。末尾の行を超える分（3行目より後）は無いので3行とも置き換える
+    await waitFor(() => expect(source.batches).toHaveLength(1));
+    await expect(source.batches[0]).toEqual([
+      { type: "setRow", handle: 1, row: ["1", "A", "B", "first"] },
+      { type: "setRow", handle: 2, row: ["2", "C", "D", "second"] },
+      { type: "setRow", handle: 3, row: ["3", "E", "F", "third"] },
+    ]);
+    await expect(cellAt(canvasElement, 3, 2)).toHaveTextContent("F");
+    // 貼り付けた範囲が選択される
+    await expect(cellAt(canvasElement, 3, 2)).toHaveAttribute("aria-selected", "true");
+    await expect(cellAt(canvasElement, 1, 1)).toHaveFocus();
+  },
+};
+
+const SIXTY_THOUSAND = 60_000;
+
+export const CopyLimit: Story = {
+  name: "10万セルを超える範囲はコピーできずメッセージを出す",
+  args: {
+    source: new InMemoryRowSource(
+      HEADER,
+      Array.from({ length: SIXTY_THOUSAND }, (_, i) =>
+        HEADER.map((name) => `${name}-${String(i + 1)}`)
+      )
+    ),
+    theme: "light",
+    clipboard: new MemoryClipboard("unchanged"),
+    onNotice: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const clipboard = args.clipboard as MemoryClipboard;
+    const element = scroller(canvasElement);
+    await userEvent.click(cellAt(canvasElement, 1, 0));
+    element.scrollTop = element.scrollHeight;
+    await waitFor(() =>
+      expect(canvas.getByRole("rowheader", { name: String(SIXTY_THOUSAND) })).toBeVisible()
+    );
+    // Shift を押したままクリックする（押したキーの状態を共有するため同じ user で操作する）
+    const user = userEvent.setup();
+    await user.keyboard("{Shift>}");
+    await user.click(cellAt(canvasElement, SIXTY_THOUSAND, 1));
+    await user.keyboard("{/Shift}");
+    await expect(cellAt(canvasElement, SIXTY_THOUSAND, 0)).toHaveAttribute("aria-selected", "true");
+    await user.keyboard("{Control>}c{/Control}");
+
+    // 6万行×2列＝12万セルは上限（10万セル）を超える
+    await expect(args.onNotice).toHaveBeenCalledWith(expect.stringMatching(/10万セル.*120,000/));
+    await expect(clipboard.text).toBe("unchanged");
+    await expect(clipboard.writes).toBe(0);
   },
 };
