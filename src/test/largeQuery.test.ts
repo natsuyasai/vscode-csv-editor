@@ -482,6 +482,32 @@ suite("大容量モードでの検索・ソート・フィルタ", function () {
     });
   });
 
+  test("画面が作り直されると実行中のジョブは取り消され、新しい画面のジョブと混ざらない", async () => {
+    const editor = await openHarness(writeFile("reinit-job.csv", bigCsv(BIG_ROWS)), {
+      document: { workerPath, queryTuning: SLOW_TUNING },
+    });
+    await editor.send({ type: "large/sort", jobId: 1, column: 1, direction: "asc" });
+    await editor.jobProgress(1);
+
+    await editor.send({ type: "init" });
+    const from = editor.posted.length;
+    // 作り直した画面は jobId を 1 から採番し直す
+    await editor.send({ type: "large/sort", jobId: 1, column: 0, direction: "desc" });
+    await editor.jobEnd(1);
+    await settle();
+
+    const after = editor.posted.slice(from);
+    const ends = after.filter((m) => m.type === "large/progress" && m.jobId === 1 && m.ratio === 1);
+    assert.strictEqual(ends.length, 1, "終わりは1回だけ");
+    const invalidated = after.findIndex(
+      (m) => m.type === "large/invalidate" && m.query !== undefined
+    );
+    assert.ok(invalidated >= 0, "新しいジョブの結果が伝えられる");
+    assert.ok(after.indexOf(ends[0]) > invalidated, "結果の後に終わりが伝えられる");
+    assert.deepStrictEqual(editor.errorsOf(1), []);
+    assert.deepStrictEqual(editor.document.queryState.sort, { column: 0, direction: "desc" });
+  });
+
   test("行数が上限を超えるとソートは拒否される", async () => {
     const editor = await openHarness(writeFile("too-many.csv", CITY_CSV), {
       document: { workerPath, maxSortRows: 9 },

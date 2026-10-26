@@ -568,7 +568,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
 
   /**
    * 表示順で検索する（from・fromCol・direction の意味は `large/search` と同じ）。
-   * 検索語が空白だけなら何もせず null。from が表示行数以上なら null
+   * 検索語が空白だけなら何もせず null。表示行が無ければ null。from が表示行数以上なら末尾の行から探す
    */
   search(
     query: string,
@@ -585,7 +585,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
       options,
       async (store) => {
         const order = this.view ? this.view.toFloat64Array() : store.handlesSnapshot();
-        if (from >= order.length) {
+        if (order.length === 0) {
           return { immediate: () => null };
         }
         return {
@@ -593,7 +593,8 @@ export class LargeCsvDocument implements vscode.CustomDocument {
           source: await this.querySource(),
           rows: { order, edits: store.editedEntries() },
           needle,
-          from,
+          // 要求の後に行が減っていたら末尾から探す（一致があるのに「無い」と返さない）
+          from: Math.min(from, order.length - 1),
           fromCol,
           direction,
           tuning: this.options.queryTuning,

@@ -94,6 +94,11 @@ export class LargeEditorSession {
   private sentRowCount = 0;
   private indexError: unknown;
   private job: SessionJob | undefined;
+  /**
+   * webview の世代（init を受けるたびに増やす）。作り直した webview は jobId を 1 から採番し直すので、
+   * 前の世代で始めたジョブの進捗・結果・エラーは送らない
+   */
+  private webviewEpoch = 0;
 
   constructor(
     private readonly document: LargeCsvDocument,
@@ -192,6 +197,10 @@ export class LargeEditorSession {
   }
 
   private async handleInit(): Promise<void> {
+    // 前の webview が始めたジョブは取り消し、以後は何も送らない
+    this.webviewEpoch += 1;
+    this.job?.run.cancel();
+    this.job = undefined;
     let header: string[] = [];
     let readError: unknown;
     try {
@@ -302,9 +311,11 @@ export class LargeEditorSession {
     onDone?: (value: T) => void
   ): void {
     let lastProgressAt = -Infinity;
+    const epoch = this.webviewEpoch;
+    const current = () => !this.disposed && epoch === this.webviewEpoch;
     const run = start((ratio) => {
       const now = this.options.now();
-      if (this.disposed || ratio >= 1 || now - lastProgressAt < this.options.progressIntervalMs) {
+      if (!current() || ratio >= 1 || now - lastProgressAt < this.options.progressIntervalMs) {
         return;
       }
       lastProgressAt = now;
@@ -314,12 +325,12 @@ export class LargeEditorSession {
     void run.result
       .then(
         (value) => {
-          if (!this.disposed) {
+          if (current()) {
             onDone?.(value);
           }
         },
         (error: unknown) => {
-          if (!this.disposed && !isSilentAbort(error)) {
+          if (current() && !isSilentAbort(error)) {
             this.post({ type: "large/error", message: errorMessage(error), jobId });
           }
         }
@@ -328,7 +339,7 @@ export class LargeEditorSession {
         if (this.job?.run === run) {
           this.job = undefined;
         }
-        if (!this.disposed) {
+        if (current()) {
           this.post({ type: "large/progress", kind, ratio: 1, jobId });
         }
       });
