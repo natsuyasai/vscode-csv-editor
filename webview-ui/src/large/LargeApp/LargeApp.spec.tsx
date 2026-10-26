@@ -198,6 +198,35 @@ describe("LargeApp", () => {
     expect(webviewState.value).toEqual({ largeNextHandle: -8 });
   });
 
+  test("large/init の nextHandle が webview の状態の値より小さければ、そこから採番する", () => {
+    webviewState.value = { largeNextHandle: -2 };
+    show({ ...INIT, rowCount: 3, indexing: false, nextHandle: -9 });
+    respondLatestRows();
+    fireEvent.mouseDown(cellOf(1, 0));
+    fireEvent.keyDown(cellOf(1, 0), { key: "I", ctrlKey: true, shiftKey: true });
+    expect(applyOpsMessages()).toEqual([
+      {
+        type: "large/applyOps",
+        ops: [{ type: "insertRows", beforeHandle: 1, handles: [-9], rows: [["", ""]] }],
+      },
+    ]);
+    expect(webviewState.value).toEqual({ largeNextHandle: -10 });
+  });
+
+  test("開き直しの large/init の nextHandle でも採番の起点を進める", () => {
+    show({ ...INIT, rowCount: 3, indexing: false });
+    receive({ ...INIT, rowCount: 3, indexing: false, nextHandle: -5 });
+    respondLatestRows();
+    fireEvent.mouseDown(cellOf(1, 0));
+    fireEvent.keyDown(cellOf(1, 0), { key: "I", ctrlKey: true, shiftKey: true });
+    expect(applyOpsMessages()).toEqual([
+      {
+        type: "large/applyOps",
+        ops: [{ type: "insertRows", beforeHandle: 1, handles: [-5], rows: [["", ""]] }],
+      },
+    ]);
+  });
+
   test("large/invalidate の header で列名を更新する", () => {
     show({ ...INIT, rowCount: 3, indexing: false });
     receive({ type: "large/invalidate", revision: 1, rowCount: 3, header: ["id", "氏名"] });

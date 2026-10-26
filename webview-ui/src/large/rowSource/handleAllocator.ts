@@ -10,6 +10,11 @@ export interface HandleStorage {
 
 export interface HandleAllocator {
   next(): number;
+  /**
+   * 次に採番する値を next 以下にする（拡張機能の `large/init` の nextHandle）。
+   * 既に使う値の方が小さければ何もしない。負の整数でなければ無視する
+   */
+  advanceTo(next: number): void;
 }
 
 const isNegativeInteger = (value: unknown): value is number =>
@@ -25,6 +30,11 @@ export function createHandleAllocator(storage?: HandleStorage): HandleAllocator 
       following = handle - 1;
       storage?.save(following);
       return handle;
+    },
+    advanceTo(next) {
+      if (isNegativeInteger(next)) {
+        following = Math.min(following, next);
+      }
     },
   };
 }

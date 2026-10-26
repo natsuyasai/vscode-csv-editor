@@ -27,7 +27,8 @@ const toIndexingRatio = (ratio: number): number | null => (ratio >= 1 ? null : r
  * - 行は RemoteRowSource で拡張機能から表示範囲の分だけ取得する
  * - 編集は RemoteRowSource が `large/applyOps` で送り、同時に表示へ反映する。
  *   拡張機能はインデックス作成が終わってから編集を受け付けるため、作成中は表を編集できなくする
- * - 追加行の負のハンドルは webview の状態に保存した続きから採番する（webview を作り直しても重ならない）
+ * - 追加行の負のハンドルは webview の状態に保存した続きから採番する（webview を作り直しても重ならない）。
+ *   `large/init` の nextHandle の方が小さければそこから採番する（webview の状態が失われても文書の追加行と重ならない）
  * - キーボードショートカットは登録しない。特に Ctrl+Z / Ctrl+Y は処理も preventDefault /
  *   stopPropagation もせず、VSCode の Undo/Redo に委ねる（スパイク S1 の決定）。Ctrl+S も VSCode の保存に任せる
  */
@@ -45,10 +46,14 @@ export function LargeApp({ init, theme, messages }: LargeAppProps) {
         onError: (message) => setError(message),
       })
   );
-  const [allocateHandle] = useState(() => {
-    const allocator = createHandleAllocator(createVscodeHandleStorage(vscode));
-    return () => allocator.next();
+  const [allocator] = useState(() => {
+    const created = createHandleAllocator(createVscodeHandleStorage(vscode));
+    if (init.nextHandle !== undefined) {
+      created.advanceTo(init.nextHandle);
+    }
+    return created;
   });
+  const [allocateHandle] = useState(() => () => allocator.next());
 
   const handleMessage = useCallback(
     (message: LargeMessageToWebview) => {
@@ -59,6 +64,9 @@ export function LargeApp({ init, theme, messages }: LargeAppProps) {
           setEncoding(message.encoding);
           setIndexingRatio(message.indexing ? 0 : null);
           setError(null);
+          if (message.nextHandle !== undefined) {
+            allocator.advanceTo(message.nextHandle);
+          }
           source.handleMessage(message);
           break;
         case "large/progress":
@@ -71,7 +79,7 @@ export function LargeApp({ init, theme, messages }: LargeAppProps) {
           break;
       }
     },
-    [source]
+    [source, allocator]
   );
 
   // 受け手を付けた時点で、描画前に届いていたメッセージも順に処理される
