@@ -2,12 +2,13 @@
 import * as path from "path";
 import * as vscode from "vscode";
 
-import type {
-  LargeFilterCondition,
-  LargeOp,
-  LargeQueryState,
-  LargeSearchDirection,
-  LargeSortDirection,
+import {
+  MAX_ROWS_PER_REQUEST,
+  type LargeFilterCondition,
+  type LargeOp,
+  type LargeQueryState,
+  type LargeSearchDirection,
+  type LargeSortDirection,
 } from "../message/largeMessages";
 import { EditStack } from "../shared/large/editStack";
 import { normalizeFilters, normalizeSearchQuery } from "../shared/large/query";
@@ -1005,8 +1006,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
 
   private async readFromIndex(start: number, count: number): Promise<DataRows> {
     const fileStart = start + HEADER_ROWS;
-    const reader = await this.reader;
-    const result = await reader.readRows(this.index, fileStart, count);
+    const result = await this.readFileRows(await this.reader, fileStart, count);
     return {
       start,
       rows: result.rows,
@@ -1038,12 +1038,43 @@ export class LargeCsvDocument implements vscode.CustomDocument {
         end += 1;
       }
       reader ??= await this.reader;
-      const result = await reader.readRows(this.index, handle, end - i);
-      rows.push(...result.rows);
+      const result = await this.readFileRows(reader, handle, end - i);
+      // 10万行になりうるので、引数の展開（引数の数の上限がある）を使わずに足す
+      for (const row of result.rows) {
+        rows.push(row);
+      }
       invalidRows.push(...result.invalidRows);
       i = end;
     }
     return { start, rows, handles, invalidRows };
+  }
+
+  /**
+   * ファイル上の行 [fileStart, fileStart + count) を読む。FileRowReader は1回 MAX_ROWS_PER_REQUEST 行までなので、
+   * 範囲のコピー（10万セルまで）のように多い行は分けて読んで連結する。末尾を超える分は切り詰める
+   */
+  private async readFileRows(
+    reader: FileRowReader,
+    fileStart: number,
+    count: number
+  ): Promise<{ rows: string[][]; invalidRows: number[] }> {
+    if (count <= MAX_ROWS_PER_REQUEST) {
+      return reader.readRows(this.index, fileStart, count);
+    }
+    const rows: string[][] = [];
+    const invalidRows: number[] = [];
+    for (let offset = 0; offset < count; offset += MAX_ROWS_PER_REQUEST) {
+      const part = Math.min(MAX_ROWS_PER_REQUEST, count - offset);
+      const result = await reader.readRows(this.index, fileStart + offset, part);
+      for (const row of result.rows) {
+        rows.push(row);
+      }
+      invalidRows.push(...result.invalidRows);
+      if (result.rows.length < part) {
+        break;
+      }
+    }
+    return { rows, invalidRows };
   }
 
   // ---- 検索・ソート・フィルタ ----

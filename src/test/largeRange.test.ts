@@ -194,6 +194,22 @@ suite("大容量モードでの範囲コピーと貼り付け", function () {
     assert.strictEqual(editor.postedOf("large/range").length, 0, "範囲は返らない");
   });
 
+  test("5000行を超える範囲も10万セル以内ならコピーできる", async () => {
+    const values = Array.from({ length: 6000 }, (_, i) => `v${String(i)}`);
+    const editor = await openHarness(writeFile("many-rows.csv", `h\n${values.join("\n")}\n`));
+    const response = await editor.requestRange({
+      startRow: 0,
+      endRow: 6000,
+      startCol: 0,
+      endCol: 1,
+    });
+    assert.strictEqual(response?.type, "large/range", `範囲が返る: ${String(response?.message)}`);
+    assert.deepStrictEqual(
+      response.rows,
+      values.map((v) => [v])
+    );
+  });
+
   test("ちょうど10万セルの範囲は要求できる", async () => {
     const editor = await openHarness(writeFile("exact.csv", TEN_CSV));
     const endRow = MAX_RANGE_CELLS / 2;
