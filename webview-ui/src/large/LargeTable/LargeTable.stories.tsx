@@ -1,9 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, waitFor, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LargeTable } from "@/large/LargeTable/LargeTable";
 import { MAX_SCROLL_HEIGHT } from "@/large/LargeTable/scrollScaling";
 import { InMemoryRowSource } from "@/large/rowSource/InMemoryRowSource";
-import { GeneratedRowSource, PendingRowSource } from "@/test-utils/largeRowSources";
+import {
+  GeneratedRowSource,
+  PendingRowSource,
+  RecordingRowSource,
+} from "@/test-utils/largeRowSources";
 
 const MILLION = 1_000_000;
 const HEADER = ["id", "name", "city", "note"];
@@ -139,5 +143,192 @@ export const DarkTheme: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("columnheader", { name: "id" })).toBeInTheDocument();
     await expect(canvas.getByText("Alice")).toBeVisible();
+  },
+};
+
+// ---- 編集（2-2） ----
+
+const editableRows = () =>
+  new RecordingRowSource(HEADER, [
+    ["1", "Alice", "Tokyo", "first"],
+    ["2", "Bob", "Osaka", "second"],
+    ["3", "Carol", "Kyoto", "third"],
+  ]);
+
+/** n 行目（1 始まり）の col 列目のセル */
+const cellAt = (canvasElement: HTMLElement, rowNumber: number, col: number) => {
+  const row = within(canvasElement)
+    .getByRole("rowheader", { name: String(rowNumber) })
+    .closest("tr");
+  if (!row) throw new Error(`${String(rowNumber)}行目が無い`);
+  return within(row).getAllByRole("gridcell")[col];
+};
+
+/** 行番号を右クリックし、行のメニュー（VscodeContextMenu）の項目を選ぶ */
+async function selectRowMenu(canvasElement: HTMLElement, rowNumber: number, value: string) {
+  const rowHeader = within(canvasElement).getByRole("rowheader", { name: String(rowNumber) });
+  await userEvent.pointer({ keys: "[MouseRight]", target: rowHeader });
+  const link = await waitFor(() => {
+    const menu = document.body.querySelector("vscode-context-menu");
+    const item = menu?.shadowRoot?.querySelector(`vscode-context-menu-item[value="${value}"]`);
+    const anchor = item?.shadowRoot?.querySelector("a");
+    if (!anchor) throw new Error(`メニューの項目 ${value} が無い`);
+    return anchor;
+  });
+  await userEvent.click(link);
+  await waitFor(() => expect(document.body.querySelector("vscode-context-menu")).toBeNull());
+}
+
+export const EditCell: Story = {
+  name: "セルの編集（ダブルクリックで編集し Enter で確定）",
+  args: { source: editableRows(), theme: "light" },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const source = args.source as RecordingRowSource;
+    await userEvent.dblClick(cellAt(canvasElement, 2, 1));
+    const editor = canvas.getByRole("textbox", { name: "セルの編集" });
+    await waitFor(() => expect(editor).toHaveFocus());
+    await userEvent.clear(editor);
+    await userEvent.type(editor, "Bobby{Enter}");
+
+    // ハンドル（ファイルの行番号）を指定した行の置き換えが送られ、即座に表示される
+    await expect(source.applied).toEqual([
+      { type: "setRow", handle: 2, row: ["2", "Bobby", "Osaka", "second"] },
+    ]);
+    await expect(cellAt(canvasElement, 2, 1)).toHaveTextContent("Bobby");
+    // 確定後は下のセルが選択される
+    await waitFor(() => expect(cellAt(canvasElement, 3, 1)).toHaveFocus());
+    await expect(cellAt(canvasElement, 3, 1)).toHaveAttribute("aria-selected", "true");
+  },
+};
+
+export const EditByTyping: Story = {
+  name: "入力で編集を始め Tab で確定、Esc でキャンセル",
+  args: { source: editableRows(), theme: "light" },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const source = args.source as RecordingRowSource;
+    await userEvent.click(cellAt(canvasElement, 1, 2));
+    await userEvent.keyboard("Nagoya");
+    await expect(canvas.getByRole("textbox", { name: "セルの編集" })).toHaveValue("Nagoya");
+    await userEvent.keyboard("{Tab}");
+    await expect(source.applied).toEqual([
+      { type: "setRow", handle: 1, row: ["1", "Alice", "Nagoya", "first"] },
+    ]);
+    await waitFor(() => expect(cellAt(canvasElement, 1, 3)).toHaveFocus());
+
+    // F2 で編集を始めて Esc でキャンセルすると何も送られない
+    await userEvent.keyboard("{F2}x{Escape}");
+    await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
+    await expect(source.applied).toHaveLength(1);
+    await expect(cellAt(canvasElement, 1, 3)).toHaveTextContent("first");
+
+    // Ctrl+Z は表では処理しない（VSCode の Undo に委ねる）
+    await userEvent.keyboard("{Control>}z{/Control}");
+    await expect(source.applied).toHaveLength(1);
+  },
+};
+
+export const EditHeader: Story = {
+  name: "ヘッダーの編集",
+  args: { source: editableRows(), theme: "light" },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const source = args.source as RecordingRowSource;
+    await userEvent.dblClick(canvas.getByRole("columnheader", { name: "city" }));
+    const editor = canvas.getByRole("textbox", { name: "列名の編集" });
+    await userEvent.clear(editor);
+    await userEvent.type(editor, "都市{Enter}");
+    await expect(source.applied).toEqual([
+      { type: "setHeader", header: ["id", "name", "都市", "note"] },
+    ]);
+    await expect(canvas.getByRole("columnheader", { name: "都市" })).toBeInTheDocument();
+  },
+};
+
+export const InsertAndDeleteRows: Story = {
+  name: "行番号の右クリックメニューで行を挿入・削除",
+  args: { source: editableRows(), theme: "light" },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const source = args.source as RecordingRowSource;
+    const bodyRows = () => within(canvas.getAllByRole("rowgroup")[1]).getAllByRole("row");
+
+    await selectRowMenu(canvasElement, 2, "insertRowAbove");
+    await expect(source.applied[0]).toEqual({
+      type: "insertRows",
+      beforeHandle: 2,
+      handles: [-1],
+      rows: [["", "", "", ""]],
+    });
+    await waitFor(() => expect(bodyRows()).toHaveLength(4));
+    await expect(cellAt(canvasElement, 3, 1)).toHaveTextContent("Bob");
+
+    await selectRowMenu(canvasElement, 4, "insertRowBelow");
+    await expect(source.applied[1]).toMatchObject({ beforeHandle: null, handles: [-2] });
+
+    await selectRowMenu(canvasElement, 1, "deleteRow");
+    await expect(source.applied[2]).toEqual({ type: "deleteRows", handles: [1] });
+    await waitFor(() => expect(bodyRows()).toHaveLength(4));
+    await expect(cellAt(canvasElement, 2, 1)).toHaveTextContent("Bob");
+  },
+};
+
+export const ReadOnlyWhileIndexing: Story = {
+  name: "インデックス作成中（編集できない）",
+  args: { source: editableRows(), theme: "light", readOnly: true },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const source = args.source as RecordingRowSource;
+    await userEvent.dblClick(cellAt(canvasElement, 2, 1));
+    await userEvent.keyboard("x{Delete}{F2}");
+    await userEvent.pointer({
+      keys: "[MouseRight]",
+      target: canvas.getByRole("rowheader", { name: "2" }),
+    });
+    await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
+    await expect(document.body.querySelector("vscode-context-menu")).toBeNull();
+    await expect(source.applied).toEqual([]);
+    // 選択の移動はできる
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(cellAt(canvasElement, 3, 1)).toHaveAttribute("aria-selected", "true");
+  },
+};
+
+export const KeyboardNavigationMillion: Story = {
+  name: "100万行で選択の移動に合わせてスクロール",
+  args: { source: new GeneratedRowSource(HEADER, MILLION), theme: "light" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const element = scroller(canvasElement);
+    const isVisible = (cell: HTMLElement) => {
+      const rect = cell.getBoundingClientRect();
+      const view = element.getBoundingClientRect();
+      // 固定ヘッダー（40px）の下に収まっている
+      return rect.top >= view.top + 40 - 1 && rect.bottom <= view.bottom + 1;
+    };
+    await waitFor(() => expect(canvas.getByRole("rowheader", { name: "1" })).toBeVisible());
+
+    // 下矢印で表示範囲の外へ移ると、その行が見える位置までスクロールする
+    await userEvent.click(cellAt(canvasElement, 1, 0));
+    for (let i = 0; i < 30; i++) {
+      await userEvent.keyboard("{ArrowDown}");
+    }
+    await waitFor(() => expect(cellAt(canvasElement, 31, 0)).toHaveFocus());
+    await expect(isVisible(cellAt(canvasElement, 31, 0))).toBe(true);
+
+    // 末尾付近（DOM の高さを縮めている範囲の終わり）でも、上へ移る選択に合わせてスクロールする
+    element.scrollTop = element.scrollHeight;
+    await waitFor(() =>
+      expect(canvas.getByRole("rowheader", { name: String(MILLION) })).toBeVisible()
+    );
+    await userEvent.click(cellAt(canvasElement, MILLION, 1));
+    for (let i = 0; i < 20; i++) {
+      await userEvent.keyboard("{ArrowUp}");
+    }
+    const target = MILLION - 20;
+    await waitFor(() => expect(cellAt(canvasElement, target, 1)).toHaveFocus());
+    await expect(isVisible(cellAt(canvasElement, target, 1))).toBe(true);
+    await expect(canvas.getByText(`name-${String(target)}`)).toBeVisible();
   },
 };

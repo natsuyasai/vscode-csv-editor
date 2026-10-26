@@ -1,3 +1,5 @@
+import type { LargeOp } from "@message/largeMessages";
+import { InMemoryRowSource } from "@/large/rowSource/InMemoryRowSource";
 import { ObservableRowSource, type RowSource } from "@/large/rowSource/RowSource";
 
 /** 行の内容を行番号から作る関数（既定は「列名-行番号」） */
@@ -85,5 +87,22 @@ export class PendingRowSource extends ObservableRowSource implements RowSource {
       }
     }
     this.notify();
+  }
+}
+
+/**
+ * 受けた編集操作（applyOps）を記録しながら適用する InMemoryRowSource（Story・テスト用）。
+ * ハンドルは省略時、ファイルの行番号と同じ 1 始まりにする
+ */
+export class RecordingRowSource extends InMemoryRowSource {
+  readonly applied: LargeOp[] = [];
+
+  constructor(header: string[], rows: string[][], handles = rows.map((_, i) => i + 1)) {
+    super(header, rows, handles);
+  }
+
+  applyOps(ops: LargeOp[]): void {
+    this.applied.push(...ops);
+    super.applyOps(ops);
   }
 }
