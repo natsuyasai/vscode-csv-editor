@@ -267,4 +267,62 @@ suite("RowIndex（行インデックスの非同期作成）", () => {
       assert.deepStrictEqual(unhandled, []);
     });
   });
+
+  suite("オフセット表から作る（保存後の差し替え）", () => {
+    test("ファイルから作ったものと同じ行の範囲・要約になり、作成済みとして扱う", async () => {
+      const data = 'h,x\r\n"a\r\nb",c\r\n\r\nlast';
+      const built = RowIndex.build(writeFile("src.csv", data), { skipBom: true });
+      const summary = await built.done;
+      const starts = Float64Array.from([0, 5, 15, 17, 21]);
+
+      const index = RowIndex.fromOffsets(starts, summary);
+
+      assert.strictEqual(index.completed, true);
+      assert.strictEqual(index.rowCount, 4);
+      assert.deepStrictEqual(allRanges(index), allRanges(built));
+      assert.deepStrictEqual(await index.done, summary);
+      assert.strictEqual(await index.firstRow, true);
+    });
+
+    test("末尾に改行があれば最終行の終了は行区切りの手前になる", async () => {
+      const index = RowIndex.fromOffsets(Float64Array.from([3, 6, 9]), {
+        delimiter: "\n",
+        contentStart: 3,
+        byteLength: 9,
+        hasTrailingNewline: true,
+        rowCount: 2,
+      });
+      assert.deepStrictEqual(allRanges(index), [
+        { start: 3, end: 5, next: 6 },
+        { start: 6, end: 8, next: 9 },
+      ]);
+      assert.deepStrictEqual((await index.done).rowCount, 2);
+    });
+
+    test("0行なら先頭行は無く、範囲を引くと RangeError になる", async () => {
+      const index = RowIndex.fromOffsets(Float64Array.from([0]), {
+        delimiter: null,
+        contentStart: 0,
+        byteLength: 0,
+        hasTrailingNewline: false,
+        rowCount: 0,
+      });
+      assert.strictEqual(await index.firstRow, false);
+      assert.throws(() => index.getRowRange(0), RangeError);
+    });
+
+    test("オフセット表の要素数が行数+1に足りなければ RangeError になる", () => {
+      assert.throws(
+        () =>
+          RowIndex.fromOffsets(Float64Array.from([0, 2]), {
+            delimiter: "\n",
+            contentStart: 0,
+            byteLength: 4,
+            hasTrailingNewline: true,
+            rowCount: 2,
+          }),
+        RangeError
+      );
+    });
+  });
 });

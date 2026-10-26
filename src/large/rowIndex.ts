@@ -87,7 +87,7 @@ export class RowIndex {
   readonly firstRow: Promise<boolean>;
 
   /** starts[i] は i 行目の開始、starts[rowCount] は最後に確定した行の next */
-  private starts = new Float64Array(INITIAL_CAPACITY);
+  private starts: Float64Array = new Float64Array(INITIAL_CAPACITY);
   private count = 0;
   /** 行区切りのバイト数（ファイル全体で一定。最初の行区切りで決まる） */
   private eolLength = 0;
@@ -95,13 +95,16 @@ export class RowIndex {
   private finished = false;
   private readonly maxRows: number;
 
-  private constructor(filePath: string, options: BuildRowIndexOptions) {
-    this.maxRows = options.maxRows ?? MAX_INDEXED_ROWS;
+  private constructor(
+    maxRows: number,
+    start: (self: RowIndex, onFirstRow: () => void) => Promise<RowIndexSummary>
+  ) {
+    this.maxRows = maxRows;
     let resolveFirstRow: (value: boolean) => void = () => {};
     this.firstRow = new Promise((resolve) => {
       resolveFirstRow = resolve;
     });
-    this.done = this.run(filePath, options, () => {
+    this.done = start(this, () => {
       resolveFirstRow(true);
     }).finally(() => {
       resolveFirstRow(this.count > 0);
@@ -111,7 +114,31 @@ export class RowIndex {
 
   /** 作成を始める（完了は `done` で待つ） */
   static build(filePath: string, options: BuildRowIndexOptions): RowIndex {
-    return new RowIndex(filePath, options);
+    return new RowIndex(options.maxRows ?? MAX_INDEXED_ROWS, (self, onFirstRow) =>
+      self.run(filePath, options, onFirstRow)
+    );
+  }
+
+  /**
+   * 作成済みのオフセット表から行インデックスを作る（保存時に書き出しながら作った表で差し替え、再インデックスを省く）。
+   * `starts[i]` は i 行目の開始、`starts[summary.rowCount]` は最終行の next（表は受け取ったものをそのまま持つ）。
+   * 行区切りの長さは `summary.delimiter`、最終行の行区切りの有無は `summary.hasTrailingNewline` で決まる。
+   */
+  static fromOffsets(starts: Float64Array, summary: RowIndexSummary): RowIndex {
+    const { rowCount } = summary;
+    if (!Number.isInteger(rowCount) || rowCount < 0 || starts.length < rowCount + 1) {
+      throw new RangeError(
+        `オフセット表の要素数（${String(starts.length)}）が行数+1（${String(rowCount + 1)}）に足りません`
+      );
+    }
+    return new RowIndex(Math.max(MAX_INDEXED_ROWS, rowCount), (self) => {
+      self.starts = starts;
+      self.count = rowCount;
+      self.eolLength = summary.delimiter?.length ?? 0;
+      self.lastRowHasEol = summary.hasTrailingNewline;
+      self.finished = true;
+      return Promise.resolve({ ...summary });
+    });
   }
 
   /** 確定済みの行数（作成中は増えていく） */
