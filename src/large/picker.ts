@@ -48,3 +48,21 @@ export class OverridablePicker implements Picker {
     return (this.override ?? this.fallback).pick(items, options);
   }
 }
+
+/**
+ * 選択を1つずつ順に出す Picker。
+ * VSCode の QuickPick は同時に1つしか出せず、後から出すと先のものがキャンセル扱いで閉じる。
+ * ウィンドウの復元などで複数のタブが同時に尋ねても、前の選択が終わってから次を出す。
+ */
+export class SerialPicker implements Picker {
+  /** 最後に並んだ選択が終わったら resolve（成否は問わない） */
+  private tail: Promise<unknown> = Promise.resolve();
+
+  constructor(private readonly inner: Picker) {}
+
+  pick<V>(items: readonly PickItem<V>[], options: PickOptions): Promise<V | undefined> {
+    const result = this.tail.then(() => this.inner.pick(items, options));
+    this.tail = result.catch(() => undefined);
+    return result;
+  }
+}

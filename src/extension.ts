@@ -3,7 +3,7 @@ import { CSVEditorProvider } from "@/editor/csvEditorProvider";
 import { LargeCsvEditorProvider } from "@/large/largeCsvEditorProvider";
 import { createOpenRouterDeps, OpenRouter, registerOpenRouting } from "@/large/openRouting";
 import { PendingEncodings } from "@/large/pendingEncodings";
-import { OverridablePicker, windowPicker, type Picker } from "@/large/picker";
+import { OverridablePicker, SerialPicker, windowPicker, type Picker } from "@/large/picker";
 
 /** テストのときだけ `activate` が返す API（拡張機能のテストモードでのみ公開する） */
 export interface CsvEditorTestingApi {
@@ -14,7 +14,9 @@ export interface CsvEditorTestingApi {
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext): CsvEditorTestingApi | undefined {
-  const picker = new OverridablePicker(windowPicker);
+  const overridable = new OverridablePicker(windowPicker);
+  // QuickPick は同時に1つしか出せないので、復元時などに重なっても1つずつ尋ねる
+  const picker = new SerialPicker(overridable);
   // 入口で選んだ文字コードを大容量モードの provider へ渡す
   const pending = new PendingEncodings();
   const router = new OpenRouter(createOpenRouterDeps(picker, pending));
@@ -30,7 +32,7 @@ export function activate(context: vscode.ExtensionContext): CsvEditorTestingApi 
   }
   return {
     setPickerForTesting: (override) => {
-      picker.setOverride(override);
+      overridable.setOverride(override);
     },
   };
 }
