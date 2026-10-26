@@ -332,39 +332,38 @@ describeFeature(feature, ({ Scenario, BeforeEachScenario, AfterEachScenario }) =
     }
   );
 
-  Scenario(
-    "検索の次へは一致した行の次の行から、前へは前の行から探す",
-    ({ Given, When, Then, And }) => {
-      Given("100万行の大容量ファイルで「abc」が50万行目の「name」列に一致している", () => {
-        open();
-        openSearchAndSubmit("abc");
-        ext.found(ext.last("large/search").jobId, { row: 499_999, col: 1 });
+  Scenario("検索の次へ・前へは直前に一致したセルを基準に探す", ({ Given, When, Then, And }) => {
+    Given("100万行の大容量ファイルで「abc」が50万行目の「name」列に一致している", () => {
+      open();
+      openSearchAndSubmit("abc");
+      ext.found(ext.last("large/search").jobId, { row: 499_999, col: 1 });
+    });
+    When("検索の次へを押す", () => {
+      click(screen.getByRole("button", { name: "Next search result" }));
+    });
+    Then("50万行目の「name」列を基準に前方へ探す検索が要求される", () => {
+      expect(ext.last("large/search")).toMatchObject({
+        from: 499_999,
+        fromCol: 1,
+        direction: "forward",
+        query: "abc",
       });
-      When("検索の次へを押す", () => {
-        click(screen.getByRole("button", { name: "Next search result" }));
+    });
+    When("拡張機能が50万1行目の「name」列に一致したと返す", () => {
+      ext.found(ext.last("large/search").jobId, { row: 500_000, col: 1 });
+    });
+    And("検索の前へを押す", () => {
+      click(screen.getByRole("button", { name: "Previous search result" }));
+    });
+    Then("50万1行目の「name」列を基準に後方へ探す検索が要求される", () => {
+      expect(ext.last("large/search")).toMatchObject({
+        from: 500_000,
+        fromCol: 1,
+        direction: "backward",
+        query: "abc",
       });
-      Then("50万1行目から前方に探す検索が要求される", () => {
-        expect(ext.last("large/search")).toMatchObject({
-          from: 500_000,
-          direction: "forward",
-          query: "abc",
-        });
-      });
-      When("拡張機能が50万1行目の「name」列に一致したと返す", () => {
-        ext.found(ext.last("large/search").jobId, { row: 500_000, col: 1 });
-      });
-      And("検索の前へを押す", () => {
-        click(screen.getByRole("button", { name: "Previous search result" }));
-      });
-      Then("50万行目から後方に探す検索が要求される", () => {
-        expect(ext.last("large/search")).toMatchObject({
-          from: 499_999,
-          direction: "backward",
-          query: "abc",
-        });
-      });
-    }
-  );
+    });
+  });
 
   Scenario("一致が見つからないと「見つかりません」と表示される", ({ Given, When, Then, And }) => {
     Given("100万行の大容量ファイルを開いている", () => open());

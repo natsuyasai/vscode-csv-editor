@@ -5,7 +5,7 @@ import type {
   LargeQueryState,
   LargeSearchDirection,
 } from "@message/largeMessages";
-import { searchFrom, toFilterConditions, nextSort, type SortState } from "./largeQuery";
+import { searchStart, toFilterConditions, nextSort, type SortState } from "./largeQuery";
 
 /** フィルタ入力から `large/filter` を送るまでの待ち時間（入力のたびに全体走査しないため） */
 export const FILTER_DEBOUNCE_MS = 300;
@@ -55,6 +55,7 @@ type SearchRequest = {
   kind: "search";
   query: string;
   from: number;
+  fromCol?: number;
   direction: LargeSearchDirection;
 };
 type QueryRequest = SortRequest | FilterRequest | SearchRequest;
@@ -309,18 +310,17 @@ export class LargeQueryController {
     if (!this.enabled || (running && running.kind !== "search")) {
       return;
     }
-    const from = searchFrom({
+    const start = searchStart({
       direction,
       rowCount: context.rowCount,
       selectedRow: context.selectedRow,
-      lastMatchRow: this.snapshot.match?.row ?? null,
-      fresh,
+      lastMatch: fresh ? null : this.snapshot.match,
     });
-    if (from === null) {
+    if (start === null) {
       return;
     }
     this.lastQuery = query;
-    this.start({ kind: "search", query, from, direction });
+    this.start({ kind: "search", query, ...start, direction });
     this.update({ searchStatus: "searching" });
   }
 
@@ -363,6 +363,7 @@ export class LargeQueryController {
           jobId,
           query: request.query,
           from: request.from,
+          ...(request.fromCol === undefined ? {} : { fromCol: request.fromCol }),
           direction: request.direction,
         });
         break;

@@ -28,45 +28,39 @@ export function toFilterConditions(texts: readonly string[]): LargeFilterConditi
   return conditions;
 }
 
-export interface SearchFromInput {
+export interface SearchStartInput {
   direction: LargeSearchDirection;
   /** 現在の表示行数（ソート・フィルタ後） */
   rowCount: number;
   /** 選択中のセルの表示行（無い・ヘッダーなら null または負） */
   selectedRow: number | null;
-  /** 直前の検索で一致した行 */
-  lastMatchRow: number | null;
-  /** 新しい検索語での最初の検索か（Enter や、語を変えたとき） */
-  fresh: boolean;
+  /** 直前の検索で一致したセル（続きの検索の基準） */
+  lastMatch: { row: number; col: number } | null;
 }
 
 /**
- * `large/search` の from（表示順の行位置。その行を含めて探す）を決める。
- * - 新しい検索: 選択中の行から（無ければ前方は先頭、後方は末尾）
- * - 続きの検索: 基準（選択中の行。無ければ直前の一致行）の次・前の行から。
- *   一致後はその一致セルが選択されているので、基準は一致行と同じになる
- * - 末尾を越えたら先頭、先頭を越えたら末尾へ回り込む。行が無ければ null（検索しない）
+ * `large/search` の from / fromCol を決める。
+ * - 続きの検索（直前の一致がある）: 一致したセルをそのまま送る。拡張機能がそのセルの次
+ *   （forward は右 → 下、backward は左 → 上）から探し、端で折り返して一周する
+ * - 新しい検索: fromCol は省略し、選択中の行（無ければ前方は先頭、後方は末尾）の端のセルから探す。
+ *   通常モードの検索が表の先頭から全件を探すのに近づけるため、選択セルの次ではなく行の端から始める
+ * - 行が無ければ null（検索しない）
  */
-export function searchFrom({
+export function searchStart({
   direction,
   rowCount,
   selectedRow,
-  lastMatchRow,
-  fresh,
-}: SearchFromInput): number | null {
+  lastMatch,
+}: SearchStartInput): { from: number; fromCol?: number } | null {
   if (rowCount <= 0) {
     return null;
   }
+  if (lastMatch !== null && lastMatch.row < rowCount) {
+    return { from: lastMatch.row, fromCol: lastMatch.col };
+  }
   const forward = direction === "forward";
-  const selected = selectedRow !== null && selectedRow >= 0 ? selectedRow : null;
-  const base = fresh ? selected : (selected ?? lastMatchRow);
-  const from =
-    base === null ? (forward ? 0 : rowCount - 1) : fresh ? base : base + (forward ? 1 : -1);
-  if (from < 0) {
-    return rowCount - 1;
+  if (selectedRow === null || selectedRow < 0 || selectedRow >= rowCount) {
+    return { from: forward ? 0 : rowCount - 1 };
   }
-  if (from >= rowCount) {
-    return forward ? 0 : rowCount - 1;
-  }
-  return from;
+  return { from: selectedRow };
 }

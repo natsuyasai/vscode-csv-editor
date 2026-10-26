@@ -1,4 +1,4 @@
-import { nextSort, searchFrom, toFilterConditions } from "./largeQuery";
+import { nextSort, searchStart, toFilterConditions } from "./largeQuery";
 
 describe("nextSort", () => {
   test("ソートしていない列をクリックすると昇順になる", () => {
@@ -34,60 +34,41 @@ describe("toFilterConditions", () => {
   });
 });
 
-describe("searchFrom", () => {
-  const base = { rowCount: 100, selectedRow: null, lastMatchRow: null, fresh: true } as const;
+describe("searchStart", () => {
+  const base = { rowCount: 100, selectedRow: null, lastMatch: null } as const;
 
   test("行が無ければ検索しない", () => {
-    expect(searchFrom({ ...base, direction: "forward", rowCount: 0 })).toBeNull();
+    expect(searchStart({ ...base, direction: "forward", rowCount: 0 })).toBeNull();
   });
 
-  test("新しい検索で選択が無ければ、前方は先頭・後方は末尾から", () => {
-    expect(searchFrom({ ...base, direction: "forward" })).toBe(0);
-    expect(searchFrom({ ...base, direction: "backward" })).toBe(99);
+  test("新しい検索で選択が無ければ、前方は先頭・後方は末尾の行から（列は指定しない）", () => {
+    expect(searchStart({ ...base, direction: "forward" })).toEqual({ from: 0 });
+    expect(searchStart({ ...base, direction: "backward" })).toEqual({ from: 99 });
   });
 
-  test("新しい検索は選択セルの行から始める（その行を含む）", () => {
-    expect(searchFrom({ ...base, direction: "forward", selectedRow: 40 })).toBe(40);
-    expect(searchFrom({ ...base, direction: "backward", selectedRow: 40 })).toBe(40);
+  test("新しい検索は選択中の行から始める（列は指定せず、行の端のセルから）", () => {
+    expect(searchStart({ ...base, direction: "forward", selectedRow: 40 })).toEqual({ from: 40 });
+    expect(searchStart({ ...base, direction: "backward", selectedRow: 40 })).toEqual({ from: 40 });
   });
 
   test("ヘッダー行（-1）の選択は選択なしとして扱う", () => {
-    expect(searchFrom({ ...base, direction: "forward", selectedRow: -1 })).toBe(0);
-  });
-
-  test("続きの検索は現在の一致位置の次・前の行から", () => {
-    const next = { ...base, fresh: false, selectedRow: 40, lastMatchRow: 40 };
-    expect(searchFrom({ ...next, direction: "forward" })).toBe(41);
-    expect(searchFrom({ ...next, direction: "backward" })).toBe(39);
-  });
-
-  test("続きの検索で、利用者が別のセルを選んでいればそこの次・前から", () => {
-    const moved = { ...base, fresh: false, selectedRow: 10, lastMatchRow: 40 };
-    expect(searchFrom({ ...moved, direction: "forward" })).toBe(11);
-    expect(searchFrom({ ...moved, direction: "backward" })).toBe(9);
-  });
-
-  test("続きの検索で選択が無ければ一致位置を基準にする", () => {
-    const only = { ...base, fresh: false, lastMatchRow: 5 };
-    expect(searchFrom({ ...only, direction: "forward" })).toBe(6);
-  });
-
-  test("続きの検索で基準が無ければ新しい検索と同じ", () => {
-    expect(searchFrom({ ...base, fresh: false, direction: "forward" })).toBe(0);
-  });
-
-  test("末尾を越える前方検索は先頭に、先頭を越える後方検索は末尾に回り込む", () => {
-    const edge = { ...base, fresh: false };
-    expect(searchFrom({ ...edge, direction: "forward", selectedRow: 99, lastMatchRow: 99 })).toBe(
-      0
-    );
-    expect(searchFrom({ ...edge, direction: "backward", selectedRow: 0, lastMatchRow: 0 })).toBe(
-      99
-    );
+    expect(searchStart({ ...base, direction: "forward", selectedRow: -1 })).toEqual({ from: 0 });
   });
 
   test("選択がフィルタで減った行数を超えていても範囲内に収める", () => {
-    expect(searchFrom({ ...base, direction: "forward", selectedRow: 500 })).toBe(0);
-    expect(searchFrom({ ...base, direction: "backward", selectedRow: 500 })).toBe(99);
+    expect(searchStart({ ...base, direction: "forward", selectedRow: 500 })).toEqual({ from: 0 });
+    expect(searchStart({ ...base, direction: "backward", selectedRow: 500 })).toEqual({ from: 99 });
+  });
+
+  test("続きの検索は直前の一致の行・列をそのまま送る（次のセルへの移動と折り返しは拡張機能が行う）", () => {
+    const next = { ...base, lastMatch: { row: 99, col: 3 }, selectedRow: 99 };
+    expect(searchStart({ ...next, direction: "forward" })).toEqual({ from: 99, fromCol: 3 });
+    expect(searchStart({ ...next, direction: "backward" })).toEqual({ from: 99, fromCol: 3 });
+  });
+
+  test("直前の一致が表示行数を超えていれば新しい検索として扱う", () => {
+    expect(searchStart({ ...base, direction: "forward", lastMatch: { row: 500, col: 0 } })).toEqual(
+      { from: 0 }
+    );
   });
 });

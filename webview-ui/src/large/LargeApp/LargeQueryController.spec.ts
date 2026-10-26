@@ -323,17 +323,17 @@ describe("LargeQueryController", () => {
       expect(controller.getSnapshot().searchStatus).toBe("searching");
     });
 
-    test("続きの検索は、現在の一致の次の行・前の行から探す", () => {
+    test("続きの検索は、直前の一致のセル（行・列）をそのまま送る", () => {
       const { controller, found, ofType } = setup();
       controller.submitSearch("abc", CTX);
       found(1, 7, 2);
       controller.continueSearch("forward", { rowCount: 1000, selectedRow: 7 });
       found(2, 9, 0);
       controller.continueSearch("backward", { rowCount: 1000, selectedRow: 9 });
-      expect(ofType("large/search").map((m) => [m.query, m.from, m.direction])).toEqual([
-        ["abc", 0, "forward"],
-        ["abc", 8, "forward"],
-        ["abc", 8, "backward"],
+      expect(ofType("large/search").map((m) => [m.query, m.from, m.fromCol, m.direction])).toEqual([
+        ["abc", 0, undefined, "forward"],
+        ["abc", 7, 2, "forward"],
+        ["abc", 9, 0, "backward"],
       ]);
     });
 
@@ -342,7 +342,7 @@ describe("LargeQueryController", () => {
       controller.submitSearch("abc", CTX);
       found(1, 7, 2);
       controller.submitSearch("abc", { rowCount: 1000, selectedRow: 7 });
-      expect(ofType("large/search")[1].from).toBe(8);
+      expect(ofType("large/search")[1]).toMatchObject({ from: 7, fromCol: 2 });
     });
 
     test("検索の結果を待っている間の前へ/次へも、直前の一致を基準にする", () => {
@@ -351,10 +351,10 @@ describe("LargeQueryController", () => {
       found(1, 7, 2);
       controller.continueSearch("forward", { rowCount: 1000, selectedRow: 7 });
       controller.continueSearch("backward", { rowCount: 1000, selectedRow: 7 });
-      expect(ofType("large/search").map((m) => [m.from, m.direction])).toEqual([
-        [0, "forward"],
-        [8, "forward"],
-        [6, "backward"],
+      expect(ofType("large/search").map((m) => [m.from, m.fromCol, m.direction])).toEqual([
+        [0, undefined, "forward"],
+        [7, 2, "forward"],
+        [7, 2, "backward"],
       ]);
     });
 

@@ -203,10 +203,14 @@ export const SearchJump: Story = {
     await expect(box.bottom).toBeLessThanOrEqual(area.bottom + 1);
     await expect(await body.findByText("行 750000・列「name」")).toBeVisible();
 
-    // 次へは一致した行の次の行から探す
+    // 次へは直前に一致したセルを基準に探す
     await userEvent.click(body.getByRole("button", { name: "Next search result" }));
     await waitFor(() => expect(ext().sent("large/search")).toHaveLength(2));
-    await expect(ext().last("large/search")).toMatchObject({ from: 750_000, direction: "forward" });
+    await expect(ext().last("large/search")).toMatchObject({
+      from: 749_999,
+      fromCol: 1,
+      direction: "forward",
+    });
   },
 };
 
