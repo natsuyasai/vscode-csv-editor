@@ -1,4 +1,4 @@
-/* global AbortController, AbortSignal, __dirname */
+/* global AbortController, AbortSignal, __dirname, structuredClone */
 import * as path from "path";
 import * as vscode from "vscode";
 
@@ -15,6 +15,7 @@ import { RowStore, type RowSegment, type RowStoreOp } from "../shared/large/rowS
 import { applyStoreOpToView, ViewOrder, type RemovedPlace } from "../shared/large/viewOrder";
 
 import { FileRowReader } from "./fileRowReader";
+import { sameStamp, statFile, type FileStamp, type LargeBackupData } from "./largeBackup";
 import {
   writeLargeCsv,
   type WriteLargeCsvOptions,
@@ -91,6 +92,35 @@ export interface LargeDocumentChange {
   query?: LargeQueryState;
 }
 
+/** ファイルを読み直した（外部変更・revert）。行インデックスを作り直している */
+export interface LargeDocumentReload {
+  /** 作り直した行インデックスの完了（失敗・中断で reject） */
+  done: Promise<RowIndexSummary>;
+  /** 読み直した後の行のハンドルの体系 */
+  generation: number;
+}
+
+/** 開くときの指定（バックアップからの復元） */
+export interface LargeDocumentOpenOptions {
+  /** 読み書きするファイル（省略は uri。別名で保存した文書を復元するとき） */
+  fileUri?: vscode.Uri;
+  /** 行インデックスの作成後に1単位で当てる op（applyPendingRestore で当てる） */
+  restoreOps?: LargeOp[];
+}
+
+/** ファイルの状態（最後に読み込み・保存した状態と比べて） */
+export type LargeFileState = "unchanged" | "changed" | "deleted";
+
+/** 読み直しの結果。error は自分の変更を当て直せなかったとき（変更は破棄した） */
+export interface LargeReloadResult {
+  error?: unknown;
+}
+
+/** バックアップから復元した編集の名前（VSCode の Undo の単位） */
+const RESTORE_LABEL = "バックアップから復元した変更";
+/** 外部変更の後に当て直した編集の名前 */
+const REPLAY_LABEL = "ファイルの変更後に当て直した変更";
+
 /** 検索・ソート・フィルタのジョブ */
 export interface LargeQueryRun<T> {
   /** 結果。取り消し・失敗で reject（LargeQueryAbortedError など） */
@@ -108,10 +138,11 @@ export interface LargeQueryOptions {
  * ジョブを取り消した理由。
  * - cancel: 利用者のキャンセル / superseded: 新しいジョブを始めた / closed: 文書を閉じた
  * - save / revert: 保存・元に戻す操作の前に取り消した（ワーカーのファイルを閉じるため）
+ * - reload: ファイルが外部で変更され、読み直す前に取り消した
  * - stale: 結果を当てる前に保存・revert で行のハンドルの体系が変わった
  */
 export type LargeQueryAbortReason =
-  "cancel" | "superseded" | "closed" | "save" | "revert" | "stale";
+  "cancel" | "superseded" | "closed" | "save" | "revert" | "reload" | "stale";
 
 const ABORT_MESSAGES: Record<LargeQueryAbortReason, string> = {
   cancel: "取り消しました",
@@ -120,6 +151,8 @@ const ABORT_MESSAGES: Record<LargeQueryAbortReason, string> = {
   save: "保存したため、実行中の検索・ソート・フィルタを取り消しました。もう一度実行してください",
   revert:
     "元に戻したため、実行中の検索・ソート・フィルタを取り消しました。もう一度実行してください",
+  reload:
+    "ファイルが外部で変更されたため読み直しました。実行中の検索・ソート・フィルタを取り消しました。もう一度実行してください",
   stale: "実行中に保存・元に戻す操作があったため、結果を捨てました。もう一度実行してください",
 };
 
@@ -277,7 +310,13 @@ const EDIT_LABELS: Record<LargeOp["type"], string> = {
  * - 保存より前の編集の Undo/Redo は何もしない（行番号の体系が変わるため。既知の制約）
  * - 失敗したら、元のファイル・編集内容・未保存の状態は変えず、元のファイルを開き直す
  *
- * revert: 現在のファイル（最後に保存した状態）の恒等の並びに作り直す。
+ * revert: 現在のファイル（最後に保存した状態）の恒等の並びに作り直す。ファイルが外部で変わっていたら読み直す。
+ *
+ * 読み直し（reload。外部変更・revert）: 実行中のジョブを取り消し、ソート・フィルタを解除し、編集の状態を捨てて
+ * 行インデックスを作り直す（onDidReload）。keepEdits なら、作り直した後に自分の変更を1単位で当て直す。
+ *
+ * バックアップ: 最後に読み込み・保存したときのファイルの状態（mtime・size）と、そのファイルに当て直す op 列を返す。
+ * 復元（open の restoreOps）は、行インデックスの作成後に applyPendingRestore で1単位として当てる。
  *
  * ハンドルの体系（generation）: 保存・revert のたびに進める。直前の保存の前の体系の op だけ付け替え、
  * それより古い体系・revert の前の体系の op は LargeEditConflictError で拒否する。
@@ -295,11 +334,20 @@ export class LargeCsvDocument implements vscode.CustomDocument {
   /** 内容が変わった（編集・Undo/Redo・保存・revert の後） */
   readonly onDidChangeContent = this.changeEmitter.event;
 
-  private readonly abort = new AbortController();
+  private readonly reloadEmitter = new vscode.EventEmitter<LargeDocumentReload>();
+  /** ファイルを読み直した（外部変更・revert）。webview の表示を作り直させる */
+  readonly onDidReload = this.reloadEmitter.event;
+
+  /** 今の行インデックスの作成の中断（読み直し・破棄で中断する） */
+  private indexAbort = new AbortController();
+  /** 最後に読み込み・保存したときのファイルの状態（外部変更の判定・バックアップに使う） */
+  private sourceStamp: Promise<FileStamp | "missing" | undefined>;
+  /** 作成後に当てるバックアップの op（当てたら undefined） */
+  private pendingRestore: LargeOp[] | undefined;
   /** 最初に作り始めた行インデックスの完了（作成中の表示に使う） */
   private readonly initialIndexDone: Promise<RowIndexSummary>;
   private currentUri: vscode.Uri;
-  private index: RowIndexLike;
+  private index!: RowIndexLike;
   private reader: Promise<FileRowReader>;
   /** 編集の状態（行インデックスの作成が終わるまで undefined） */
   private store: RowStore | undefined;
@@ -331,47 +379,28 @@ export class LargeCsvDocument implements vscode.CustomDocument {
   private constructor(
     readonly uri: vscode.Uri,
     readonly encoding: LargeEncoding,
-    private readonly options: LargeCsvDocumentOptions
+    private readonly options: LargeCsvDocumentOptions,
+    openOptions: LargeDocumentOpenOptions
   ) {
-    this.currentUri = uri;
-    const build = options.buildIndex ?? ((path, opts) => RowIndex.build(path, opts));
-    const index = build(uri.fsPath, {
-      skipBom: skipsBom(encoding),
-      signal: this.abort.signal,
-      highWaterMark: options.highWaterMark,
-      maxRows: options.maxRows,
-      onProgress: (progress) => {
-        this.releaseWaiters();
-        this.progressEmitter.fire(progress);
-      },
-    });
-    this.index = index;
-    this.initialIndexDone = index.done;
-    // 成否にかかわらず、完了したら待っている要求をすべて進める（足りない分は切り詰める）
-    index.done.then(
-      () => {
-        if (!this.disposed) {
-          // 編集は作成完了後のみ。完了時の行数で作る
-          this.resetEdits();
-        }
-        this.releaseAllWaiters();
-      },
-      () => {
-        this.releaseAllWaiters();
-      }
-    );
-    this.reader = this.openReader(uri.fsPath);
+    this.currentUri = openOptions.fileUri ?? uri;
+    this.pendingRestore = openOptions.restoreOps;
+    const filePath = this.currentUri.fsPath;
+    // 作成より先に取る（作成中に書き換えられたら、次の判定で「変わった」になる）
+    this.sourceStamp = statFile(filePath);
+    this.initialIndexDone = this.startIndex(filePath).done;
+    this.reader = this.openReader(filePath);
   }
 
   static open(
     uri: vscode.Uri,
     encoding: LargeEncoding,
-    options: LargeCsvDocumentOptions = {}
+    options: LargeCsvDocumentOptions = {},
+    openOptions: LargeDocumentOpenOptions = {}
   ): LargeCsvDocument {
-    if (uri.scheme !== "file") {
+    if (uri.scheme !== "file" || (openOptions.fileUri && openOptions.fileUri.scheme !== "file")) {
       throw new Error("大容量モードで開けるのはローカルのファイルだけです");
     }
-    return new LargeCsvDocument(uri, encoding, options);
+    return new LargeCsvDocument(uri, encoding, options, openOptions);
   }
 
   /**
@@ -396,6 +425,11 @@ export class LargeCsvDocument implements vscode.CustomDocument {
   /** 適用中のソート・フィルタ */
   get queryState(): LargeQueryState {
     return copyQuery(this.query);
+  }
+
+  /** バックアップからの復元が済んだか（復元しない文書は true。当てられなかった場合も済んだ扱い） */
+  get restoreSettled(): boolean {
+    return this.pendingRestore === undefined;
   }
 
   /** 破棄されたか */
@@ -520,6 +554,11 @@ export class LargeCsvDocument implements vscode.CustomDocument {
   revert(): Promise<void> {
     return this.serial(async () => {
       this.throwIfDisposed();
+      if ((await this.fileState()) === "changed") {
+        // 外部で変わっていたら、変わった後のファイルを読み直す
+        await this.restartIndex();
+        return;
+      }
       if (!this.store) {
         // 作成中は編集できないので、戻す変更も無い
         return;
@@ -617,17 +656,93 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     );
   }
 
+  /**
+   * バックアップから復元する op を、行インデックスの作成後に1単位の編集として当てる（無ければ何もしない）。
+   * 当てられなければ（作成の失敗・不正な op）変更を破棄して reject する（文書はファイルの状態のまま）
+   */
+  async applyPendingRestore(): Promise<void> {
+    const ops = this.pendingRestore;
+    if (!ops) {
+      return;
+    }
+    try {
+      await this.initialIndexDone;
+      await this.serial(() => {
+        // 作成中に読み直していたら（外部変更）、復元の op は捨てられている
+        if (this.pendingRestore === ops) {
+          this.applyAsOneEdit(ops, RESTORE_LABEL);
+        }
+      });
+    } finally {
+      if (this.pendingRestore === ops) {
+        this.pendingRestore = undefined;
+      }
+    }
+  }
+
+  /** バックアップに書く内容（serial の中で取るので、保存の途中の状態は混ざらない） */
+  backupData(): Promise<LargeBackupData> {
+    return this.serial(async () => {
+      const stamp = await this.sourceStamp;
+      return {
+        version: 1 as const,
+        fileUri: this.currentUri.toString(),
+        encoding: this.encoding,
+        source: typeof stamp === "object" ? stamp : null,
+        // 復元の op を当てる前なら、その op をそのまま残す
+        ops: this.pendingRestore
+          ? this.pendingRestore.map((op) => structuredClone(op))
+          : (this.stack?.appliedOps() ?? []),
+      };
+    });
+  }
+
+  /** ファイルが最後に読み込み・保存したときから変わったか（保存の途中なら終わってから調べる） */
+  checkFile(): Promise<LargeFileState> {
+    return this.serial(() => this.fileState());
+  }
+
+  /**
+   * ファイルを読み直す（外部変更）。keepEdits なら、作り直した後に今の変更を1単位で当て直す
+   * （当て直せなければ変更を破棄し、結果の error で知らせる）。作成の完了と当て直しまで待つ
+   */
+  async reload(keepEdits: boolean): Promise<LargeReloadResult> {
+    const { ops, done } = await this.serial(async () => {
+      this.throwIfDisposed();
+      const kept = keepEdits ? (this.stack?.appliedOps() ?? []) : [];
+      return { ops: kept, done: await this.restartIndex() };
+    });
+    try {
+      await done.done;
+    } catch (error) {
+      return ops.length > 0 ? { error } : {};
+    }
+    if (ops.length === 0) {
+      return {};
+    }
+    try {
+      await this.serial(() => {
+        this.throwIfDisposed();
+        this.applyAsOneEdit(ops, REPLAY_LABEL);
+      });
+      return {};
+    } catch (error) {
+      return { error };
+    }
+  }
+
   dispose(): void {
     if (this.disposed) {
       return;
     }
     this.disposed = true;
-    this.abort.abort();
+    this.indexAbort.abort();
     this.abortActiveQuery("closed");
     this.releaseAllWaiters();
     this.progressEmitter.dispose();
     this.editEmitter.dispose();
     this.changeEmitter.dispose();
+    this.reloadEmitter.dispose();
     const client = this.queryClient;
     this.queryClient = undefined;
     this.closed = Promise.all([
@@ -646,6 +761,106 @@ export class LargeCsvDocument implements vscode.CustomDocument {
   }
 
   // ---- 内部 ----
+
+  /** 行インデックスの作成を始める（以前のインデックスの完了・進捗は無視する） */
+  private startIndex(filePath: string): RowIndexLike {
+    const abort = new AbortController();
+    this.indexAbort = abort;
+    const build = this.options.buildIndex ?? ((path, opts) => RowIndex.build(path, opts));
+    const index = build(filePath, {
+      skipBom: skipsBom(this.encoding),
+      signal: abort.signal,
+      highWaterMark: this.options.highWaterMark,
+      maxRows: this.options.maxRows,
+      onProgress: (progress) => {
+        if (this.index !== index) {
+          return;
+        }
+        this.releaseWaiters();
+        this.progressEmitter.fire(progress);
+      },
+    });
+    this.index = index;
+    // 成否にかかわらず、完了したら待っている要求をすべて進める（足りない分は切り詰める）
+    index.done.then(
+      () => {
+        if (this.index !== index) {
+          return;
+        }
+        if (!this.disposed) {
+          // 編集は作成完了後のみ。完了時の行数で作る
+          this.resetEdits();
+        }
+        this.releaseAllWaiters();
+      },
+      () => {
+        if (this.index === index) {
+          this.releaseAllWaiters();
+        }
+      }
+    );
+    return index;
+  }
+
+  /** serial の中で呼ぶ */
+  private async fileState(): Promise<LargeFileState> {
+    const current = await statFile(this.currentUri.fsPath);
+    if (current === "missing") {
+      return "deleted";
+    }
+    if (current === undefined) {
+      // 調べられない（権限など）ときは変わっていない扱いにする
+      return "unchanged";
+    }
+    return sameStamp(current, await this.sourceStamp) ? "unchanged" : "changed";
+  }
+
+  /**
+   * 今のファイルを読み直す（serial の中で呼ぶ）。ジョブを取り消し、ソート・フィルタと編集の状態を捨て、
+   * ハンドルの体系と Undo の世代を進めて行インデックスを作り直す。作り直したインデックスの完了を返す
+   */
+  private async restartIndex(): Promise<{ done: Promise<RowIndexSummary> }> {
+    await this.abortQuery("reload");
+    this.indexAbort.abort();
+    await this.closeReader(this.reader);
+    this.clearView();
+    this.store = undefined;
+    this.stack = undefined;
+    this.fileHeader = undefined;
+    this.pendingRestore = undefined;
+    // 読み直す前の行のハンドルは付け替えられないので、古い体系の op は拒否する
+    this.generation += 1;
+    this.epoch += 1;
+    this.lastRemap = undefined;
+    const filePath = this.currentUri.fsPath;
+    this.sourceStamp = statFile(filePath);
+    await this.sourceStamp;
+    // 前のインデックスを待っていた行の取得は、作り直したインデックスの進捗で進める
+    const index = this.startIndex(filePath);
+    this.reader = this.openReader(filePath);
+    this.reloadEmitter.fire({ done: index.done, generation: this.generation });
+    // async 関数から Promise をそのまま返すと完了まで待つことになるので包む
+    return { done: index.done };
+  }
+
+  /** op 列を1単位の編集として当てる（serial の中で呼ぶ）。当てられなければ投げる（状態は変えない） */
+  private applyAsOneEdit(ops: readonly LargeOp[], label: string): void {
+    if (!this.stack) {
+      throw new LargeEditRejectedError(
+        "行インデックスを作成できなかったため、変更を当てられません"
+      );
+    }
+    if (!this.stack.apply(ops)) {
+      return;
+    }
+    for (const op of ops) {
+      if (op.type === "insertRows") {
+        this.minHandle = Math.min(this.minHandle, ...op.handles);
+      }
+    }
+    this.editEmitter.fire({ label, epoch: this.epoch });
+    this.fireChange();
+  }
 
   /** 届いた順に1つずつ処理する（前の処理が失敗しても次へ進む） */
   private serial<T>(task: () => T | Promise<T>): Promise<T> {
@@ -763,6 +978,9 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     }
 
     this.currentUri = destination;
+    // 自分の保存を外部変更と見なさないよう、保存した後のファイルの状態を記録する
+    this.sourceStamp = statFile(destination.fsPath);
+    await this.sourceStamp;
     this.index = RowIndex.fromOffsets(result.starts, result.summary);
     this.reader = this.openReader(destination.fsPath);
     this.fileHeader = result.summary.rowCount > 0 ? header : [];

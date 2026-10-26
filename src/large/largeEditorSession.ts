@@ -18,6 +18,7 @@ import {
   LargeQueryAbortedError,
   type LargeCsvDocument,
   type LargeDocumentChange,
+  type LargeDocumentReload,
   type LargeQueryRun,
 } from "./largeCsvDocument";
 import { LARGE_MODE_RESTRICTIONS } from "./largeRestrictions";
@@ -142,6 +143,9 @@ export class LargeEditorSession {
       document.onDidChangeContent((change) => {
         this.onContentChanged(change);
       }),
+      document.onDidReload((reload) => {
+        this.onReloaded(reload);
+      }),
       vscode.window.onDidChangeActiveColorTheme(() => {
         if (this.ready) {
           this.postTheme();
@@ -236,6 +240,36 @@ export class LargeEditorSession {
     this.webviewEpoch += 1;
     this.job?.run.cancel();
     this.job = undefined;
+    await this.postInit();
+  }
+
+  /**
+   * ファイルを読み直した（外部変更・revert）。新しい体系の revision を記録し、`large/init` を送り直して
+   * 画面を作り直させる（webview はソート・フィルタ・検索の状態も捨てる）。作り直したインデックスの進捗・完了も送る。
+   * 実行中だったジョブは文書が取り消し、その終わり（large/error と ratio: 1）は同じ webview に送る
+   */
+  private onReloaded({ done, generation }: LargeDocumentReload): void {
+    if (this.disposed) {
+      return;
+    }
+    this.indexError = undefined;
+    this.revision += 1;
+    this.generationStarts.push({ generation, revision: this.revision });
+    this.generationStarts = this.generationStarts.slice(-3);
+    done.then(
+      () => {
+        this.onIndexCompleted();
+      },
+      (error: unknown) => {
+        this.onIndexFailed(error);
+      }
+    );
+    if (this.ready) {
+      void this.postInit();
+    }
+  }
+
+  private async postInit(): Promise<void> {
     let header: string[] = [];
     let readError: unknown;
     try {
