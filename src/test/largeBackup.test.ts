@@ -574,6 +574,29 @@ suite("大容量モードの未保存変更とファイルの外部変更", func
     assert.strictEqual(readText(uri), csvWithRows(6, "x").replace("x1,v1", "r1,編集"));
   });
 
+  test("外部変更で読み直した後は、読み直しより前の編集を元に戻せないことが知らされる", async () => {
+    const uri = writeFile("external-undo.csv", csvWithRows(5));
+    const infos: string[] = [];
+    const editor = await openHarness(uri, {
+      answers: ["keep"],
+      extra: { info: (message) => infos.push(message) },
+    });
+    await editor.apply([{ type: "setRow", handle: 2, row: ["r1", "編集"] }]);
+    await sleep(WATCH_READY_MS);
+
+    writeFile("external-undo.csv", csvWithRows(6, "x"));
+    await editor.waitReloaded();
+    await waitUntil(() => editor.edits.length >= 2, 20000);
+    await settle();
+
+    await editor.edits[0].undo();
+
+    assert.deepStrictEqual((await editor.rows(1, 1))[0], ["r1", "編集"], "当て直した変更は残る");
+    assert.strictEqual(editor.document.isDirty, true);
+    assert.strictEqual(infos.length, 1);
+    assert.match(infos[0], /ファイルの読み直しより前の編集は元に戻せません/);
+  });
+
   test("自分の保存では再読み込みしない", async () => {
     const uri = writeFile("self-save.csv", csvWithRows(5));
     const editor = await openHarness(uri);

@@ -13,6 +13,7 @@ import {
   type LargeCsvDocumentOptions,
   type LargeDocumentOpenOptions,
   type LargeEditorDocument,
+  type EditBoundary,
   type UndoRedoResult,
 } from "./largeCsvDocument";
 import { readLargeBackup, sameStamp, statFile, writeLargeBackup } from "./largeBackup";
@@ -40,6 +41,15 @@ type RestoreChoice = "apply" | "discard";
 /** 警告に載せるパースできない行の数 */
 const MAX_REPORTED_INVALID_ROWS = 5;
 
+/** 区切り（保存・revert・読み直し）より前の編集を Undo/Redo しようとしたときのメッセージ */
+const STALE_UNDO_MESSAGES: Record<EditBoundary, string> = {
+  save: "保存より前の編集は元に戻せません（大容量モードでは保存すると行の番号が変わるため）",
+  revert:
+    "元に戻す（Revert）より前の編集は元に戻せません（大容量モードでは元に戻すと編集の状態をファイルの内容から作り直すため）",
+  reload:
+    "ファイルの読み直しより前の編集は元に戻せません（大容量モードではファイルを読み直すと行の番号が変わるため）",
+};
+
 export interface LargeCsvEditorProviderOptions {
   picker: Picker;
   pending: PendingEncodings;
@@ -50,7 +60,7 @@ export interface LargeCsvEditorProviderOptions {
   now?: () => number;
   /** パースできない行があったときの通知（文書ごとに1回）。既定は出力チャンネルと警告の通知 */
   warn?: (message: string) => void;
-  /** 情報メッセージ（保存より前の編集を元に戻せないとき）。既定は showInformationMessage */
+  /** 情報メッセージ（保存・revert・読み直しより前の編集を元に戻せないとき）。既定は showInformationMessage */
   info?: (message: string) => void;
   /** エラーの通知（バックアップを復元できなかったときなど）。既定は showErrorMessage */
   error?: (message: string) => void;
@@ -117,7 +127,8 @@ async function revertInActiveEditor(document: LargeCsvDocument): Promise<void> {
  * - 編集: 文書が編集を当てるたびに `CustomDocumentEditEvent` を1件発火する。undo / redo コールバックは
  *   文書の Undo/Redo を呼ぶ（webview は Ctrl+Z / Ctrl+Y を処理せず、VSCode の Undo/Redo に委ねる）
  * - 保存・別名で保存・revert は文書に任せる（`LargeCsvDocument` の説明を参照）。
- *   保存より前の編集の Undo/Redo は何もせず、文書ごとに初回だけ情報メッセージで知らせる（既知の制約）。
+ *   保存・revert・読み直しより前の編集の Undo/Redo は何もせず、文書と原因（どの操作より前か）ごとに
+ *   初回だけ、原因に合った情報メッセージで知らせる（既知の制約）。
  *   別名で保存すると VSCode が保存先を開き直すことがあるので、保存先の文字コードを保留オプションに入れる
  * - バックアップ: 文書の backupData（op 列・文字コード・読み書きするファイルとその mtime・size）を JSON で
  *   書き出す（largeBackup.ts）。backupId 付きの openCustomDocument で復元する: 文字コードはバックアップから戻し
@@ -137,8 +148,8 @@ export class LargeCsvEditorProvider implements vscode.CustomEditorProvider<Large
   >();
   /** 編集（webview の `large/applyOps` 1通）ごとに1件。VSCode の Undo/Redo とダーティ状態に連動する */
   readonly onDidChangeCustomDocument = this.editEmitter.event;
-  /** 「保存より前の編集は元に戻せません」を知らせた文書 */
-  private readonly staleNotified = new WeakSet<LargeCsvDocument>();
+  /** 「…より前の編集は元に戻せません」を知らせた文書と、その原因 */
+  private readonly staleNotified = new WeakMap<LargeCsvDocument, Set<EditBoundary>>();
 
   /** パースできない行を警告済みの文書 */
   private readonly warnedDocuments = new WeakSet<LargeCsvDocument>();
@@ -364,12 +375,18 @@ export class LargeCsvEditorProvider implements vscode.CustomEditorProvider<Large
   }
 
   private async undoRedo(document: LargeCsvDocument, result: Promise<UndoRedoResult>) {
-    if ((await result) !== "stale" || document.isClosed || this.staleNotified.has(document)) {
+    const outcome = await result;
+    if (typeof outcome !== "object" || document.isClosed) {
       return;
     }
-    this.staleNotified.add(document);
+    const notified = this.staleNotified.get(document) ?? new Set<EditBoundary>();
+    this.staleNotified.set(document, notified);
+    if (notified.has(outcome.stale)) {
+      return;
+    }
+    notified.add(outcome.stale);
     (this.options.info ?? defaultInfo)(
-      `${path.basename(document.fileUri.fsPath)}: 保存より前の編集は元に戻せません（大容量モードでは保存すると行の番号が変わるため）`
+      `${path.basename(document.fileUri.fsPath)}: ${STALE_UNDO_MESSAGES[outcome.stale]}`
     );
   }
 

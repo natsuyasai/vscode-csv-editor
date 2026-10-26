@@ -570,6 +570,30 @@ suite("大容量モードでの編集と保存", function () {
     assert.strictEqual(readText(uri), csvWithRows(5));
   });
 
+  test("元に戻す（revert）より前の編集はrevert後に元に戻せず、どの操作より前かが知らされる", async () => {
+    const uri = writeFile("before-revert.csv", csvWithRows(5));
+    const infos: string[] = [];
+    const editor = await openHarness(uri, "utf-8", { info: (message) => infos.push(message) });
+    await editor.apply([{ type: "setRow", handle: 1, row: ["r0", "保存"] }]);
+    await editor.save();
+    await editor.apply([{ type: "setRow", handle: 2, row: ["r1", "破棄"] }]);
+    await editor.provider.revertCustomDocument(editor.document, editor.token);
+
+    // 新しい編集から順に Undo する（VSCode の Undo と同じ順）
+    await editor.edits[1].undo();
+    await editor.edits[0].undo();
+
+    const { rows } = await editor.rows(0, 2);
+    assert.deepStrictEqual(rows, [
+      ["r0", "保存"],
+      ["r1", "v1"],
+    ]);
+    assert.strictEqual(editor.document.isDirty, false, "ファイルの内容のまま");
+    assert.strictEqual(infos.length, 2, "操作ごとに知らせる");
+    assert.match(infos[0], /元に戻す（Revert）より前の編集は元に戻せません/);
+    assert.match(infos[1], /保存より前の編集は元に戻せません/);
+  });
+
   test("開き直した画面には次に使う追加行のハンドルが伝えられる", async () => {
     const uri = writeFile("next-handle.csv", csvWithRows(5));
     const editor = await openHarness(uri);

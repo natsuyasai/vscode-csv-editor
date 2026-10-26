@@ -193,8 +193,18 @@ const copyQuery = (query: LargeQueryState): LargeQueryState => ({
 
 const isEmptyQuery = (query: LargeQueryState) => query.sort === null && query.filters.length === 0;
 
-/** Undo/Redo の結果。stale は保存・revert より前の編集で、何もしなかった */
-export type UndoRedoResult = "done" | "none" | "stale";
+/**
+ * Undo の世代を区切った操作（その操作より前の編集は Undo/Redo できない）。
+ * save は保存（別名で保存を含む）、revert はファイルが変わっていないときの元に戻す、
+ * reload はファイルの読み直し（外部変更、ファイルが外部で変わっていたときの元に戻す）
+ */
+export type EditBoundary = "save" | "revert" | "reload";
+
+/**
+ * Undo/Redo の結果。stale は区切り（保存・revert・読み直し）より前の編集で、何もしなかった。
+ * boundary はその編集の直後の区切り（その編集を元に戻せなくした操作）
+ */
+export type UndoRedoResult = "done" | "none" | { stale: EditBoundary };
 
 /** 受け付けられない編集（インデックスの作成中など）。文書は変わっていない */
 export class LargeEditRejectedError extends Error {
@@ -360,8 +370,10 @@ export class LargeCsvDocument implements vscode.CustomDocument {
   private generation = 0;
   /** 直前の保存のハンドルの直し方（generation の1つ前の体系から。直前が revert なら undefined） */
   private lastRemap: HandleRemap | undefined;
-  /** Undo の世代（保存・revert のたびに増える） */
+  /** Undo の世代（保存・revert・読み直しのたびに増える） */
   private epoch = 0;
+  /** 世代を終わらせた操作（キーは終わった世代）。古い世代の Undo でどの操作より前かを知らせる */
+  private readonly epochBoundaries = new Map<number, EditBoundary>();
   /** これまでに受け取った負のハンドルの最小値（無ければ 0） */
   private minHandle = 0;
   private waiters: RowWaiter[] = [];
@@ -558,7 +570,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
       this.throwIfDisposed();
       if ((await this.fileState()) === "changed") {
         // 外部で変わっていたら、変わった後のファイルを読み直す
-        await this.restartIndex();
+        await this.restartIndex("reload");
         return;
       }
       if (!this.store) {
@@ -569,7 +581,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
       // ソート・フィルタも解除する（revert の前の追加行は無くなる）
       this.clearView();
       this.resetEdits();
-      this.epoch += 1;
+      this.endEpoch("revert");
       // revert の前の追加行は無くなるので、revert の前の体系のハンドルの op は付け替えずに拒否する
       this.generation += 1;
       this.lastRemap = undefined;
@@ -712,7 +724,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     const { ops, done } = await this.serial(async () => {
       this.throwIfDisposed();
       const kept = keepEdits ? (this.stack?.appliedOps() ?? this.pendingRestore ?? []) : [];
-      return { ops: kept, done: await this.restartIndex() };
+      return { ops: kept, done: await this.restartIndex("reload") };
     });
     try {
       await done.done;
@@ -821,7 +833,9 @@ export class LargeCsvDocument implements vscode.CustomDocument {
    * 今のファイルを読み直す（serial の中で呼ぶ）。ジョブを取り消し、ソート・フィルタと編集の状態を捨て、
    * ハンドルの体系と Undo の世代を進めて行インデックスを作り直す。作り直したインデックスの完了を返す
    */
-  private async restartIndex(): Promise<{ done: Promise<RowIndexSummary> }> {
+  private async restartIndex(
+    boundary: EditBoundary
+  ): Promise<{ done: Promise<RowIndexSummary> }> {
     await this.abortQuery("reload");
     this.indexAbort.abort();
     await this.closeReader(this.reader);
@@ -832,7 +846,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     this.pendingRestore = undefined;
     // 読み直す前の行のハンドルは付け替えられないので、古い体系の op は拒否する
     this.generation += 1;
-    this.epoch += 1;
+    this.endEpoch(boundary);
     this.lastRemap = undefined;
     const filePath = this.currentUri.fsPath;
     this.sourceStamp = statFile(filePath);
@@ -934,9 +948,16 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     return ops.map((op) => remap.mapOp(op));
   }
 
+  /** 今の Undo の世代を boundary で終わらせ、次の世代に進める */
+  private endEpoch(boundary: EditBoundary): void {
+    this.epochBoundaries.set(this.epoch, boundary);
+    this.epoch += 1;
+  }
+
   private undoRedo(epoch: number, run: (stack: EditStack) => boolean): UndoRedoResult {
     if (this.disposed || !this.stack || epoch !== this.epoch) {
-      return "stale";
+      // 今の世代で編集の状態が無い（読み直しの途中）ときも、読み直しより前の編集として扱う
+      return { stale: this.epochBoundaries.get(epoch) ?? "reload" };
     }
     if (!run(this.stack)) {
       return "none";
@@ -990,7 +1011,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     this.lastRemap = new HandleRemap(segments);
     this.remapView(this.lastRemap);
     this.generation += 1;
-    this.epoch += 1;
+    this.endEpoch("save");
     this.closeIfDisposed();
     if (!this.disposed) {
       this.fireChange();
