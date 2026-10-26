@@ -128,7 +128,11 @@ export class LargeCsvEditorProvider implements vscode.CustomEditorProvider<Large
       return new CancelledLargeCsvDocument(uri);
     }
     // TODO(2-4): backupId があればバックアップから未保存の変更を復元する（今は無視する）
-    const document = LargeCsvDocument.open(uri, encoding, this.options.document);
+    const document = LargeCsvDocument.open(uri, encoding, {
+      // 検索・ソート・フィルタのワーカー（esbuild の2つ目のエントリ）
+      workerPath: path.join(this.extensionUri.fsPath, "dist", "largeCsvWorker.js"),
+      ...this.options.document,
+    });
     document.onDidEdit(({ label, epoch }) => {
       this.editEmitter.fire({
         document,

@@ -5,13 +5,19 @@ import {
   isLargeMessageToExtension,
   type LargeMessageToWebview,
   type LargeOp,
+  type LargeProgressKind,
 } from "../message/largeMessages";
 import { isMessageToExtension } from "../message/messageTypeToExtension";
 import type { UpdateThemeMessage } from "../message/messageTypeToWebview";
 import { disposeAll } from "../util/dispose";
 import { logWarning } from "../util/logger";
 
-import type { LargeCsvDocument, LargeDocumentChange } from "./largeCsvDocument";
+import {
+  LargeQueryAbortedError,
+  type LargeCsvDocument,
+  type LargeDocumentChange,
+  type LargeQueryRun,
+} from "./largeCsvDocument";
 import { LARGE_MODE_RESTRICTIONS } from "./largeRestrictions";
 
 /** セッションが使う webview の機能（テストではやり取りを観測する実装で包む） */
@@ -30,6 +36,16 @@ export interface LargeEditorSessionOptions {
 const isAbortError = (error: unknown) => error instanceof Error && error.name === "AbortError";
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+/** webview に知らせないジョブの終わり方（webview 自身が取り消した・新しいジョブを始めた・閉じた） */
+const isSilentAbort = (error: unknown) =>
+  error instanceof LargeQueryAbortedError &&
+  (error.reason === "cancel" || error.reason === "superseded" || error.reason === "closed");
+
+interface SessionJob {
+  jobId: number;
+  run: LargeQueryRun<unknown>;
+}
 
 /** ログ用に不正メッセージの概要だけを返す（内容は出力しない） */
 function describeMessage(value: unknown): string {
@@ -53,6 +69,11 @@ function describeMessage(value: unknown): string {
  *   どの行のハンドルの体系か（保存・revert で変わる）を決めて文書に渡す
  * - 文書の内容が変わったら（編集・Undo/Redo・保存・revert）、列名を載せた `large/invalidate` を送る
  * - 拒否・不正な編集は `large/error` を送り、楽観的に反映した画面を戻させるため `large/invalidate` も送る
+ * - `large/sort` / `large/filter` / `large/search` は文書のジョブにする（ワーカーで走査する。受け取ったら待たずに返す）。
+ *   ジョブは1つずつで、新しいジョブで前のジョブは取り消される。進捗は jobId 付きで間引いて送り、
+ *   終わったら（完了・取り消し・失敗のいずれでも）ratio: 1 を送る。検索は先に `large/searchResult` を送る。
+ *   失敗と、保存・revert による取り消しは jobId 付きの `large/error` で知らせる（webview の取り消しは知らせない）
+ * - `large/cancel` は実行中のジョブ（jobId が一致するもの）を取り消す。パネルを閉じたときも取り消す
  */
 export class LargeEditorSession {
   private readonly disposables: vscode.Disposable[] = [];
@@ -72,6 +93,7 @@ export class LargeEditorSession {
   /** webview に最後に知らせたデータ行数 */
   private sentRowCount = 0;
   private indexError: unknown;
+  private job: SessionJob | undefined;
 
   constructor(
     private readonly document: LargeCsvDocument,
@@ -104,6 +126,8 @@ export class LargeEditorSession {
 
   dispose(): void {
     this.disposed = true;
+    this.job?.run.cancel();
+    this.job = undefined;
     disposeAll(this.disposables);
   }
 
@@ -129,8 +153,39 @@ export class LargeEditorSession {
       case "large/applyOps":
         await this.handleApplyOps(message.ops, message.revision);
         return;
+      case "large/sort": {
+        const { jobId, column, direction } = message;
+        this.startJob(jobId, "sort", (onProgress) =>
+          this.document.sort(column, direction, { onProgress })
+        );
+        return;
+      }
+      case "large/filter": {
+        const { jobId, filters } = message;
+        this.startJob(jobId, "filter", (onProgress) =>
+          this.document.filter(filters, { onProgress })
+        );
+        return;
+      }
+      case "large/search": {
+        const { jobId, query, from, fromCol, direction } = message;
+        this.startJob(
+          jobId,
+          "search",
+          (onProgress) => this.document.search(query, from, fromCol, direction, { onProgress }),
+          (match) => {
+            this.post({ type: "large/searchResult", jobId, match });
+          }
+        );
+        return;
+      }
+      case "large/cancel":
+        if (this.job?.jobId === message.jobId) {
+          this.job.run.cancel();
+        }
+        return;
       default:
-        // 検索・ソート・フィルタ・範囲コピーは後続フェーズ（2-3 / 2-4）で対応する
+        // 範囲コピーは後続フェーズ（2-4）で対応する
         logWarning(`大容量モードで未対応のメッセージを無視しました (${message.type})`);
         return;
     }
@@ -160,6 +215,7 @@ export class LargeEditorSession {
       restrictions: [...LARGE_MODE_RESTRICTIONS],
       nextHandle: this.document.nextHandle,
       revision: this.revision,
+      query: this.document.queryState,
     });
     this.ready = true;
     const now = this.options.now();
@@ -234,8 +290,48 @@ export class LargeEditorSession {
       this.generationStarts = this.generationStarts.slice(-3);
     }
     if (this.ready) {
-      this.postInvalidate(change.rowCount, change.header, this.revision);
+      this.postInvalidate(change.rowCount, change.header, this.revision, change.query);
     }
+  }
+
+  /** 文書のジョブを始め、進捗・結果・終わりを webview に送る（終わるのを待たない） */
+  private startJob<T>(
+    jobId: number,
+    kind: LargeProgressKind,
+    start: (onProgress: (ratio: number) => void) => LargeQueryRun<T>,
+    onDone?: (value: T) => void
+  ): void {
+    let lastProgressAt = -Infinity;
+    const run = start((ratio) => {
+      const now = this.options.now();
+      if (this.disposed || ratio >= 1 || now - lastProgressAt < this.options.progressIntervalMs) {
+        return;
+      }
+      lastProgressAt = now;
+      this.post({ type: "large/progress", kind, ratio, jobId });
+    });
+    this.job = { jobId, run };
+    void run.result
+      .then(
+        (value) => {
+          if (!this.disposed) {
+            onDone?.(value);
+          }
+        },
+        (error: unknown) => {
+          if (!this.disposed && !isSilentAbort(error)) {
+            this.post({ type: "large/error", message: errorMessage(error), jobId });
+          }
+        }
+      )
+      .finally(() => {
+        if (this.job?.run === run) {
+          this.job = undefined;
+        }
+        if (!this.disposed) {
+          this.post({ type: "large/progress", kind, ratio: 1, jobId });
+        }
+      });
   }
 
   private onProgress(ratio: number): void {
@@ -279,11 +375,15 @@ export class LargeEditorSession {
     }
   }
 
-  /** header は列名が変わったかもしれないときに載せる（省略は「変わっていない」） */
+  /**
+   * header は列名が変わったかもしれないときに載せる（省略は「変わっていない」）。
+   * query はソート・フィルタの状態が変わったときに載せる（省略は「変わっていない」）
+   */
   private postInvalidate(
     rowCount: number,
     header?: string[],
-    revision: number = ++this.revision
+    revision: number = ++this.revision,
+    query?: LargeDocumentChange["query"]
   ): void {
     this.sentRowCount = rowCount;
     this.post({
@@ -291,6 +391,7 @@ export class LargeEditorSession {
       revision,
       rowCount,
       ...(header ? { header } : {}),
+      ...(query ? { query } : {}),
     });
   }
 

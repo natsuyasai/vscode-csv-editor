@@ -96,6 +96,10 @@ export class ControlledRowIndex implements RowIndexLike {
     this.rejectDone(error);
   }
 
+  offsets(): Float64Array {
+    return this.real.offsets().slice(0, this.visible + 1);
+  }
+
   getRowRange(i: number): RowByteRange {
     if (i >= this.visible) {
       throw new RangeError(`行 ${String(i)} は確定していません`);

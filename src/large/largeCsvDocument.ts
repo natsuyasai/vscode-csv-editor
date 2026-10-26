@@ -1,9 +1,18 @@
-/* global AbortController, AbortSignal */
+/* global AbortController, AbortSignal, __dirname */
+import * as path from "path";
 import * as vscode from "vscode";
 
-import type { LargeOp } from "../message/largeMessages";
+import type {
+  LargeFilterCondition,
+  LargeOp,
+  LargeQueryState,
+  LargeSearchDirection,
+  LargeSortDirection,
+} from "../message/largeMessages";
 import { EditStack } from "../shared/large/editStack";
-import { RowStore, type RowSegment } from "../shared/large/rowStore";
+import { normalizeFilters, normalizeSearchQuery } from "../shared/large/query";
+import { RowStore, type RowSegment, type RowStoreOp } from "../shared/large/rowStore";
+import { applyStoreOpToView, ViewOrder, type RemovedPlace } from "../shared/large/viewOrder";
 
 import { FileRowReader } from "./fileRowReader";
 import {
@@ -12,6 +21,8 @@ import {
   type WriteLargeCsvResult,
 } from "./largeCsvWriter";
 import { skipsBom, type LargeEncoding } from "./largeEncoding";
+import type { QueryJobRequest, QueryJobResult, QuerySource, QueryTuning } from "./queryProtocol";
+import { QueryCancelledError, QueryWorkerClient, type QueryJobHandle } from "./queryWorkerClient";
 import {
   RowIndex,
   type BuildRowIndexOptions,
@@ -27,6 +38,8 @@ export interface RowIndexLike {
   readonly rowCount: number;
   readonly completed: boolean;
   getRowRange(i: number): RowByteRange;
+  /** 確定済みの行のオフセット表のコピー（検索・ソート・フィルタのワーカーへ渡す） */
+  offsets(): Float64Array;
 }
 
 export type BuildRowIndex = (filePath: string, options: BuildRowIndexOptions) => RowIndexLike;
@@ -40,6 +53,10 @@ export interface LargeCsvDocumentOptions {
   maxRows?: number;
   /** 保存の書き出しの差し替え（テストで rename を失敗・保留させる） */
   writer?: Pick<WriteLargeCsvOptions, "rename" | "renameRetry">;
+  /** 検索・ソート・フィルタのワーカー（dist/largeCsvWorker.js）のパス */
+  workerPath?: string;
+  /** ワーカーの読み方の調整（テストで小さくして、走査の途中でキャンセル・保存できるようにする） */
+  queryTuning?: QueryTuning;
 }
 
 /** 表示位置で指定したデータ行の読み取り結果 */
@@ -68,7 +85,70 @@ export interface LargeDocumentChange {
   header?: string[];
   /** 行のハンドルの体系の番号（保存・revert のたびに増える） */
   generation: number;
+  /** ソート・フィルタの状態が変わったときだけ載せる（適用・解除・revert） */
+  query?: LargeQueryState;
 }
+
+/** 検索・ソート・フィルタのジョブ */
+export interface LargeQueryRun<T> {
+  /** 結果。取り消し・失敗で reject（LargeQueryAbortedError など） */
+  readonly result: Promise<T>;
+  /** 取り消す（result は reason "cancel" の LargeQueryAbortedError で reject） */
+  cancel(): void;
+}
+
+export interface LargeQueryOptions {
+  /** 進捗（0〜1。間引きは呼び出し側） */
+  onProgress?: (ratio: number) => void;
+}
+
+/**
+ * ジョブを取り消した理由。
+ * - cancel: 利用者のキャンセル / superseded: 新しいジョブを始めた / closed: 文書を閉じた
+ * - save / revert: 保存・元に戻す操作の前に取り消した（ワーカーのファイルを閉じるため）
+ * - stale: 結果を当てる前に保存・revert で行のハンドルの体系が変わった
+ */
+export type LargeQueryAbortReason =
+  "cancel" | "superseded" | "closed" | "save" | "revert" | "stale";
+
+const ABORT_MESSAGES: Record<LargeQueryAbortReason, string> = {
+  cancel: "取り消しました",
+  superseded: "新しい検索・ソート・フィルタを始めたため取り消しました",
+  closed: "文書を閉じたため取り消しました",
+  save: "保存したため、実行中の検索・ソート・フィルタを取り消しました。もう一度実行してください",
+  revert:
+    "元に戻したため、実行中の検索・ソート・フィルタを取り消しました。もう一度実行してください",
+  stale: "実行中に保存・元に戻す操作があったため、結果を捨てました。もう一度実行してください",
+};
+
+export class LargeQueryAbortedError extends Error {
+  constructor(readonly reason: LargeQueryAbortReason) {
+    super(ABORT_MESSAGES[reason]);
+    this.name = "LargeQueryAbortedError";
+  }
+}
+
+/** 表示順で指定した検索の一致（表示位置と列） */
+export interface LargeSearchMatch {
+  row: number;
+  col: number;
+}
+
+interface ActiveQuery {
+  aborted: LargeQueryAbortReason | undefined;
+  /** スナップショットを取ってから当てた RowStore の op（結果の表示順に当て直す） */
+  pendingOps: RowStoreOp[] | undefined;
+  worker: QueryJobHandle | undefined;
+}
+
+const EMPTY_QUERY: LargeQueryState = { sort: null, filters: [] };
+
+const copyQuery = (query: LargeQueryState): LargeQueryState => ({
+  sort: query.sort ? { ...query.sort } : null,
+  filters: query.filters.map((f) => ({ ...f })),
+});
+
+const isEmptyQuery = (query: LargeQueryState) => query.sort === null && query.filters.length === 0;
 
 /** Undo/Redo の結果。stale は保存・revert より前の編集で、何もしなかった */
 export type UndoRedoResult = "done" | "none" | "stale";
@@ -227,6 +307,15 @@ export class LargeCsvDocument implements vscode.CustomDocument {
   /** これまでに受け取った負のハンドルの最小値（無ければ 0） */
   private minHandle = 0;
   private waiters: RowWaiter[] = [];
+  /** ソート・フィルタの表示順（当てていなければ undefined＝RowStore の並び） */
+  private view: ViewOrder | undefined;
+  private query: LargeQueryState = EMPTY_QUERY;
+  /** 表示順から除いた行の場所（削除の Undo で同じ場所へ戻す） */
+  private removedPlaces = new Map<number, RemovedPlace>();
+  /** 表示順・並びが変わるたびに増やす（検索の結果の位置が古くなったかを判定する） */
+  private viewVersion = 0;
+  private activeQuery: ActiveQuery | undefined;
+  private queryClient: QueryWorkerClient | undefined;
   private disposed = false;
   private closed: Promise<void> = Promise.resolve();
 
@@ -295,6 +384,11 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     return !this.index.completed;
   }
 
+  /** 適用中のソート・フィルタ */
+  get queryState(): LargeQueryState {
+    return copyQuery(this.query);
+  }
+
   /** 破棄されたか */
   get isClosed(): boolean {
     return this.disposed;
@@ -307,7 +401,9 @@ export class LargeCsvDocument implements vscode.CustomDocument {
 
   /** データ行数（作成中は確定済みの行数。ヘッダーを除く） */
   get dataRowCount(): number {
-    return this.store?.rowCount ?? Math.max(0, this.index.rowCount - HEADER_ROWS);
+    return (
+      this.view?.length ?? this.store?.rowCount ?? Math.max(0, this.index.rowCount - HEADER_ROWS)
+    );
   }
 
   /** 現在の列名（ファイルの1行目を読む前で、上書きもしていなければ undefined） */
@@ -346,9 +442,15 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     }
     return this.serial(() => {
       this.throwIfDisposed();
-      return this.store
-        ? this.readFromStore(this.store, start, count)
-        : this.readFromIndex(start, count);
+      if (!this.store) {
+        return this.readFromIndex(start, count);
+      }
+      const handles = this.view
+        ? this.view.handlesInRange(start, count)
+        : start < this.store.rowCount
+          ? this.store.handlesInRange(start, count)
+          : [];
+      return this.readHandles(this.store, start, handles);
     });
   }
 
@@ -407,19 +509,102 @@ export class LargeCsvDocument implements vscode.CustomDocument {
 
   /** 保存した状態（現在のファイルの内容）に戻す */
   revert(): Promise<void> {
-    return this.serial(() => {
+    return this.serial(async () => {
       this.throwIfDisposed();
       if (!this.store) {
         // 作成中は編集できないので、戻す変更も無い
         return;
       }
+      await this.abortQuery("revert");
+      // ソート・フィルタも解除する（revert の前の追加行は無くなる）
+      this.clearView();
       this.resetEdits();
       this.epoch += 1;
       // revert の前の追加行は無くなるので、revert の前の体系のハンドルの op は付け替えずに拒否する
       this.generation += 1;
       this.lastRemap = undefined;
-      this.fireChange();
+      this.fireChange(true);
     });
+  }
+
+  /**
+   * 列でソートする（direction が null なら解除）。今のフィルタはそのまま（フィルタ → ソートの順で表示順を作る）。
+   * ソートもフィルタも無くなったら表示順を捨てて RowStore の並びに戻す（ワーカーは使わない）。
+   * 当てたら onDidChangeContent（query 付き）を発火する。
+   */
+  sort(
+    column: number,
+    direction: LargeSortDirection,
+    options: LargeQueryOptions = {}
+  ): LargeQueryRun<void> {
+    return this.runView(
+      (current) => ({
+        sort: direction === null ? null : { column, direction },
+        filters: current.filters,
+      }),
+      options
+    );
+  }
+
+  /** 列ごとの条件（AND）でフィルタする。空の条件は除く（すべて空なら解除）。今のソートはそのまま */
+  filter(
+    filters: readonly LargeFilterCondition[],
+    options: LargeQueryOptions = {}
+  ): LargeQueryRun<void> {
+    const kept = filters
+      .filter((f) => f.text !== "")
+      .map((f) => ({ column: f.column, text: f.text }));
+    return this.runView((current) => ({ sort: current.sort, filters: kept }), options);
+  }
+
+  /**
+   * 表示順で検索する（from・fromCol・direction の意味は `large/search` と同じ）。
+   * 検索語が空白だけなら何もせず null。from が表示行数以上なら null
+   */
+  search(
+    query: string,
+    from: number,
+    fromCol: number | undefined,
+    direction: LargeSearchDirection,
+    options: LargeQueryOptions = {}
+  ): LargeQueryRun<LargeSearchMatch | null> {
+    const needle = normalizeSearchQuery(query);
+    if (needle === null) {
+      return { result: Promise.resolve(null), cancel: () => {} };
+    }
+    return this.runJob<LargeSearchMatch | null>(
+      options,
+      async (store) => {
+        const order = this.view ? this.view.toFloat64Array() : store.handlesSnapshot();
+        if (from >= order.length) {
+          return { immediate: () => null };
+        }
+        return {
+          kind: "search",
+          source: await this.querySource(),
+          rows: { order, edits: store.editedEntries() },
+          needle,
+          from,
+          fromCol,
+          direction,
+          tuning: this.options.queryTuning,
+        };
+      },
+      (output, viewVersion) => {
+        const match = output.kind === "search" ? output.match : null;
+        if (!match) {
+          return null;
+        }
+        if (viewVersion === this.viewVersion) {
+          return { row: match.position, col: match.col };
+        }
+        // 検索している間に行の挿入・削除があった。見つけた行の今の位置を引き直す
+        const row = this.view
+          ? this.view.indexOf(match.handle)
+          : (this.store?.indexOfHandle(match.handle) ?? -1);
+        return row < 0 ? null : { row, col: match.col };
+      }
+    );
   }
 
   dispose(): void {
@@ -428,12 +613,16 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     }
     this.disposed = true;
     this.abort.abort();
+    this.abortActiveQuery("closed");
     this.releaseAllWaiters();
     this.progressEmitter.dispose();
     this.editEmitter.dispose();
     this.changeEmitter.dispose();
+    const client = this.queryClient;
+    this.queryClient = undefined;
     this.closed = Promise.all([
       this.closeReader(this.reader),
+      client?.dispose(),
       this.index.done.then(
         () => undefined,
         () => undefined
@@ -474,14 +663,20 @@ export class LargeCsvDocument implements vscode.CustomDocument {
 
   private resetEdits(): void {
     this.store = new RowStore(this.index.rowCount);
-    this.stack = new EditStack(this.store);
+    this.stack = new EditStack(this.store, {
+      onApplied: (op) => {
+        this.onStoreOp(op);
+      },
+    });
   }
 
-  private fireChange(): void {
+  /** queryChanged はソート・フィルタの状態が変わったとき（invalidate に query を載せる） */
+  private fireChange(queryChanged = false): void {
     this.changeEmitter.fire({
       rowCount: this.dataRowCount,
       header: this.currentHeader,
       generation: this.generation,
+      ...(queryChanged ? { query: copyQuery(this.query) } : {}),
     });
   }
 
@@ -534,7 +729,9 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     const segments = [...this.store.segments()];
     const sourcePath = this.currentUri.fsPath;
 
-    // 書き出し先が開いたままだと Windows では置き換えられない（他の OS では古いファイルを読み続ける）
+    // 書き出し先が開いたままだと Windows では置き換えられない（他の OS では古いファイルを読み続ける）。
+    // 検索・ソート・フィルタのワーカーもファイルを開いているので、先に取り消して閉じさせる
+    await this.abortQuery("save");
     await this.closeReader(this.reader);
     let result: WriteLargeCsvResult;
     try {
@@ -561,6 +758,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     this.fileHeader = result.summary.rowCount > 0 ? header : [];
     this.resetEdits();
     this.lastRemap = new HandleRemap(segments);
+    this.remapView(this.lastRemap);
     this.generation += 1;
     this.epoch += 1;
     this.closeIfDisposed();
@@ -588,9 +786,8 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     };
   }
 
-  /** RowStore の並びで読む。ハンドルが連続する未編集の元の行は1回の範囲読みにまとめる */
-  private async readFromStore(store: RowStore, start: number, count: number): Promise<DataRows> {
-    const handles = start < store.rowCount ? store.handlesInRange(start, count) : [];
+  /** ハンドルの行を読む。ハンドルが連続する未編集の元の行は1回の範囲読みにまとめる */
+  private async readHandles(store: RowStore, start: number, handles: number[]): Promise<DataRows> {
     const rows: string[][] = [];
     const invalidRows: number[] = [];
     let reader: FileRowReader | undefined;
@@ -618,6 +815,211 @@ export class LargeCsvDocument implements vscode.CustomDocument {
       i = end;
     }
     return { start, rows, handles, invalidRows };
+  }
+
+  // ---- 検索・ソート・フィルタ ----
+
+  /** 表示順を作り直す（update は、そのときの条件から次の条件を作る） */
+  private runView(
+    update: (current: LargeQueryState) => LargeQueryState,
+    options: LargeQueryOptions
+  ): LargeQueryRun<void> {
+    let next = EMPTY_QUERY;
+    return this.runJob<undefined>(
+      options,
+      async (store) => {
+        next = copyQuery(update(this.query));
+        if (isEmptyQuery(next)) {
+          return {
+            immediate: () => {
+              this.clearView();
+              this.fireChange(true);
+            },
+          };
+        }
+        return {
+          kind: "view",
+          source: await this.querySource(),
+          rows: { order: store.handlesSnapshot(), edits: store.editedEntries() },
+          filters: normalizeFilters(next.filters),
+          sort: next.sort,
+          tuning: this.options.queryTuning,
+        };
+      },
+      (output, _viewVersion, pendingOps) => {
+        if (output.kind !== "view") {
+          return;
+        }
+        const view = new ViewOrder(output.handles);
+        const places = new Map<number, RemovedPlace>();
+        // ワーカーが走査している間の行の挿入・削除を、結果の表示順にも当てる
+        for (const op of pendingOps) {
+          applyStoreOpToView(view, op, places);
+        }
+        this.view = view;
+        this.query = next;
+        this.removedPlaces = places;
+        this.viewVersion += 1;
+        this.fireChange(true);
+      }
+    );
+  }
+
+  /**
+   * ジョブを1つ実行する。前のジョブは取り消す（1つずつ）。
+   * - prepare: serial の中でスナップショットを取り、ワーカーへの要求を作る（immediate ならワーカーを使わない）
+   * - ワーカーの実行は serial の外（実行中も行の取得・編集を止めない）
+   * - apply: serial の中で結果を当てる。始めたときと行のハンドルの体系（保存・revert で変わる）が違えば捨てる
+   */
+  private runJob<T>(
+    options: LargeQueryOptions,
+    prepare: (store: RowStore) => Promise<QueryJobRequest | { immediate: () => T }>,
+    apply: (output: QueryJobResult, viewVersion: number, pendingOps: readonly RowStoreOp[]) => T
+  ): LargeQueryRun<T> {
+    this.abortActiveQuery("superseded");
+    const job: ActiveQuery = { aborted: undefined, pendingOps: undefined, worker: undefined };
+    this.activeQuery = job;
+    const throwIfAborted = () => {
+      if (job.aborted) {
+        throw new LargeQueryAbortedError(job.aborted);
+      }
+    };
+    const run = async (): Promise<T> => {
+      const prepared = await this.serial(async () => {
+        throwIfAborted();
+        this.throwIfDisposed();
+        const store = this.requireQueryable();
+        const planned = await prepare(store);
+        if ("immediate" in planned) {
+          return { done: true as const, value: planned.immediate() };
+        }
+        job.pendingOps = [];
+        return {
+          done: false as const,
+          request: planned,
+          generation: this.generation,
+          viewVersion: this.viewVersion,
+        };
+      });
+      if (prepared.done) {
+        return prepared.value;
+      }
+      throwIfAborted();
+      this.queryClient ??= new QueryWorkerClient(this.workerPath());
+      job.worker = this.queryClient.run(prepared.request, {
+        onProgress: options.onProgress,
+        // 大きなソートで使ったメモリを確実に返す（次のジョブでワーカーを作り直す）
+        recycle: prepared.request.kind === "view",
+      });
+      let output: QueryJobResult;
+      try {
+        output = await job.worker.result;
+      } catch (error) {
+        throwIfAborted();
+        throw error instanceof QueryCancelledError
+          ? new Error("検索・ソート・フィルタのワーカーが止まりました。もう一度実行してください")
+          : error;
+      }
+      return this.serial(() => {
+        throwIfAborted();
+        this.throwIfDisposed();
+        if (this.generation !== prepared.generation) {
+          throw new LargeQueryAbortedError("stale");
+        }
+        return apply(output, prepared.viewVersion, job.pendingOps ?? []);
+      });
+    };
+    const result = run().finally(() => {
+      if (this.activeQuery === job) {
+        this.activeQuery = undefined;
+      }
+    });
+    // 待つ側がいなくても unhandled にしない
+    result.catch(() => {});
+    return {
+      result,
+      cancel: () => {
+        this.abortJob(job, "cancel");
+      },
+    };
+  }
+
+  private abortJob(job: ActiveQuery, reason: LargeQueryAbortReason): void {
+    if (job.aborted) {
+      return;
+    }
+    job.aborted = reason;
+    void job.worker?.cancel();
+  }
+
+  private abortActiveQuery(reason: LargeQueryAbortReason): void {
+    if (this.activeQuery) {
+      this.abortJob(this.activeQuery, reason);
+    }
+  }
+
+  /** 実行中のジョブを取り消し、ワーカーがファイルを閉じるまで待つ（保存・revert の前に serial の中で呼ぶ） */
+  private async abortQuery(reason: LargeQueryAbortReason): Promise<void> {
+    const job = this.activeQuery;
+    if (job) {
+      this.abortJob(job, reason);
+      await job.worker?.cancel();
+    }
+    await this.queryClient?.release();
+  }
+
+  private requireQueryable(): RowStore {
+    if (!this.store) {
+      throw new LargeEditRejectedError(
+        "行インデックスの作成中は検索・ソート・フィルタを使えません。作成が終わってから実行してください"
+      );
+    }
+    return this.store;
+  }
+
+  /** ワーカーが読むファイルのスナップショット（オフセット表はコピー。ワーカーへ転送する） */
+  private async querySource(): Promise<QuerySource> {
+    const summary = await this.index.done;
+    return {
+      filePath: this.currentUri.fsPath,
+      encoding: this.encoding,
+      starts: this.index.offsets(),
+      summary,
+    };
+  }
+
+  private workerPath(): string {
+    // 既定はバンドルした拡張機能（dist/extension.js）と同じディレクトリ
+    return this.options.workerPath ?? path.join(__dirname, "largeCsvWorker.js");
+  }
+
+  /** RowStore に op を当てた（編集・Undo/Redo）。表示順と実行中のジョブの記録に反映する */
+  private onStoreOp(op: RowStoreOp): void {
+    if (op.type === "insertRows" || op.type === "deleteRows" || op.type === "restoreRows") {
+      this.viewVersion += 1;
+      if (this.view) {
+        applyStoreOpToView(this.view, op, this.removedPlaces);
+      }
+      this.activeQuery?.pendingOps?.push(op);
+    }
+  }
+
+  private clearView(): void {
+    this.view = undefined;
+    this.query = EMPTY_QUERY;
+    this.removedPlaces = new Map();
+    this.viewVersion += 1;
+  }
+
+  /** 保存で行の番号が変わったので、表示順のハンドルを保存したファイルの行番号に付け替える */
+  private remapView(remap: HandleRemap): void {
+    this.removedPlaces = new Map();
+    this.viewVersion += 1;
+    this.view?.remap((handle) => {
+      const mapped = remap.map(handle);
+      // 保存したファイルに無い行（消えた行）は除く
+      return mapped > 0 && mapped !== Number.MAX_SAFE_INTEGER ? mapped : undefined;
+    });
   }
 
   private throwIfDisposed(): void {
