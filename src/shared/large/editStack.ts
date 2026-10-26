@@ -75,6 +75,14 @@ export class EditStack {
     return true;
   }
 
+  /**
+   * 当てたまま（undo していない）の op を当てた順に並べたもの（コピー）。
+   * 作ったときの状態（最後に保存・revert した状態）に1単位で当て直すと現在の状態になる（バックアップに書き出す）
+   */
+  appliedOps(): LargeOp[] {
+    return this.done.flatMap((entry) => entry.ops.map((op) => structuredClone(op)));
+  }
+
   get canUndo(): boolean {
     return this.done.length > 0;
   }

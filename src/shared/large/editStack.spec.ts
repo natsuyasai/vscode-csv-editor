@@ -160,4 +160,40 @@ describe("EditStack", () => {
       expect(stack.isDirty).toBe(true);
     });
   });
+  describe("appliedOps（バックアップに書く、保存した状態からの op 列）", () => {
+    it("初期状態では空", () => {
+      const { stack } = setup();
+      expect(stack.appliedOps()).toEqual([]);
+    });
+
+    it("当てた op を当てた順に並べ、undo した単位は含めない", () => {
+      const { stack } = setup();
+      stack.apply([
+        { type: "setRow", handle: 1, row: ["a"] },
+        { type: "insertRows", beforeHandle: 2, handles: [-1], rows: [["n"]] },
+      ]);
+      stack.apply([{ type: "deleteRows", handles: [3] }]);
+      stack.apply([{ type: "setHeader", header: ["h"] }]);
+      stack.undo();
+      expect(stack.appliedOps()).toEqual([
+        { type: "setRow", handle: 1, row: ["a"] },
+        { type: "insertRows", beforeHandle: 2, handles: [-1], rows: [["n"]] },
+        { type: "deleteRows", handles: [3] },
+      ]);
+      stack.redo();
+      expect(stack.appliedOps().at(-1)).toEqual({ type: "setHeader", header: ["h"] });
+    });
+
+    it("返した op 列を新しい RowStore に1単位で当てると同じ状態になる", () => {
+      const { store, stack } = setup();
+      stack.apply([
+        { type: "insertRows", beforeHandle: null, handles: [-1, -2], rows: [["x"], ["y"]] },
+      ]);
+      stack.apply([{ type: "setRow", handle: -2, row: ["z"] }]);
+      stack.apply([{ type: "deleteRows", handles: [1] }]);
+      const restored = setup();
+      expect(restored.stack.apply(stack.appliedOps())).toBe(true);
+      expect(contents(restored.store)).toEqual(contents(store));
+    });
+  });
 });
