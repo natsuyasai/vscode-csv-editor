@@ -74,6 +74,12 @@ export type LargeMessageToWebview =
       encoding: string;
       /** 制限している機能の表示名一覧 */
       restrictions: string[];
+      /**
+       * 次に使ってよい追加行の負のハンドル（これ以下の値から採番する）。
+       * 文書がこれまでに受け取った負のハンドルの最小値 - 1（無ければ -1）。
+       * webview の状態が失われて作り直されたときに、既にある追加行とハンドルが重ならないようにする
+       */
+      nextHandle?: number;
     }
   | { type: "large/rows"; reqId: number; start: number; rows: string[][]; handles: number[] }
   | { type: "large/progress"; kind: LargeProgressKind; ratio: number; jobId?: number }
@@ -216,7 +222,8 @@ export function isLargeMessageToWebview(value: unknown): value is LargeMessageTo
         isNonNegInt(value.rowCount) &&
         typeof value.indexing === "boolean" &&
         typeof value.encoding === "string" &&
-        isStringArray(value.restrictions)
+        isStringArray(value.restrictions) &&
+        (value.nextHandle === undefined || (isInt(value.nextHandle) && value.nextHandle < 0))
       );
     case "large/rows":
       return (
