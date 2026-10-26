@@ -45,6 +45,12 @@ describe("planPaste（貼り付ける範囲）", () => {
     expect(planPaste({ row: 10, col: 0 }, [["a"]], bounds)).toBeNull();
     expect(planPaste({ row: 0, col: 4 }, [["a"]], bounds)).toBeNull();
   });
+
+  test("数十万行の貼り付けでも例外を出さずにセル数を数える（上限の判定は呼び出し側）", () => {
+    const values = Array.from({ length: 300_000 }, () => ["x"]);
+    const plan = planPaste({ row: 0, col: 0 }, values, { rowCount: 5_000_000, colCount: 4 });
+    expect(plan).toMatchObject({ startRow: 0, endRow: 300_000, cellCount: 300_000, width: 1 });
+  });
 });
 
 describe("buildPasteOps（行の置き換え）", () => {

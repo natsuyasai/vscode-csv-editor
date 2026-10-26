@@ -34,13 +34,20 @@ export function planPaste(
   if (kept.length === 0) {
     return null;
   }
+  // 数十万行でも引数の数の上限を超えないよう、展開（Math.max(...)）せずに数える
+  let cellCount = 0;
+  let width = 0;
+  for (const row of kept) {
+    cellCount += row.length;
+    width = Math.max(width, row.length);
+  }
   return {
     startRow: origin.row,
     endRow: origin.row + kept.length,
     startCol: origin.col,
     values: kept,
-    cellCount: kept.reduce((sum, row) => sum + row.length, 0),
-    width: Math.max(...kept.map((row) => row.length)),
+    cellCount,
+    width,
   };
 }
 
