@@ -151,6 +151,14 @@ export class RowIndex {
     return this.finished;
   }
 
+  /**
+   * 確定済みの行のオフセット表のコピー（rowCount + 1 要素。`fromOffsets` に渡せる）。
+   * 検索・ソート・フィルタのワーカーへ渡す（ワーカーは自分でファイルを開いて読む）
+   */
+  offsets(): Float64Array {
+    return this.starts.slice(0, this.count + 1);
+  }
+
   /** i 行目のバイト範囲。確定していない行は RangeError */
   getRowRange(i: number): RowByteRange {
     if (!Number.isInteger(i) || i < 0 || i >= this.count) {
