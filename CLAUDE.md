@@ -109,9 +109,14 @@
 ## 通信アーキテクチャ
 
 メッセージパッシングは`src/message/`内の型付きインターフェースを使用します:
-- `messageTypeToWebview.ts`: 拡張機能 → Webview メッセージ (init, update, updateTheme)
-- `messageTypeToExtension.ts`: Webview → 拡張機能 メッセージ (init, update, reload, save)
-- データフロー: VSCode Document ↔ Extension ↔ Webview (デバウンス更新あり)
+- `messageTypeToWebview.ts`: 拡張機能 → Webview メッセージ (init, update（全文＋epoch）, updateTheme)
+- `messageTypeToExtension.ts`: Webview → 拡張機能 メッセージ (init, applyOps, reload, save)
+- データフロー: VSCode Document ↔ Extension ↔ Webview
+  - 拡張機能 → Webview は全文（init / 外部変更 / resync）。送るたびに epoch を +1 する
+  - Webview → 拡張機能は編集差分（`applyOps { epoch, ops: RowOp[] }`、300ms デバウンスでまとめて送る）。拡張機能は該当行の範囲だけを `WorkspaceEdit` で置き換える
+  - epoch 不一致・適用失敗・適用後の行構造の不一致では、拡張機能が全文を送り直し、webview は保留中の操作を捨てて作り直す
+  - `save` は payload を持たない。webview は保留中の操作を送ってから `save` を送る
+  - エコー抑止は自分で適用した編集後の `document.version` で行う
 
 ## ビルドコマンド
 
