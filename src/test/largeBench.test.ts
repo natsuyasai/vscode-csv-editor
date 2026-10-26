@@ -10,6 +10,10 @@ import * as process from "process";
 import * as vscode from "vscode";
 
 import type { CsvEditorTestingApi } from "../extension";
+import { writeLargeBackup } from "../large/largeBackup";
+import { LargeCsvDocument } from "../large/largeCsvDocument";
+import { MAX_ROWS_PER_REQUEST } from "../message/largeMessages";
+import type { LargeEncoding } from "../large/largeEncoding";
 import { QueryWorkerClient } from "../large/queryWorkerClient";
 import type { ViewJobResult } from "../large/queryProtocol";
 import { RowIndex } from "../large/rowIndex";
@@ -23,6 +27,7 @@ import { WebviewTap, waitFor } from "./helpers/webviewTap";
  * 通常の `npm test` では実行しない。`CSV_EDITOR_BENCH=1` のときだけ実行する:
  *   CSV_EDITOR_BENCH=1 npx vscode-test --grep "大容量モードの性能計測"
  * `CSV_EDITOR_BENCH_SIZE`（既定 500MB）・`CSV_EDITOR_BENCH_COLS`（既定 8）で生成する大きさを変えられる。
+ * `CSV_EDITOR_BENCH_ENCODING`（utf-8 | shift_jis。既定 utf-8）で文字コードを変えられる（生成も同じ文字コード）。
  * `CSV_EDITOR_BENCH_FILE` に CSV のパスを渡すとそれを使う（消さない）。無ければ
  * `scripts/bench/generate-large-csv.mjs` で 500MB を一時ディレクトリに生成し、計測後に消す。
  * 生成した直後のファイルは OS のページキャッシュに載っているので、計測値はウォームキャッシュの値。
@@ -33,6 +38,9 @@ const MiB = 1024 * 1024;
 const BENCH_SIZE = process.env.CSV_EDITOR_BENCH_SIZE ?? "500MB";
 /** 列数（generate-large-csv.mjs の既定は 10 列で約400万行。8 列で約500万行） */
 const BENCH_COLS = process.env.CSV_EDITOR_BENCH_COLS ?? "8";
+/** 文字コード（shift_jis を指定すると生成するファイルも Shift_JIS にする） */
+const BENCH_ENCODING: LargeEncoding =
+  process.env.CSV_EDITOR_BENCH_ENCODING === "shift_jis" ? "shift_jis" : "utf-8";
 const benchSuite = process.env.CSV_EDITOR_BENCH === "1" ? suite : suite.skip;
 
 /** webview が中ほどを表示したときの要求と同じ大きさ（表示中のページと前後の先読み1ページずつ） */
@@ -91,7 +99,17 @@ benchSuite("大容量モードの性能計測", function () {
     const started = performance.now();
     const result = spawnSync(
       "node",
-      [script, "--size", BENCH_SIZE, "--cols", BENCH_COLS, "--out", file],
+      [
+        script,
+        "--size",
+        BENCH_SIZE,
+        "--cols",
+        BENCH_COLS,
+        "--encoding",
+        BENCH_ENCODING === "shift_jis" ? "shift_jis" : "utf8",
+        "--out",
+        file,
+      ],
       {
         encoding: "utf8",
       }
@@ -114,7 +132,7 @@ benchSuite("大容量モードの性能計測", function () {
     const size = fs.statSync(file).size;
     const tap = new WebviewTap();
     api.setLargeEditorForTesting({ wrapWebview: tap.wrap });
-    api.setPickerForTesting(new ScriptedPicker("utf-8"));
+    api.setPickerForTesting(new ScriptedPicker(BENCH_ENCODING));
     await vscode.commands.executeCommand("workbench.action.closeAllEditors");
 
     const before = memory();
@@ -184,14 +202,14 @@ benchSuite("大容量モードの性能計測", function () {
       memoryAfterIndex: memoryDelta(afterIndex, before),
       memoryAfterReads: memoryDelta(afterReads, before),
     };
-    console.log(`[bench] ${JSON.stringify(report, null, 2)}`);
+    console.log(`[bench] ${JSON.stringify({ encoding: BENCH_ENCODING, ...report }, null, 2)}`);
 
     await vscode.commands.executeCommand("workbench.action.closeAllEditors");
   });
   test("500MBのファイルで検索・ソート・フィルタの時間とメモリを計測する", async () => {
     const tap = new WebviewTap();
     api.setLargeEditorForTesting({ wrapWebview: tap.wrap });
-    api.setPickerForTesting(new ScriptedPicker("utf-8"));
+    api.setPickerForTesting(new ScriptedPicker(BENCH_ENCODING));
     await vscode.commands.executeCommand("workbench.action.closeAllEditors");
     await vscode.commands.executeCommand("vscode.openWith", vscode.Uri.file(file), LARGE);
     const largeInit = await tap.waitFor(
@@ -277,7 +295,12 @@ benchSuite("大容量モードの性能計測", function () {
     const workerSort = async (column: number) => {
       const result = (await client.run({
         kind: "view",
-        source: { filePath: file, encoding: "utf-8", starts: index.offsets(), summary },
+        source: {
+          filePath: file,
+          encoding: BENCH_ENCODING === "shift_jis" ? "shift_jis" : "utf-8",
+          starts: index.offsets(),
+          summary,
+        },
         rows: { order: order.slice(), edits: [] },
         filters: [],
         sort: { column, direction: "asc" },
@@ -309,5 +332,150 @@ benchSuite("大容量モードの性能計測", function () {
     };
     console.log(`[bench-query] ${JSON.stringify(report, null, 2)}`);
     await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+  });
+
+  test("500MBのファイルで範囲コピー・編集・保存・バックアップの時間とメモリを計測する", async () => {
+    const tap = new WebviewTap();
+    api.setLargeEditorForTesting({ wrapWebview: tap.wrap });
+    api.setPickerForTesting(new ScriptedPicker(BENCH_ENCODING));
+    await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+    await vscode.commands.executeCommand("vscode.openWith", vscode.Uri.file(file), LARGE);
+    const largeInit = await tap.waitFor(
+      "toWebview",
+      (m) => m.type === "large/init",
+      "large/init",
+      60000
+    );
+    await waitFor(
+      () =>
+        largeInit.message.indexing === false ||
+        tap
+          .messagesOf("toWebview", "large/progress")
+          .some((m) => m.kind === "index" && m.ratio === 1),
+      "行インデックスの作成完了",
+      10 * 60 * 1000
+    );
+    const cols = Number(BENCH_COLS);
+    const rowCount =
+      (tap.messagesOf("toWebview", "large/invalidate").at(-1)?.rowCount as number | undefined) ??
+      (largeInit.message.rowCount as number);
+    const before = memory();
+    let reqId = 3_000_000;
+    let revision = 0;
+    for (const m of tap.messagesOf("toWebview", "large/init")) {
+      revision = Math.max(revision, (m.revision as number | undefined) ?? 0);
+    }
+
+    // (a) 範囲コピー。10万セル（rows 行 x cols 列）を中ほど・末尾で各5回。
+    //     1回の読み取りは MAX_ROWS_PER_REQUEST 行までなので、10万セルが1回で読めるかも記録する
+    const getRange = async (startRow: number, rows: number) => {
+      const id = reqId++;
+      const began = performance.now();
+      await tap.deliver({
+        type: "large/getRange",
+        reqId: id,
+        range: { startRow, endRow: startRow + rows, startCol: 0, endCol: cols },
+      });
+      const elapsed = performance.now() - began;
+      const response = tap.messagesOf("toWebview", "large/range").find((m) => m.reqId === id);
+      const failure = tap.messagesOf("toWebview", "large/error").find((m) => m.reqId === id);
+      if (!response) {
+        return { error: String(failure?.message) };
+      }
+      assert.strictEqual((response.rows as unknown[]).length, rows);
+      return { elapsed };
+    };
+    const measureRange = async (rows: number) => {
+      const middle: number[] = [];
+      const tail: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        for (const [start, samples] of [
+          [Math.floor(rowCount / 2) + i * 7919, middle],
+          [rowCount - rows - i * 7919, tail],
+        ] as const) {
+          const result = await getRange(start, rows);
+          if (result.error !== undefined) {
+            return { rows, cells: rows * cols, error: result.error };
+          }
+          samples.push(result.elapsed);
+        }
+      }
+      return { rows, cells: rows * cols, middle: summarize(middle), tail: summarize(tail) };
+    };
+    const rangeRows = Math.min(MAX_ROWS_PER_REQUEST, Math.floor(100_000 / cols));
+    const rangeFull = await measureRange(Math.floor(100_000 / cols));
+    const rangeCapped = await measureRange(rangeRows);
+    const afterRange = memory();
+
+    // (b) 編集1件 -> 保存（VSCode の保存コマンド。一時ファイルへ全体を書き出して置き換える）
+    const id = reqId++;
+    const target = Math.floor(rowCount / 2);
+    await tap.deliver({ type: "large/getRows", reqId: id, start: target, count: 1 });
+    const fetched = tap.messagesOf("toWebview", "large/rows").find((m) => m.reqId === id);
+    assert.ok(fetched);
+    const handle = (fetched.handles as number[])[0];
+    const row = [...(fetched.rows as string[][])[0]];
+    row[0] = "ベンチ編集";
+    const activeTab = () => vscode.window.tabGroups.activeTabGroup.activeTab;
+    const editBegan = performance.now();
+    await tap.deliver({
+      type: "large/applyOps",
+      revision,
+      ops: [{ type: "setRow", handle, row }],
+    });
+    const editMs = performance.now() - editBegan;
+    await waitFor(() => activeTab()?.isDirty === true, "未保存になる");
+    const saveBegan = performance.now();
+    await vscode.commands.executeCommand("workbench.action.files.save");
+    await waitFor(() => activeTab()?.isDirty === false, "保存が終わる", 10 * 60 * 1000);
+    const saveMs = performance.now() - saveBegan;
+    const afterSave = memory();
+    await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+
+    // (c) バックアップの書き出し（文書を直接開き、編集1件と、10万セル貼り付け相当の setRow を書き出す）
+    const document = LargeCsvDocument.open(vscode.Uri.file(file), BENCH_ENCODING);
+    await document.indexDone;
+    const backupFile = path.join(path.dirname(file), "bench-backup.json");
+    const backupOnce = async (ops: { type: "setRow"; handle: number; row: string[] }[]) => {
+      assert.ok(await document.applyOps(ops));
+      const began = performance.now();
+      const data = await document.backupData();
+      const dataMs = performance.now() - began;
+      await writeLargeBackup(backupFile, data);
+      return {
+        ops: data.ops.length,
+        backupDataMs: ms(dataMs),
+        totalMs: ms(performance.now() - began),
+        fileMiB: mib(fs.statSync(backupFile).size),
+      };
+    };
+    const rows = await document.readDataRows(0, rangeRows);
+    const backupSingle = await backupOnce([
+      { type: "setRow", handle: rows.handles[0], row: ["a", ...rows.rows[0].slice(1)] },
+    ]);
+    const backupPaste = await backupOnce(
+      rows.rows.map((r, i) => ({
+        type: "setRow" as const,
+        handle: rows.handles[i],
+        row: r.map((cell) => `${cell}-p`),
+      }))
+    );
+    document.dispose();
+    fs.rmSync(backupFile, { force: true });
+
+    const report = {
+      encoding: BENCH_ENCODING,
+      rowCount,
+      getRangeFull100kCells: rangeFull,
+      getRangeCappedAtRequestRows: rangeCapped,
+      editOneRowMs: ms(editMs),
+      saveAfterOneEditMs: ms(saveMs),
+      backupAfterOneEdit: backupSingle,
+      backupAfterPaste100kCells: backupPaste,
+      memoryAfterRange: memoryDelta(afterRange, before),
+      memoryAfterSave: memoryDelta(afterSave, before),
+      memoryAtEnd: memoryDelta(memory(), before),
+    };
+    console.log(`[bench-edit] ${JSON.stringify(report, null, 2)}`);
   });
 });
