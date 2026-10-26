@@ -165,20 +165,6 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       return true;
     };
 
-    // 暫定: webview→拡張の全文 update（ステップ9で webview が applyOps に移行したら削除する）
-    const applyFromWebview = (csvText: string): Promise<boolean> =>
-      enqueue(async () => {
-        const normalized = CSVEditorProvider.normalizeEol(csvText);
-        if (normalized === CSVEditorProvider.normalizeEol(document.getText())) {
-          return true;
-        }
-        const ok = await applyOwnEdit(CSVEditorProvider.wholeDocumentEdit(document, csvText));
-        if (!ok) {
-          resync("全文の置換が拒否されました");
-        }
-        return ok;
-      });
-
     const applyOps = (message: ApplyOpsMessage): Promise<void> =>
       enqueue(async () => {
         if (message.epoch !== epoch) {
@@ -256,26 +242,11 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
             updateTheme();
             updateWebview();
             return;
-          case "update":
-            // ドキュメントへ反映のみ行う（保存はしない。ダーティ状態になる）
-            if (e.payload !== undefined) {
-              await applyFromWebview(e.payload);
-            }
-            return;
           case "applyOps":
             await applyOps(e as ApplyOpsMessage);
             return;
           case "save":
-            if (e.payload === undefined) {
-              await saveAfterQueuedEdits();
-              return;
-            }
-            // 暫定: 全文を持つ save（ステップ9で webview が payload なしに移行したら削除する）
-            if (!(await applyFromWebview(e.payload))) {
-              warnSaveDiscarded();
-              return;
-            }
-            await document.save();
+            await saveAfterQueuedEdits();
             return;
           case "reload":
             updateWebview();
@@ -346,10 +317,6 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     `;
   }
 
-  private static normalizeEol(text: string): string {
-    return text.replace(/\r\n/g, "\n");
-  }
-
   /**
    * 文書の書式を検出する。改行コードは文書のもの（document.eol）を使う。
    * VSCode は読み込み時に改行を1種類へ揃え、挿入した改行も文書の改行コードへ変換するため、
@@ -360,21 +327,5 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       ...detectCsvFormat(text),
       eol: document.eol === vscode.EndOfLine.CRLF ? "\r\n" : "\n",
     };
-  }
-
-  /**
-   * ドキュメント全体を置換する編集を作る。
-   */
-  private static wholeDocumentEdit(
-    document: vscode.TextDocument,
-    csvText: string
-  ): vscode.WorkspaceEdit {
-    const edit = new vscode.WorkspaceEdit();
-    const fullRange = new vscode.Range(
-      new vscode.Position(0, 0),
-      document.positionAt(document.getText().length)
-    );
-    edit.replace(document.uri, fullRange, csvText);
-    return edit;
   }
 }

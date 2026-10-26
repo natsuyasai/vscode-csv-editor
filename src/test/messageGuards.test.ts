@@ -10,12 +10,13 @@ suite("メッセージ型ガード (issue #89)", () => {
       { type: "reload" },
       { type: "reload", payload: "a,b" },
       { type: "openAsText" },
-      { type: "update", payload: "a,b\n1,2" },
-      { type: "update", payload: "" },
-      { type: "save", payload: "a,b" },
       { type: "save" },
       { type: "applyOps", epoch: 0, ops: [] },
-      { type: "applyOps", epoch: 3, ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: [] }] },
+      {
+        type: "applyOps",
+        epoch: 3,
+        ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: [] }],
+      },
       {
         type: "applyOps",
         epoch: 1,
@@ -41,9 +42,9 @@ suite("メッセージ型ガード (issue #89)", () => {
       { type: 1 },
       { type: "unknown" },
       { type: "updateTheme", payload: "dark" },
+      // webview→拡張の全文 update は廃止した（差分は applyOps で送る）
+      { type: "update", payload: "a,b\n1,2" },
       { type: "update" },
-      { type: "update", payload: 1 },
-      { type: "update", payload: null },
       { type: "save", payload: {} },
       { type: "save", payload: 1 },
       { type: "applyOps" },
@@ -57,14 +58,42 @@ suite("メッセージ型ガード (issue #89)", () => {
       { type: "applyOps", epoch: 0, ops: [null] },
       { type: "applyOps", epoch: 0, ops: [{}] },
       { type: "applyOps", epoch: 0, ops: [{ type: "x", start: 0, deleteCount: 0, rows: [] }] },
-      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: -1, deleteCount: 0, rows: [] }] },
-      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0.5, deleteCount: 0, rows: [] }] },
-      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: -1, rows: [] }] },
-      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: "1", rows: [] }] },
+      {
+        type: "applyOps",
+        epoch: 0,
+        ops: [{ type: "replaceRows", start: -1, deleteCount: 0, rows: [] }],
+      },
+      {
+        type: "applyOps",
+        epoch: 0,
+        ops: [{ type: "replaceRows", start: 0.5, deleteCount: 0, rows: [] }],
+      },
+      {
+        type: "applyOps",
+        epoch: 0,
+        ops: [{ type: "replaceRows", start: 0, deleteCount: -1, rows: [] }],
+      },
+      {
+        type: "applyOps",
+        epoch: 0,
+        ops: [{ type: "replaceRows", start: 0, deleteCount: "1", rows: [] }],
+      },
       { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: 0 }] },
-      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: ["a"] }] },
-      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: [[1]] }] },
-      { type: "applyOps", epoch: 0, ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: [["a"]] }, 1] },
+      {
+        type: "applyOps",
+        epoch: 0,
+        ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: ["a"] }],
+      },
+      {
+        type: "applyOps",
+        epoch: 0,
+        ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: [[1]] }],
+      },
+      {
+        type: "applyOps",
+        epoch: 0,
+        ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: [["a"]] }, 1],
+      },
       { type: "reload", payload: 1 },
     ];
     invalid.forEach((v) => {
@@ -91,7 +120,10 @@ suite("メッセージ型ガード (issue #89)", () => {
       assert.strictEqual(isMessageToWebview({ type: "init", epoch: 1.5 }), false);
       assert.strictEqual(isMessageToWebview({ type: "init", epoch: "1" }), false);
       assert.strictEqual(isMessageToWebview({ type: "update", payload: "a", epoch: -1 }), false);
-      assert.strictEqual(isMessageToWebview({ type: "update", payload: "a", epoch: Number.NaN }), false);
+      assert.strictEqual(
+        isMessageToWebview({ type: "update", payload: "a", epoch: Number.NaN }),
+        false
+      );
       assert.strictEqual(isMessageToWebview({ type: "updateTheme", payload: "blue" }), false);
       assert.strictEqual(isMessageToWebview({ type: "updateTheme" }), false);
     });

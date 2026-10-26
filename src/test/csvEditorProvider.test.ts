@@ -6,7 +6,8 @@ import * as path from "path";
 import * as os from "os";
 import { setTimeout as sleep } from "timers/promises";
 import { CSVEditorProvider } from "../editor/csvEditorProvider";
-import { Message, UpdateMessage, SaveMessage } from "../message/messageTypeToExtension";
+import { ApplyOpsMessage, Message, SaveMessage } from "../message/messageTypeToExtension";
+import { replaceRows } from "./helpers/providerHarness";
 
 suite("CSVEditorProvider", () => {
   test("registerが返すDisposableでコマンドとカスタムエディタの登録を解除できる", () => {
@@ -188,15 +189,18 @@ suite("CSVEditorProvider", () => {
 
       assert.ok(messageHandler, "Message handler should be registered");
 
-      // webviewからの更新メッセージをシミュレート
-      const updatedCsvData =
-        "Name,Age,Department,Status\n" +
-        "田中太郎,31,Engineering,Active\n" +
-        "佐藤花子,25,Marketing,Active";
-
-      const updateMessage: UpdateMessage = {
-        type: "update",
-        payload: updatedCsvData,
+      // webviewからの編集（差分の操作）をシミュレート
+      await messageHandler({ type: "init" });
+      // init への応答（最初の全文送信）のエポックは 1
+      const updateMessage: ApplyOpsMessage = {
+        type: "applyOps",
+        epoch: 1,
+        ops: [
+          replaceRows(1, 5, [
+            ["田中太郎", "31", "Engineering", "Active"],
+            ["佐藤花子", "25", "Marketing", "Active"],
+          ]),
+        ],
       };
 
       // モックワークスペース編集
@@ -249,21 +253,17 @@ suite("CSVEditorProvider", () => {
         onCancellationRequested: () => ({ dispose: () => {} }),
       });
 
-      // フィルター操作をシミュレート（Engineering部署のみ表示）
-      const filteredData =
-        "Name,Age,Department,Status\n" +
-        "田中太郎,30,Engineering,Active\n" +
-        "山田次郎,32,Engineering,Inactive";
-
-      const updateMessage: UpdateMessage = {
-        type: "update",
-        payload: filteredData,
-      };
-
       // webviewからinitメッセージを送信して初期化
       if (messageHandler) {
-        messageHandler({ type: "init" });
+        await messageHandler({ type: "init" });
       }
+
+      // 行を削除した結果の操作をシミュレート（Engineering部署の行だけを残す）
+      const updateMessage: ApplyOpsMessage = {
+        type: "applyOps",
+        epoch: 1,
+        ops: [replaceRows(2, 3, [])],
+      };
 
       // フィルター操作をシミュレート
       if (messageHandler) {
@@ -275,17 +275,17 @@ suite("CSVEditorProvider", () => {
     });
 
     function createHarness(document: vscode.TextDocument) {
-      const sentMessages: { type: string; payload?: string }[] = [];
-      let messageHandler: ((message: Message) => unknown) | undefined;
+      const sentMessages: { type: string; payload?: string; epoch?: number }[] = [];
+      let messageHandler: ((message: Message | ApplyOpsMessage) => unknown) | undefined;
       const mockWebview = {
         html: "",
         cspSource: "vscode-resource:",
         asWebviewUri: (uri: vscode.Uri) => uri,
-        postMessage: (message: { type: string; payload?: string }) => {
+        postMessage: (message: { type: string; payload?: string; epoch?: number }) => {
           sentMessages.push(message);
           return Promise.resolve(true);
         },
-        onDidReceiveMessage: (handler: (message: Message) => unknown) => {
+        onDidReceiveMessage: (handler: (message: Message | ApplyOpsMessage) => unknown) => {
           messageHandler = handler;
           return { dispose: () => {} };
         },
@@ -305,11 +305,18 @@ suite("CSVEditorProvider", () => {
         isCancellationRequested: false,
         onCancellationRequested: () => ({ dispose: () => {} }),
       });
+      const send = async (message: Message | ApplyOpsMessage) => {
+        assert.ok(messageHandler, "Message handler should be registered");
+        await messageHandler(message);
+      };
       return {
         sentMessages,
-        send: async (message: Message) => {
-          assert.ok(messageHandler, "Message handler should be registered");
-          await messageHandler(message);
+        send,
+        /** init を送り、最後に受け取った全文のエポック付きで操作を送る */
+        sendOps: async (ops: ApplyOpsMessage["ops"]) => {
+          const epoch = sentMessages.filter((m) => m.type === "update").at(-1)?.epoch;
+          assert.strictEqual(typeof epoch, "number", "init 済みであること");
+          await send({ type: "applyOps", epoch: epoch as number, ops });
         },
         dispose: () => disposeHandler?.(),
       };
@@ -317,12 +324,18 @@ suite("CSVEditorProvider", () => {
 
     const waitForEvents = () => sleep(100);
 
-    test("updateメッセージはドキュメントを更新してダーティにするが保存しない", async () => {
+    test("applyOpsメッセージはドキュメントを更新してダーティにするが保存しない", async () => {
       const document = await vscode.workspace.openTextDocument(testCsvFile);
       const harness = createHarness(document);
       const newText = "Name,Age\n田中太郎,31";
 
-      await harness.send({ type: "update", payload: newText } satisfies UpdateMessage);
+      await harness.send({ type: "init" });
+      await harness.sendOps([
+        replaceRows(0, 6, [
+          ["Name", "Age"],
+          ["田中太郎", "31"],
+        ]),
+      ]);
 
       assert.strictEqual(document.getText(), newText);
       assert.strictEqual(document.isDirty, true);
@@ -334,13 +347,15 @@ suite("CSVEditorProvider", () => {
       harness.dispose();
     });
 
-    test("末尾の内容も含めて全置換される", async () => {
+    test("全行を置き換える操作で末尾の行まで置き換わる", async () => {
       const document = await vscode.workspace.openTextDocument(testCsvFile);
       const harness = createHarness(document);
 
-      await harness.send({ type: "update", payload: "A\n" } satisfies UpdateMessage);
+      await harness.send({ type: "init" });
+      await harness.sendOps([replaceRows(0, 6, [["A"]])]);
 
-      assert.strictEqual(document.getText(), "A\n");
+      // 元のファイルに末尾改行がないため、置き換えた後も末尾改行は付かない
+      assert.strictEqual(document.getText(), "A");
       harness.dispose();
     });
 
@@ -348,13 +363,14 @@ suite("CSVEditorProvider", () => {
       const document = await vscode.workspace.openTextDocument(testCsvFile);
       const harness = createHarness(document);
 
-      await harness.send({ type: "update", payload: "A,B\n1,2" } satisfies UpdateMessage);
+      await harness.send({ type: "init" });
+      await harness.sendOps([replaceRows(1, 1, [["A", "B"]])]);
       await waitForEvents();
 
       assert.strictEqual(
         harness.sentMessages.filter((m) => m.type === "update").length,
-        0,
-        "エコーのupdateは送られない"
+        1,
+        "init への応答以外に、エコーのupdateは送られない"
       );
       harness.dispose();
     });
@@ -374,30 +390,38 @@ suite("CSVEditorProvider", () => {
       harness.dispose();
     });
 
-    test("同じ内容のupdateではドキュメントを変更しない", async () => {
+    test("内容の変わらない操作ではドキュメントを変更しない", async () => {
       const document = await vscode.workspace.openTextDocument(testCsvFile);
       const harness = createHarness(document);
 
-      await harness.send({ type: "update", payload: document.getText() } satisfies UpdateMessage);
+      await harness.send({ type: "init" });
+      await harness.sendOps([replaceRows(1, 1, [["田中太郎", "30", "Engineering", "Active"]])]);
 
       assert.strictEqual(document.isDirty, false);
       harness.dispose();
     });
 
-    test("saveメッセージはドキュメントへ反映して保存する", async () => {
+    test("saveメッセージは先に送った操作を反映して保存する", async () => {
       const document = await vscode.workspace.openTextDocument(testCsvFile);
       const harness = createHarness(document);
       const saveData = "Name,Age,Department\n田中太郎,31,Engineering";
 
-      await harness.send({ type: "save", payload: saveData } satisfies SaveMessage);
+      await harness.send({ type: "init" });
+      await harness.sendOps([
+        replaceRows(0, 6, [
+          ["Name", "Age", "Department"],
+          ["田中太郎", "31", "Engineering"],
+        ]),
+      ]);
+      await harness.send({ type: "save" } satisfies SaveMessage);
 
       assert.strictEqual(document.isDirty, false);
       assert.strictEqual(fs.readFileSync(testCsvFile.fsPath, "utf8"), saveData);
       await waitForEvents();
       assert.strictEqual(
         harness.sentMessages.filter((m) => m.type === "update").length,
-        0,
-        "保存時もupdateは送り返さない"
+        1,
+        "保存時もupdateは送り返さない（init への応答の1回だけ）"
       );
       harness.dispose();
     });
@@ -523,13 +547,15 @@ suite("CSVEditorProvider", () => {
         onCancellationRequested: () => ({ dispose: () => {} }),
       });
 
-      // 複雑なデータの更新をシミュレート
-      const updatedComplexData =
-        "Name,Description,Price\n" + '"田中, 太郎","Updated ""quoted"" text",1500';
-
-      const updateMessage: UpdateMessage = {
-        type: "update",
-        payload: updatedComplexData,
+      // 複雑なデータの更新をシミュレート（1行目を書き換え、残りの行を削除する）
+      if (messageHandler) {
+        await messageHandler({ type: "init" });
+      }
+      // init への応答（最初の全文送信）のエポックは 1
+      const updateMessage: ApplyOpsMessage = {
+        type: "applyOps",
+        epoch: 1,
+        ops: [replaceRows(1, 3, [["田中, 太郎", 'Updated "quoted" text', "1500"]])],
       };
 
       let appliedEdit: vscode.WorkspaceEdit | undefined;
@@ -595,14 +621,15 @@ suite("CSVEditorProvider", () => {
       // 大きなファイルでも適切に処理されることを確認
       assert.ok(endTime - startTime < 5000); // 5秒以内に処理完了
 
-      // フィルター操作をシミュレート
-      const filteredData =
-        "ID,Name,Email,Department,Salary,Status\n" +
-        "1,User1,user1@example.com,Engineering,50100,Active";
-
-      const updateMessage: UpdateMessage = {
-        type: "update",
-        payload: filteredData,
+      // 2行目以降の行を削除した結果の操作をシミュレート
+      if (messageHandler) {
+        await messageHandler({ type: "init" });
+      }
+      // init への応答（最初の全文送信）のエポックは 1
+      const updateMessage: ApplyOpsMessage = {
+        type: "applyOps",
+        epoch: 1,
+        ops: [replaceRows(2, 999, [])],
       };
 
       let appliedEdit: vscode.WorkspaceEdit | undefined;

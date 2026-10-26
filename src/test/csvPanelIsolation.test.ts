@@ -1,7 +1,13 @@
 import * as assert from "assert";
 import { setTimeout as sleep } from "timers/promises";
 import { suite, test } from "mocha";
-import { createProviderHarness, openCsv, replaceAll, useTempDir } from "./helpers/providerHarness";
+import {
+  createProviderHarness,
+  openCsv,
+  replaceAll,
+  replaceRows,
+  useTempDir,
+} from "./helpers/providerHarness";
 
 suite("複数CSVを同時に開いたときのパネル分離", () => {
   const temp = useTempDir("isolation");
@@ -26,10 +32,11 @@ suite("複数CSVを同時に開いたときのパネル分離", () => {
     assert.strictEqual(harnessB.postedOf("update").length, 0);
   });
 
-  test("片方のwebviewからのupdateは他方のドキュメントに影響せず、他方へ通知もされない", async () => {
+  test("片方のwebviewからの編集は他方のドキュメントに影響せず、他方へ通知もされない", async () => {
     const { docA, docB, harnessA, harnessB } = await openTwo();
 
-    await harnessA.send({ type: "update", payload: "a1,a2\n1,2\n5,6\n" });
+    await harnessA.send({ type: "init" });
+    await harnessA.sendOps([replaceRows(2, 0, [["5", "6"]])]);
     await sleep(50);
 
     assert.strictEqual(docA.getText(), "a1,a2\n1,2\n5,6\n");
@@ -41,20 +48,21 @@ suite("複数CSVを同時に開いたときのパネル分離", () => {
   test("両方のパネルから交互に更新しても互いのドキュメント内容が混ざらない", async () => {
     const { docA, docB, harnessA, harnessB } = await openTwo();
 
+    await Promise.all([harnessA.send({ type: "init" }), harnessB.send({ type: "init" })]);
     await Promise.all([
-      harnessA.send({ type: "update", payload: "A,1\n" }),
-      harnessB.send({ type: "update", payload: "B,1\n" }),
+      harnessA.sendOps([replaceRows(0, 2, [["A", "1"]])]),
+      harnessB.sendOps([replaceRows(0, 2, [["B", "1"]])]),
     ]);
     await Promise.all([
-      harnessB.send({ type: "update", payload: "B,2\n" }),
-      harnessA.send({ type: "update", payload: "A,2\n" }),
+      harnessB.sendOps([replaceRows(0, 1, [["B", "2"]])]),
+      harnessA.sendOps([replaceRows(0, 1, [["A", "2"]])]),
     ]);
     await sleep(50);
 
     assert.strictEqual(docA.getText(), "A,2\n");
     assert.strictEqual(docB.getText(), "B,2\n");
-    // webview自身の編集はエコーされない
-    assert.strictEqual(harnessA.postedOf("update").length, 0);
-    assert.strictEqual(harnessB.postedOf("update").length, 0);
+    // webview自身の編集はエコーされない（init への応答の1回だけ）
+    assert.strictEqual(harnessA.postedOf("update").length, 1);
+    assert.strictEqual(harnessB.postedOf("update").length, 1);
   });
 });
