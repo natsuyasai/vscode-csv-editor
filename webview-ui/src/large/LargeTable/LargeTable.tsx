@@ -13,9 +13,13 @@ import type { RowSource } from "../rowSource/RowSource";
 import { useRowSource } from "../rowSource/useRowSource";
 import { HEADER_ROW, revealOffset, type CellPosition } from "./cellNavigation";
 import { LargeCellEditor } from "./LargeCellEditor";
+import { isInRange } from "./largeSelection";
 import styles from "./LargeTable.module.scss";
 import { computeScrollScale, rowDomTop, toDomOffset, toVirtualOffset } from "./scrollScaling";
+import { useLargeClipboard, type LargeTableClipboard } from "./useLargeClipboard";
 import { useLargeTableEditing } from "./useLargeTableEditing";
+
+export type { LargeTableClipboard } from "./useLargeClipboard";
 
 /** 行の高さ（通常モードの既定「normal」と同じ） */
 export const LARGE_ROW_HEIGHT = 40;
@@ -60,6 +64,10 @@ export interface LargeTableProps {
   jump?: LargeTableJump | null;
   /** 選択中のセルが変わったとき（検索の開始位置に使う） */
   onSelectionChange?: (cell: CellPosition | null) => void;
+  /** コピー・貼り付けに使うクリップボード（省略時は navigator.clipboard） */
+  clipboard?: LargeTableClipboard;
+  /** 利用者に知らせるメッセージ（コピー・貼り付けの上限を超えたときなど）。null は前のメッセージを消す */
+  onNotice?: (message: string | null) => void;
 }
 
 /** セルの DOM を探すためのキー（ヘッダーは行 -1） */
@@ -80,9 +88,10 @@ const sortIndicator = (sort: SortState | null, col: number) =>
  * - 未取得の行は読み込み中（aria-busy）のプレースホルダーで表示する
  * - 行数×行高がブラウザの最大要素高を超える場合は、DOM 上の高さを上限に収め、
  *   スクロール位置を比例で変換する（scrollScaling.ts）。これで末尾行までスクロールバーで移動できる
- * - 単一セルの選択（クリック・矢印キー・Tab）、セル・ヘッダーの編集、行の挿入・削除
- *   （行番号・セルの右クリックメニュー、Ctrl+Shift+I/B/D）。編集は source.applyOps に渡す
- *   （useLargeTableEditing.ts）。source が applyOps を持たない・readOnly のときは選択だけ
+ * - セルの選択（クリック・矢印キー・Tab）と矩形の範囲選択（ドラッグ・Shift+クリック・Shift+矢印キー）、
+ *   セル・ヘッダーの編集、行の挿入・削除（行番号・セルの右クリックメニュー、Ctrl+Shift+I/B/D）。
+ *   編集は source.applyOps に渡す（useLargeTableEditing.ts）。source が applyOps を持たない・readOnly のときは選択だけ
+ * - 範囲の Ctrl+C / Ctrl+V（useLargeClipboard.ts。10万セルまで。readOnly のときはコピーだけ）
  * - 列の挿入・削除、行・列のドラッグ&ドロップ、オートフィルは出さない（大容量モードでは使えない）
  */
 export function LargeTable({
@@ -93,6 +102,8 @@ export function LargeTable({
   query,
   jump,
   onSelectionChange,
+  clipboard,
+  onNotice,
 }: LargeTableProps) {
   useRowSource(source);
   const rowCount = source.rowCount;
@@ -184,8 +195,12 @@ export function LargeTable({
   const editable = !readOnly && source.applyOps !== undefined;
   const {
     focusedCell,
+    selection,
     editing,
     select,
+    selectRange,
+    pressCell,
+    enterCell,
     takeFocusRequest,
     startEditing,
     changeEditingValue,
@@ -195,6 +210,20 @@ export function LargeTable({
     openRowMenu,
     rowMenu,
   } = useLargeTableEditing({ source, editable, allocateHandle });
+  const { handleClipboardKey } = useLargeClipboard({
+    source,
+    editable,
+    selection,
+    isEditing: editing !== null,
+    selectRange,
+    clipboard,
+    onNotice,
+  });
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!handleClipboardKey(e)) {
+      handleGridKeyDown(e);
+    }
+  };
 
   // 選択したセルが表示領域の外なら、その行が見える位置までスクロールする。
   // スクロール位置は仮想座標で計算し、DOM の位置へ変換して設定する（ジャンプと同じ方法）
@@ -266,10 +295,12 @@ export function LargeTable({
         onBlur={() => finishEditing("blur")}
       />
     ) : null;
+  const isSelected = (row: number, col: number) =>
+    isFocused(row, col) || isInRange(selection, row, col);
   const cellClass = (row: number, col: number, base: string) =>
     [
       base,
-      isFocused(row, col) ? styles.selected : "",
+      isFocused(row, col) ? styles.selected : isInRange(selection, row, col) ? styles.inRange : "",
       editing?.row === row && editing.col === col ? styles.editing : "",
     ]
       .filter(Boolean)
@@ -307,7 +338,7 @@ export function LargeTable({
         tabIndex={-1}
         className={styles.table}
         style={{ width: `${String(tableWidth)}px` }}
-        onKeyDown={handleGridKeyDown}
+        onKeyDown={handleKeyDown}
       >
         <thead className={styles.thead} style={{ height: `${String(headerHeight)}px` }}>
           <tr className={styles.row} style={{ height: `${String(LARGE_HEADER_HEIGHT)}px` }}>
@@ -328,7 +359,7 @@ export function LargeTable({
                 className={cellClass(HEADER_ROW, col, styles.headerCell)}
                 style={columnStyle}
                 title={name}
-                onMouseDown={() => select({ row: HEADER_ROW, col })}
+                onMouseDown={(e) => pressCell(e, { row: HEADER_ROW, col })}
                 onDoubleClick={(e) => {
                   // ソートボタンの連打では編集を始めない
                   if (!(e.target instanceof Element && e.target.closest("button"))) {
@@ -405,12 +436,13 @@ export function LargeTable({
                   <td
                     key={col}
                     role="gridcell"
-                    aria-selected={isFocused(item.index, col)}
+                    aria-selected={isSelected(item.index, col)}
                     tabIndex={isFocused(item.index, col) ? 0 : -1}
                     data-cell={cellKey(item.index, col)}
                     className={cellClass(item.index, col, styles.cell)}
                     style={columnStyle}
-                    onMouseDown={() => select({ row: item.index, col })}
+                    onMouseDown={(e) => pressCell(e, { row: item.index, col })}
+                    onMouseEnter={() => enterCell({ row: item.index, col })}
                     onDoubleClick={() => startEditing({ row: item.index, col })}
                     onContextMenu={(e) => openRowMenu(e, item.index, col)}
                   >

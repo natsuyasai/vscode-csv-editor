@@ -7,6 +7,7 @@ import type { RowSource } from "../rowSource/RowSource";
 import { HEADER_ROW, moveCell, type CellPosition } from "./cellNavigation";
 import type { CommitMove } from "./LargeCellEditor";
 import { deleteRowOp, insertRowOp, setCellOp, setHeaderOp } from "./largeEditOps";
+import { extendCell, selectionRange } from "./largeSelection";
 
 /** 編集中のセル（row が HEADER_ROW ならヘッダー） */
 export interface EditingCell extends CellPosition {
@@ -46,13 +47,16 @@ const ROW_SHORTCUTS: Record<string, RowAction> = {
   d: "deleteRow",
 };
 
-const isTextEntry = (target: EventTarget) =>
+export const isTextEntry = (target: EventTarget) =>
   target instanceof HTMLElement && (target.tagName === "TEXTAREA" || target.tagName === "INPUT");
 
 /**
  * 大容量モードの表の選択・編集・行の挿入/削除の状態と操作。
  * 通常モードの useCellSelection / EditableCell は CSV 配列（string[][]）と TanStack に依存するため使わず、
- * 単一セルの選択と、ハンドルを指定した LargeOp の送信だけを持つ。
+ * 選択と、ハンドルを指定した LargeOp の送信だけを持つ。
+ * - 選択は起点（anchor）と選択中のセル（focusedCell）の2点で持つ矩形（largeSelection.ts）。
+ *   通常モードと同じく、ドラッグ・Shift+クリック・Shift+矢印キーで選択中のセルだけを動かして範囲を広げ、
+ *   それ以外の選択（クリック・矢印キー・Tab・検索のジャンプなど）は起点も同じセルにする。範囲はデータ行だけ
  * - 選択・編集中の位置は表示位置。確定時に RowSource からハンドルを引いて LargeOp を作る
  * - 入力中の値はここで持つため、行が表示範囲から外れて編集欄が消えても失われない
  * - Ctrl / Cmd を伴うキーは、行の挿入・削除のショートカット（Ctrl+Shift+I/B/D）以外は処理しない
@@ -64,6 +68,11 @@ export function useLargeTableEditing({
   allocateHandle,
 }: UseLargeTableEditingOptions) {
   const [focusedCell, setFocusedCell] = useState<CellPosition | null>(null);
+  const [anchor, setAnchor] = useState<CellPosition | null>(null);
+  // 範囲を広げるときに、描画を待たずに起点を参照する
+  const anchorRef = useRef<CellPosition | null>(null);
+  /** ドラッグで範囲を選択している途中か（マウスを離すと終わる） */
+  const draggingRef = useRef(false);
   const [editing, setEditingState] = useState<EditingCell | null>(null);
   // 確定・キャンセルが同じ編集に2回働かないよう（Enter の後のフォーカス喪失など）同期的に参照する
   const editingRef = useRef<EditingCell | null>(null);
@@ -81,12 +90,57 @@ export function useLargeTableEditing({
   const bounds = () => ({ rowCount: source.rowCount, colCount: colCount() });
   const nextHandle = () => (allocateHandle ? allocateHandle() : fallbackAllocator.next());
 
-  const select = useCallback((cell: CellPosition, focus = true) => {
-    setFocusedCell(cell);
+  /** 起点 from と選択中のセル to の範囲を選択する（to にフォーカスを移す） */
+  const selectRange = useCallback((from: CellPosition, to: CellPosition, focus = true) => {
+    anchorRef.current = from;
+    setAnchor(from);
+    setFocusedCell(to);
     if (focus) {
       focusRequestRef.current = true;
     }
   }, []);
+
+  /**
+   * cell を選択する。extend なら起点を残して範囲を広げる
+   * （起点・cell のどちらかがヘッダーなら広げず、cell だけを選択する）
+   */
+  const select = useCallback(
+    (cell: CellPosition, focus = true, extend = false) => {
+      const from = anchorRef.current;
+      const canExtend =
+        extend && from !== null && from.row !== HEADER_ROW && cell.row !== HEADER_ROW;
+      selectRange(canExtend ? from : cell, cell, focus);
+    },
+    [selectRange]
+  );
+
+  // ドラッグはどこでマウスを離しても終える
+  useEffect(() => {
+    const stop = () => {
+      draggingRef.current = false;
+    };
+    document.addEventListener("mouseup", stop);
+    return () => document.removeEventListener("mouseup", stop);
+  }, []);
+
+  /** セルの mousedown。Shift を押していれば範囲を広げ、そうでなければそのセルからドラッグで選択を始める */
+  const pressCell = (e: React.MouseEvent, cell: CellPosition) => {
+    if (e.shiftKey) {
+      // ブラウザの文字列の選択を始めない
+      e.preventDefault();
+      select(cell, true, true);
+      return;
+    }
+    select(cell);
+    draggingRef.current = e.button === 0 && cell.row !== HEADER_ROW;
+  };
+
+  /** ドラッグ中にセルへ入ったら、そのセルまで範囲を広げる */
+  const enterCell = (cell: CellPosition) => {
+    if (draggingRef.current) {
+      select(cell, true, true);
+    }
+  };
 
   /** 選択中のセルへフォーカスを移してよければ true を返し、要求を消す */
   const takeFocusRequest = useCallback(() => {
@@ -254,6 +308,14 @@ export function useLargeTableEditing({
     if (e.altKey) {
       return;
     }
+    if (e.shiftKey) {
+      const extended = extendCell(cell, e.key, bounds());
+      if (extended) {
+        e.preventDefault();
+        select(extended, true, true);
+        return;
+      }
+    }
     const moved = moveCell(cell, e.key, e.shiftKey, bounds());
     if (moved) {
       e.preventDefault();
@@ -317,8 +379,14 @@ export function useLargeTableEditing({
 
   return {
     focusedCell,
+    anchor,
+    /** 選択している範囲（データ行だけ。表の大きさには収めていない） */
+    selection: selectionRange(anchor, focusedCell),
     editing,
     select,
+    selectRange,
+    pressCell,
+    enterCell,
     takeFocusRequest,
     startEditing,
     changeEditingValue,
