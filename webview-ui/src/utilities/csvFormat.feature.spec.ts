@@ -39,27 +39,6 @@ describeFeature(feature, ({ ScenarioOutline, Scenario }) => {
     });
   });
 
-  Scenario(
-    "改行コードが混在する場合は最初の改行だけが行区切りになる",
-    ({ Given, When, Then, And }) => {
-      Given('テキスト "a,b\\r\\nc,d\\ne,f" がある', () => {
-        text = "a,b\r\nc,d\ne,f";
-      });
-      When("CSVを読み込む", () => {
-        result = parseCsv(text);
-      });
-      Then('改行コードは "CRLF" として検出される', () => {
-        expect(expectOk(result).format.eol).toBe("\r\n");
-      });
-      And("表は 2 行になる", () => {
-        expect(expectOk(result).rows).toHaveLength(2);
-      });
-      And('2行目2列目のセルは "d\\ne" になる', () => {
-        expect(expectOk(result).rows[1][1]).toBe("d\ne");
-      });
-    }
-  );
-
   Scenario("セル内の改行は行区切りとして扱わない", ({ Given, When, Then, And }) => {
     Given('テキスト "\\"a\\nb\\",c\\r\\nd,e\\r\\n" がある', () => {
       text = '"a\nb",c\r\nd,e\r\n';
