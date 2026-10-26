@@ -10,6 +10,9 @@ import * as process from "process";
 import * as vscode from "vscode";
 
 import type { CsvEditorTestingApi } from "../extension";
+import { QueryWorkerClient } from "../large/queryWorkerClient";
+import type { ViewJobResult } from "../large/queryProtocol";
+import { RowIndex } from "../large/rowIndex";
 import { ScriptedPicker } from "./helpers/fakePicker";
 import { WebviewTap, waitFor } from "./helpers/webviewTap";
 
@@ -183,6 +186,128 @@ benchSuite("大容量モードの性能計測", function () {
     };
     console.log(`[bench] ${JSON.stringify(report, null, 2)}`);
 
+    await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+  });
+  test("500MBのファイルで検索・ソート・フィルタの時間とメモリを計測する", async () => {
+    const tap = new WebviewTap();
+    api.setLargeEditorForTesting({ wrapWebview: tap.wrap });
+    api.setPickerForTesting(new ScriptedPicker("utf-8"));
+    await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+    await vscode.commands.executeCommand("vscode.openWith", vscode.Uri.file(file), LARGE);
+    const largeInit = await tap.waitFor(
+      "toWebview",
+      (m) => m.type === "large/init",
+      "large/init",
+      60000
+    );
+    await waitFor(
+      () =>
+        largeInit.message.indexing === false ||
+        tap
+          .messagesOf("toWebview", "large/progress")
+          .some((m) => m.kind === "index" && m.ratio === 1),
+      "行インデックスの作成完了",
+      10 * 60 * 1000
+    );
+    const before = memory();
+    let jobId = 1_000_000;
+    let reqId = 2_000_000;
+    /** ジョブを渡し、ratio: 1 の進捗（終わり）までの時間 */
+    const job = async (message: Record<string, unknown>) => {
+      const id = jobId++;
+      const began = performance.now();
+      await tap.deliver({ ...message, jobId: id });
+      await waitFor(
+        () =>
+          tap
+            .messagesOf("toWebview", "large/progress")
+            .some((m) => m.jobId === id && m.ratio === 1),
+        `ジョブ ${String(message.type)} の終わり`,
+        10 * 60 * 1000
+      );
+      const errors = tap.messagesOf("toWebview", "large/error").filter((m) => m.jobId === id);
+      assert.deepStrictEqual(errors, []);
+      const rowCount = tap.messagesOf("toWebview", "large/invalidate").at(-1)?.rowCount;
+      return { ms: ms(performance.now() - began), rowCount, memory: memoryDelta(memory(), before) };
+    };
+    const roundTrips = async (rowCount: number) => {
+      const samples: number[] = [];
+      for (let i = 0; i < SAMPLES; i++) {
+        const id = reqId++;
+        const began = performance.now();
+        const start = Math.max(0, Math.floor(rowCount / 2) + i * 7919 - REQUEST_ROWS);
+        await tap.deliver({ type: "large/getRows", reqId: id, start, count: REQUEST_ROWS });
+        assert.ok(tap.messagesOf("toWebview", "large/rows").some((m) => m.reqId === id));
+        samples.push(performance.now() - began);
+      }
+      return summarize(samples);
+    };
+
+    const filter = await job({ type: "large/filter", filters: [{ column: 2, text: "tokyo" }] });
+    const filterSort = await job({ type: "large/sort", column: 3, direction: "asc" });
+    const clearFilter = await job({ type: "large/filter", filters: [] });
+    const sortedRowCount = clearFilter.rowCount as number;
+    const sortedRows = await roundTrips(sortedRowCount);
+    const searchSorted = await job({
+      type: "large/search",
+      query: "not-found",
+      from: 0,
+      direction: "forward",
+    });
+    const sortMixed = await job({ type: "large/sort", column: 1, direction: "desc" });
+    const unsort = await job({ type: "large/sort", column: 1, direction: null });
+    const searchFileOrder = await job({
+      type: "large/search",
+      query: "not-found",
+      from: 0,
+      direction: "forward",
+    });
+    const searchNear = await job({
+      type: "large/search",
+      query: "tokyo",
+      from: 1000,
+      direction: "forward",
+    });
+
+    // ワーカーのヒープ（拡張ホストの rss はプロセス全体なので、ワーカーを直接動かして測る）
+    const index = RowIndex.build(file, { skipBom: true });
+    const summary = await index.done;
+    const client = new QueryWorkerClient(path.resolve(__dirname, "../../dist/largeCsvWorker.js"));
+    const order = Float64Array.from({ length: summary.rowCount - 1 }, (_, i) => i + 1);
+    const workerSort = async (column: number) => {
+      const result = (await client.run({
+        kind: "view",
+        source: { filePath: file, encoding: "utf-8", starts: index.offsets(), summary },
+        rows: { order: order.slice(), edits: [] },
+        filters: [],
+        sort: { column, direction: "asc" },
+      }).result) as ViewJobResult;
+      return {
+        sortKind: result.sortKind,
+        readMs: ms(result.stats.readMs),
+        totalMs: ms(result.stats.totalMs),
+        peakHeapUsedMiB: mib(result.stats.peakHeapUsed),
+      };
+    };
+    const workerMixed = await workerSort(1);
+    const workerNumeric = await workerSort(3);
+    await client.dispose();
+
+    const report = {
+      rowCount: sortedRowCount,
+      filter,
+      filterThenSort: filterSort,
+      sortAllNumeric: clearFilter,
+      sortedViewGetRows: sortedRows,
+      searchNotFoundSorted: searchSorted,
+      sortAllMixed: sortMixed,
+      unsort,
+      searchNotFoundFileOrder: searchFileOrder,
+      searchNear,
+      worker: { mixed: workerMixed, numeric: workerNumeric },
+      memoryAtEnd: memoryDelta(memory(), before),
+    };
+    console.log(`[bench-query] ${JSON.stringify(report, null, 2)}`);
     await vscode.commands.executeCommand("workbench.action.closeAllEditors");
   });
 });
