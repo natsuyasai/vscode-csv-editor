@@ -18,7 +18,10 @@ export interface RowSource {
   /** 表示範囲 [start, end)（end は排他）の行を要求する。取得済み・要求中のものは再要求しない */
   ensureRange(start: number, end: number): void;
   readonly subscribe: (listener: () => void) => () => void;
-  /** 編集操作の適用（2-2 で使う。2-1 では InMemoryRowSource のみ実装する） */
+  /**
+   * 編集操作の適用。RemoteRowSource は拡張機能へ送ると同時にキャッシュへ反映する。
+   * 持たない RowSource（Story・テスト用の生成行など）の表は閲覧だけになる
+   */
   applyOps?(ops: LargeOp[]): void;
 }
 
