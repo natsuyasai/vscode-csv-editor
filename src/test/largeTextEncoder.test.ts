@@ -131,7 +131,7 @@ suite("largeTextEncoder（保存時の文字列のエンコード）", () => {
       }
     });
 
-    // 拡張ホストの ICU は F040〜F8FC を私用領域（U+E000〜）にデコードする（F940〜F9FC はデコードできず U+FFFD になる）
+    // 拡張ホストの ICU は F040〜F8FC を私用領域（U+E000〜）にデコードする（F940〜F9FC は拡張ホストの TextDecoder ではデコードできない）
     test("ユーザー定義文字（F040〜F8FC）は ? にならず元のバイト列に戻る", () => {
       for (const code of ["F040", "F07E", "F080", "F5A0", "F8FC"]) {
         assert.strictEqual(roundTrip(code), code);
