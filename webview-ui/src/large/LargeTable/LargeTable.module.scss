@@ -1,0 +1,111 @@
+// スクロール領域（親の高さいっぱい）
+.scroller {
+  position: relative;
+  height: 100%;
+  overflow: auto;
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: 13px;
+}
+
+// テーブル（列幅は固定）
+.table {
+  display: block;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+// 固定ヘッダー
+.thead {
+  display: block;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--vscode-editor-background);
+}
+
+// ボディ（高さはスケーリング後の DOM 上の高さ。行は絶対配置）
+.tbody {
+  display: block;
+  position: relative;
+}
+
+// 行（ヘッダー・データ共通）
+.row {
+  display: flex;
+  box-sizing: border-box;
+}
+
+.tbody .row {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+// ヘッダーセル
+.headerCell,
+.indexHeader {
+  display: block;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 8px;
+  overflow: hidden;
+  text-align: left;
+  font-weight: bold;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+// 行番号セル
+.indexCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 0 4px;
+  font-weight: normal;
+  color: var(--vscode-editorLineNumber-foreground);
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+// データセル
+.cell {
+  display: block;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.cellText {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 8px;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+// 未取得の行のプレースホルダー（薄いスケルトン）
+.placeholder {
+  display: block;
+  height: 12px;
+  margin: 14px 8px;
+  border-radius: 2px;
+  background-color: var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2));
+  opacity: 0.4;
+}
+
+// 画面には出さずスクリーンリーダーにだけ読ませる
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
