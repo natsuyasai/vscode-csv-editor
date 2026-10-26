@@ -157,6 +157,8 @@ suite("エディタタイトルボタンの表示条件 (issue #93)", () => {
           editorLangId: "plaintext",
           activeCustomEditorId: VIEW_TYPE,
         },
+        // 大容量モードのエディタ表示中も出さない
+        { resourceExtname: ".csv", activeCustomEditorId: "csv-editor.largeEditor" },
       ];
       for (const ctx of contexts) {
         assert.ok(!evaluateWhen(when, ctx), `表示されるべきでない: ${JSON.stringify(ctx)}`);

@@ -8,6 +8,7 @@ import { CsvFormat, DEFAULT_CSV_FORMAT, detectCsvFormat } from "../shared/csv/cs
 import { disposeAll } from "../util/dispose";
 import { getThemeKind, getWebviewHtml } from "./webviewContent";
 import { loggerDisposable, logWarning } from "../util/logger";
+import type { NormalResolveDecision } from "../large/openRouting";
 
 /** ログ用に不正メッセージの概要だけを返す（payload の内容は出力しない） */
 function describeInvalidMessage(value: unknown): string {
@@ -18,28 +19,30 @@ function describeInvalidMessage(value: unknown): string {
   return `type=${typeof type === "string" ? type : typeof type}, payload=${typeof payload}`;
 }
 
+/**
+ * 通常モードの resolve の前に、ファイルの大きさで振り分けるかを決める（openRouting の OpenRouter）。
+ * 確認が要らないときは同期的に undefined を返す（小さいファイルは従来どおり同期的に resolve する）。
+ */
+export interface NormalEditorGate {
+  beforeNormalResolve(uri: vscode.Uri): Promise<NormalResolveDecision> | undefined;
+}
+
 export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
   /**
    * Register the editor provider.
+   * コマンド `csv-editor.openEditor` は入口の振り分け（openRouting）が登録する。
    *
    * @param context The extension context.
+   * @param gate 大きなファイルを開く前の確認と振り分け
    * @returns A disposable that unregisters the editor provider.
    */
-  public static register(context: vscode.ExtensionContext): vscode.Disposable {
-    // 現在アクティブなファイルを開くコマンドを登録
-    const openEditorCommand = vscode.commands.registerCommand("csv-editor.openEditor", () => {
-      const activeEditor = vscode.window.activeTextEditor;
-      if (!activeEditor) {
-        vscode.window.showErrorMessage("csv-editor: No active editor.");
-        return;
-      }
-      const uri = activeEditor.document.uri;
-      vscode.commands.executeCommand("vscode.openWith", uri, CSVEditorProvider.viewType);
-    });
-
+  public static register(
+    context: vscode.ExtensionContext,
+    gate?: NormalEditorGate
+  ): vscode.Disposable {
     const customEditorProvider = vscode.window.registerCustomEditorProvider(
       CSVEditorProvider.viewType,
-      new CSVEditorProvider(context),
+      new CSVEditorProvider(context, gate),
       {
         webviewOptions: {
           enableFindWidget: false,
@@ -49,15 +52,17 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
       }
     );
 
-    return vscode.Disposable.from(openEditorCommand, customEditorProvider, loggerDisposable());
+    return vscode.Disposable.from(customEditorProvider, loggerDisposable());
   }
 
   // package.jsonのviewTypeと一致させる
   private static readonly viewType = "csv-editor.openEditor";
   private readonly context: vscode.ExtensionContext;
+  private readonly gate: NormalEditorGate | undefined;
 
-  constructor(context: vscode.ExtensionContext) {
+  constructor(context: vscode.ExtensionContext, gate?: NormalEditorGate) {
     this.context = context;
+    this.gate = gate;
   }
 
   /**
@@ -65,12 +70,50 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
    * 登録している拡張子のファイルを開いたときに呼ばれる
    * コマンドで表示を行った場合もvscode.openWithで実行しているのでこちらが呼ばれる
    *
+   * 10MB 以上のファイルは、先に開き方を確認する（大容量モード等を選んだらパネルを閉じて開き直す）。
    */
   public resolveCustomTextEditor(
     document: vscode.TextDocument,
     webviewPanel: vscode.WebviewPanel,
     _token: vscode.CancellationToken
   ): void {
+    const decision = this.gate?.beforeNormalResolve(document.uri);
+    if (decision === undefined) {
+      this.setupEditor(document, webviewPanel);
+      return;
+    }
+    // 呼び出し側（テストのハーネス等）が同期的な resolve を前提にしているため、確認は待たせずに進める
+    this.resolveAfterConfirmation(document, webviewPanel, decision).catch((error: unknown) => {
+      logWarning(`開き方の確認に失敗しました: ${String(error)}`);
+    });
+  }
+
+  private async resolveAfterConfirmation(
+    document: vscode.TextDocument,
+    webviewPanel: vscode.WebviewPanel,
+    pending: Promise<NormalResolveDecision>
+  ): Promise<void> {
+    // 確認中にユーザーがタブを閉じることがある
+    const panel = { disposed: false };
+    const subscription = webviewPanel.onDidDispose(() => {
+      panel.disposed = true;
+    });
+    const decision = await pending;
+    subscription.dispose();
+    if (decision.proceed) {
+      if (!panel.disposed) {
+        this.setupEditor(document, webviewPanel);
+      }
+      return;
+    }
+    // パネルを閉じてから開き直す（スパイク S1 で確認した順序）
+    if (!panel.disposed) {
+      webviewPanel.dispose();
+    }
+    await decision.after?.();
+  }
+
+  private setupEditor(document: vscode.TextDocument, webviewPanel: vscode.WebviewPanel): void {
     // Setup initial content for the webview
     webviewPanel.webview.options = {
       enableScripts: true,

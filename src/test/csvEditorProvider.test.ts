@@ -10,7 +10,8 @@ import { ApplyOpsMessage, Message, SaveMessage } from "../message/messageTypeToE
 import { replaceRows } from "./helpers/providerHarness";
 
 suite("CSVEditorProvider", () => {
-  test("registerが返すDisposableでコマンドとカスタムエディタの登録を解除できる", () => {
+  test("registerが返すDisposableでカスタムエディタの登録を解除できる", () => {
+    // コマンド csv-editor.openEditor は入口の振り分け（registerOpenRouting）が登録する（openRouting.test.ts）
     // 拡張機能が有効化済みでも衝突しないよう、登録APIをスタブに差し替えて検証する
     const commandsApi = vscode.commands as {
       registerCommand: (
@@ -48,20 +49,19 @@ suite("CSVEditorProvider", () => {
       } as unknown as vscode.ExtensionContext;
 
       const disposable = CSVEditorProvider.register(context);
-      assert.deepStrictEqual(registeredCommands, ["csv-editor.openEditor"]);
+      assert.deepStrictEqual(registeredCommands, []);
       assert.deepStrictEqual(registeredViewTypes, ["csv-editor.openEditor"]);
       assert.deepStrictEqual(disposedNames, [], "dispose前は何も解除されない");
 
       disposable.dispose();
       assert.deepStrictEqual(
         [...disposedNames].sort(),
-        ["command:csv-editor.openEditor", "editor:csv-editor.openEditor"],
-        "コマンドとカスタムエディタの両方が解除される"
+        ["editor:csv-editor.openEditor"],
+        "カスタムエディタが解除される"
       );
 
       // 解除後に再度登録しても問題ない
       CSVEditorProvider.register(context).dispose();
-      assert.strictEqual(registeredCommands.length, 2);
       assert.strictEqual(registeredViewTypes.length, 2);
     } finally {
       commandsApi.registerCommand = originalRegisterCommand;

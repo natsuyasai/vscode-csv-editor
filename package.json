@@ -48,6 +48,19 @@
           }
         ],
         "priority": "option"
+      },
+      {
+        "viewType": "csv-editor.largeEditor",
+        "displayName": "CSV Editor (Large File)",
+        "selector": [
+          {
+            "filenamePattern": "*.csv"
+          },
+          {
+            "filenamePattern": "*.CSV"
+          }
+        ],
+        "priority": "option"
       }
     ],
     "commands": [
@@ -60,7 +73,7 @@
       "editor/title": [
         {
           "command": "csv-editor.openEditor",
-          "when": "resourceExtname =~ /^\\.[cC][sS][vV]$/ && activeCustomEditorId != csv-editor.openEditor",
+          "when": "resourceExtname =~ /^\\.[cC][sS][vV]$/ && activeCustomEditorId != csv-editor.openEditor && activeCustomEditorId != csv-editor.largeEditor",
           "group": "navigation"
         }
       ]

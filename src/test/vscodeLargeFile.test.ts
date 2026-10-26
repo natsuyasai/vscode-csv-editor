@@ -203,22 +203,9 @@ suite("VSCodeの大容量ファイルの挙動（大容量モードの入口の�
       assert.strictEqual(input.uri.fsPath, vscode.Uri.file(overProbe).fsPath);
     });
 
-    test("既存のcsv-editor.openEditorでもopenWithはエラーにならず、壊れたタブが残る", async () => {
-      await vscode.commands.executeCommand(
-        "vscode.openWith",
-        vscode.Uri.file(overCsv),
-        "csv-editor.openEditor"
-      );
-      await sleep(NOT_CALLED_WAIT_MS);
-
-      const input = activeTab()?.input;
-      assert.ok(input instanceof vscode.TabInputCustom);
-      assert.strictEqual(input.viewType, "csv-editor.openEditor");
-      assert.ok(
-        !vscode.workspace.textDocuments.some((d) => d.uri.fsPath === input.uri.fsPath),
-        "拡張機能側に TextDocument は無い"
-      );
-    });
+    // 既存の csv-editor.openEditor で開いたときの壊れたタブは、大容量モードの入口（openRouting）が
+    // 検出して開き直すようになったため、ここでは probe の viewType だけで VSCode の挙動を確かめる
+    // （開き直しは largeOpen.test.ts）。
 
     test("CustomEditorProviderはopenCustomDocumentとresolveCustomEditorが呼ばれる", async () => {
       const probe = createProbeCustomProvider();
