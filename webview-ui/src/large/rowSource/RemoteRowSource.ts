@@ -3,9 +3,10 @@ import {
   type LargeMessageToExtension,
   type LargeOp,
   type LargeMessageToWebview,
+  type LargeRange,
 } from "@message/largeMessages";
 import { vscode } from "../../utilities/vscode";
-import { ObservableRowSource, type RowSource } from "./RowSource";
+import { ObservableRowSource, type FetchedRows, type RowSource } from "./RowSource";
 
 /** キャッシュ・要求の単位（行数） */
 export const ROW_PAGE_SIZE = 500;
@@ -13,6 +14,8 @@ export const ROW_PAGE_SIZE = 500;
 export const MAX_CACHED_PAGES = 200;
 /** 表示範囲の前後に先読みするページ数 */
 export const PREFETCH_PAGES = 1;
+/** fetchRows の取り寄せ中に無効化が届いたとき、取り直す回数の上限 */
+export const MAX_FETCH_RETRIES = 3;
 
 interface CachedPage {
   rows: string[][];
@@ -24,6 +27,27 @@ interface InflightRequest {
   start: number;
   pages: number[];
 }
+
+/** fetchRows の1回の呼び出し（取り直しをまたいで同じもの） */
+interface FetchJob {
+  start: number;
+  end: number;
+  /** 取り寄せを（取り直しのときは改めて）始めたときの revision */
+  revision: number;
+  /** 取り直した回数 */
+  retries: number;
+  /** 分けて送った要求ごとの応答（送った順） */
+  parts: ({ rows: string[][]; handles: number[] } | undefined)[];
+  remaining: number;
+  settled: boolean;
+  resolve: (result: FetchedRows) => void;
+  reject: (error: Error) => void;
+}
+
+/** 表示用のキャッシュとは別に応答を待つ要求（範囲のコピー・貼り付け先の行の取り寄せ） */
+type SideRequest =
+  | { kind: "range"; resolve: (rows: string[][]) => void; reject: (error: Error) => void }
+  | { kind: "fetch"; job: FetchJob; part: number };
 
 export interface RemoteRowSourceOptions {
   postMessage?: (message: LargeMessageToExtension) => void;
@@ -62,6 +86,11 @@ export class RemoteRowSource extends ObservableRowSource implements RowSource {
   private readonly inflightPages = new Set<number>();
   private nextReqId = 1;
   private lastRange: [number, number] | undefined;
+  /**
+   * コピー・貼り付けのための要求（reqId → 待っているもの）。無効化（reset）では捨てない
+   * （範囲は要求した順に処理されて必ず応答が届く。取り寄せは revision を見て取り直す）
+   */
+  private readonly sideRequests = new Map<number, SideRequest>();
 
   constructor(options: RemoteRowSourceOptions) {
     super();
@@ -108,6 +137,45 @@ export class RemoteRowSource extends ObservableRowSource implements RowSource {
     this.requestPages(missing);
   }
 
+  /** 範囲のセルを拡張機能に要求する（コピー用。キャッシュは使わない） */
+  getRange(range: LargeRange): Promise<string[][]> {
+    return new Promise((resolve, reject) => {
+      const reqId = this.nextReqId++;
+      this.sideRequests.set(reqId, { kind: "range", resolve, reject });
+      this.postMessage({ type: "large/getRange", reqId, range });
+    });
+  }
+
+  /**
+   * 表示位置 [start, end) の行全体とハンドル（貼り付け用）。
+   * - 全て取得済みなら、キャッシュの行（楽観的に反映した編集を含む）と現在の revision で返す
+   * - そうでなければ、表示用のキャッシュとは別に MAX_ROWS_PER_REQUEST 行ずつ `large/getRows` で取り寄せる。
+   *   取り寄せの途中で無効化が届いたら（保存で行のハンドルの体系が変わったかもしれない）、
+   *   どちらの体系のハンドルか分からないので取り直す（MAX_FETCH_RETRIES 回まで）
+   */
+  fetchRows(start: number, end: number): Promise<FetchedRows> {
+    const from = Math.max(0, start);
+    const to = Math.min(end, this.rowCount);
+    const cached = this.cachedRows(from, to);
+    if (cached) {
+      return Promise.resolve({ ...cached, revision: this.revision });
+    }
+    return new Promise((resolve, reject) => {
+      const job: FetchJob = {
+        start: from,
+        end,
+        revision: this.revision,
+        retries: 0,
+        parts: [],
+        remaining: 0,
+        settled: false,
+        resolve,
+        reject,
+      };
+      this.sendFetch(job);
+    });
+  }
+
   /**
    * 編集操作を拡張機能へ送り、同時にキャッシュへ反映する。
    * - setRow: キャッシュ内の同じハンドルの行を置き換える
@@ -139,8 +207,18 @@ export class RemoteRowSource extends ObservableRowSource implements RowSource {
   handleMessage(message: LargeMessageToWebview): boolean {
     switch (message.type) {
       case "large/rows":
-        this.acceptRows(message.reqId, message.start, message.rows, message.handles);
+        if (!this.acceptSideRows(message.reqId, message.rows, message.handles)) {
+          this.acceptRows(message.reqId, message.start, message.rows, message.handles);
+        }
         return true;
+      case "large/range": {
+        const request = this.sideRequests.get(message.reqId);
+        if (request?.kind === "range") {
+          this.sideRequests.delete(message.reqId);
+          request.resolve(message.rows);
+        }
+        return true;
+      }
       case "large/invalidate":
         if (message.revision >= this.revision) {
           this.revision = message.revision;
@@ -159,6 +237,10 @@ export class RemoteRowSource extends ObservableRowSource implements RowSource {
         return true;
       case "large/error":
         if (message.reqId !== undefined) {
+          if (this.rejectSideRequest(message.reqId, message.message)) {
+            // 呼び出し元（コピー・貼り付け）が知らせる
+            return true;
+          }
           this.releaseRequest(message.reqId);
         }
         this.onError?.(message.message);
@@ -166,6 +248,109 @@ export class RemoteRowSource extends ObservableRowSource implements RowSource {
       default:
         return false;
     }
+  }
+
+  /** [from, to) が全てキャッシュにあればその行とハンドル */
+  private cachedRows(from: number, to: number): { rows: string[][]; handles: number[] } | null {
+    const rows: string[][] = [];
+    const handles: number[] = [];
+    for (let i = from; i < to; i++) {
+      const page = this.pages.get(Math.floor(i / this.pageSize));
+      const offset = i % this.pageSize;
+      const row = page?.rows[offset];
+      const handle = page?.handles[offset];
+      if (row === undefined || handle === undefined) {
+        return null;
+      }
+      rows.push(row);
+      handles.push(handle);
+    }
+    return { rows, handles };
+  }
+
+  /** 取り寄せの要求を（取り直しのときは改めて）送る */
+  private sendFetch(job: FetchJob): void {
+    const to = Math.min(job.end, this.rowCount);
+    job.revision = this.revision;
+    job.parts = [];
+    job.remaining = 0;
+    if (job.start >= to) {
+      this.settleFetch(job);
+      return;
+    }
+    for (let start = job.start, part = 0; start < to; start += MAX_ROWS_PER_REQUEST, part++) {
+      const count = Math.min(MAX_ROWS_PER_REQUEST, to - start);
+      const reqId = this.nextReqId++;
+      job.parts.push(undefined);
+      job.remaining += 1;
+      this.sideRequests.set(reqId, { kind: "fetch", job, part });
+      this.postMessage({ type: "large/getRows", reqId, start, count });
+    }
+  }
+
+  /** 取り寄せの応答なら受け取って true */
+  private acceptSideRows(reqId: number, rows: string[][], handles: number[]): boolean {
+    const request = this.sideRequests.get(reqId);
+    if (request?.kind !== "fetch") {
+      return false;
+    }
+    this.sideRequests.delete(reqId);
+    const { job, part } = request;
+    if (job.settled || job.parts[part] !== undefined) {
+      return true;
+    }
+    job.parts[part] = { rows, handles };
+    job.remaining -= 1;
+    if (job.remaining > 0) {
+      return true;
+    }
+    if (job.revision === this.revision) {
+      this.settleFetch(job);
+    } else if (job.retries < MAX_FETCH_RETRIES) {
+      job.retries += 1;
+      this.sendFetch(job);
+    } else {
+      this.failFetch(job, new Error("表の内容が変わり続けたため、行を取得できませんでした"));
+    }
+    return true;
+  }
+
+  private settleFetch(job: FetchJob): void {
+    job.settled = true;
+    const rows: string[][] = [];
+    const handles: number[] = [];
+    for (const part of job.parts) {
+      if (part) {
+        rows.push(...part.rows);
+        handles.push(...part.handles);
+      }
+    }
+    job.resolve({ rows, handles, revision: job.revision });
+  }
+
+  private failFetch(job: FetchJob, error: Error): void {
+    job.settled = true;
+    for (const [reqId, request] of this.sideRequests) {
+      if (request.kind === "fetch" && request.job === job) {
+        this.sideRequests.delete(reqId);
+      }
+    }
+    job.reject(error);
+  }
+
+  /** コピー・貼り付けの要求のエラーなら失敗させて true */
+  private rejectSideRequest(reqId: number, message: string): boolean {
+    const request = this.sideRequests.get(reqId);
+    if (!request) {
+      return false;
+    }
+    this.sideRequests.delete(reqId);
+    if (request.kind === "range") {
+      request.reject(new Error(message));
+    } else if (!request.job.settled) {
+      this.failFetch(request.job, new Error(message));
+    }
+    return true;
   }
 
   private applyOptimistic(op: LargeOp): void {

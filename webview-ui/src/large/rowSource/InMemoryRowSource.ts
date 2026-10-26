@@ -1,5 +1,5 @@
-import type { LargeOp } from "@message/largeMessages";
-import { ObservableRowSource, type RowSource } from "./RowSource";
+import type { LargeOp, LargeRange } from "@message/largeMessages";
+import { ObservableRowSource, type FetchedRows, type RowSource } from "./RowSource";
 
 interface Entry {
   handle: number;
@@ -35,6 +35,25 @@ export class InMemoryRowSource extends ObservableRowSource implements RowSource 
 
   ensureRange(_start: number, _end: number): void {
     // 全行をメモリに持つため何もしない
+  }
+
+  getRange({ startRow, endRow, startCol, endCol }: LargeRange): Promise<string[][]> {
+    return Promise.resolve(
+      this.entries
+        .slice(startRow, endRow)
+        .map(({ row }) =>
+          Array.from({ length: endCol - startCol }, (_, i) => row[startCol + i] ?? "")
+        )
+    );
+  }
+
+  fetchRows(start: number, end: number): Promise<FetchedRows> {
+    const entries = this.entries.slice(start, end);
+    return Promise.resolve({
+      rows: entries.map((entry) => entry.row),
+      handles: entries.map((entry) => entry.handle),
+      revision: undefined,
+    });
   }
 
   applyOps(ops: LargeOp[]): void {

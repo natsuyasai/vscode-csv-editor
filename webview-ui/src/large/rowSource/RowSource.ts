@@ -1,4 +1,12 @@
-import type { LargeOp } from "@message/largeMessages";
+import type { LargeOp, LargeRange } from "@message/largeMessages";
+
+/** 貼り付け先の行の取得結果（fetchRows） */
+export interface FetchedRows {
+  rows: string[][];
+  handles: number[];
+  /** ハンドルを得たときの revision（applyOps に添える。持たない RowSource は undefined） */
+  revision: number | undefined;
+}
 
 /**
  * 大容量モードの表が行を読み出すための抽象。
@@ -29,6 +37,16 @@ export interface RowSource {
    * 持たない RowSource（Story・テスト用の生成行など）の表は閲覧だけになる
    */
   applyOps?(ops: LargeOp[], revision?: number): void;
+  /**
+   * 表示順の範囲のセル（コピー用）。列が足りない分は空のセル、末尾を超える行は切り詰める。
+   * RemoteRowSource は拡張機能に `large/getRange` で要求する（キャッシュは使わない）。範囲は MAX_RANGE_CELLS まで
+   */
+  getRange?(range: LargeRange): Promise<string[][]>;
+  /**
+   * 表示位置 [start, end) の行全体とハンドル（貼り付け用）。末尾を超える行は切り詰める。
+   * RemoteRowSource は全て取得済みならキャッシュから、そうでなければ拡張機能から取り寄せる
+   */
+  fetchRows?(start: number, end: number): Promise<FetchedRows>;
 }
 
 /** 購読と version の管理を共通化する基底クラス */

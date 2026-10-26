@@ -93,3 +93,35 @@ describe("InMemoryRowSource", () => {
     expect(source.getRow(1)).toEqual(["B"]);
   });
 });
+
+describe("InMemoryRowSource のコピー・貼り付け用の取得", () => {
+  const source = () =>
+    new InMemoryRowSource(
+      ["id", "a", "b"],
+      [["1", "a1", "b1"], ["2"], ["3", "a3", "b3"]],
+      [1, 2, 3]
+    );
+
+  it("getRange は範囲のセルを返し、列が足りない分は空のセルで埋める", async () => {
+    await expect(
+      source().getRange({ startRow: 0, endRow: 2, startCol: 1, endCol: 3 })
+    ).resolves.toEqual([
+      ["a1", "b1"],
+      ["", ""],
+    ]);
+  });
+
+  it("getRange は末尾を超える行を切り詰める", async () => {
+    await expect(
+      source().getRange({ startRow: 2, endRow: 9, startCol: 0, endCol: 1 })
+    ).resolves.toEqual([["3"]]);
+  });
+
+  it("fetchRows は行全体とハンドルを返し、末尾を超える行を切り詰める", async () => {
+    await expect(source().fetchRows(1, 5)).resolves.toEqual({
+      rows: [["2"], ["3", "a3", "b3"]],
+      handles: [2, 3],
+      revision: undefined,
+    });
+  });
+});
