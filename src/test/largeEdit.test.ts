@@ -109,7 +109,16 @@ suite("大容量モードでの編集と保存", function () {
   /** webview から届いたかのように編集を渡し、その後の invalidate を待つ */
   const deliverOps = async (ops: LargeOp[]) => {
     const from = tap.log.length;
-    await tap.deliver({ type: "large/applyOps", ops });
+    // webview と同じく、最後に受け取った large/init / large/invalidate の revision を添える
+    const revision = tap.log
+      .filter(
+        (m) =>
+          m.direction === "toWebview" &&
+          (m.message.type === "large/init" || m.message.type === "large/invalidate")
+      )
+      .map((m) => (m.message.revision as number | undefined) ?? 0)
+      .reduce((a, b) => Math.max(a, b), 0);
+    await tap.deliver({ type: "large/applyOps", revision, ops });
     await waitFor(
       () =>
         tap.log
@@ -180,9 +189,17 @@ suite("大容量モードでの編集と保存", function () {
       assert.ok(response, "large/rows が返る");
       return { rows: response.rows as string[][], handles: response.handles as number[] };
     };
-    const apply = (ops: LargeOp[]) => editor.send({ type: "large/applyOps", ops });
+    /** 画面が持っている revision（最後に受け取った large/init / large/invalidate の revision） */
+    const revision = () =>
+      editor.posted
+        .filter((m) => m.type === "large/init" || m.type === "large/invalidate")
+        .map((m) => (m.revision as number | undefined) ?? 0)
+        .reduce((a, b) => Math.max(a, b), 0);
+    /** webview と同じ形で編集を送る。revision はハンドルを得たときの値（省略は現在の値） */
+    const apply = (ops: LargeOp[], at: number = revision()) =>
+      editor.send({ type: "large/applyOps", revision: at, ops });
     const save = () => editor.provider.saveCustomDocument(document, editor.token);
-    return { ...editor, document, pending, initDone, rows, apply, save };
+    return { ...editor, document, pending, initDone, rows, apply, save, revision };
   };
 
   const lastOf = (posted: Message[], type: string) => posted.filter((m) => m.type === type).at(-1);
@@ -561,8 +578,80 @@ suite("大容量モードでの編集と保存", function () {
       { type: "insertRows", beforeHandle: null, handles: [-3], rows: [["n", "n"]] },
     ]);
 
+    const revision = editor.revision();
     await editor.send({ type: "init" });
 
-    assert.strictEqual(lastOf(editor.posted, "large/init")?.nextHandle, -4);
+    const init = lastOf(editor.posted, "large/init");
+    assert.strictEqual(init?.nextHandle, -4);
+    assert.strictEqual(init.revision, revision, "画面はこの revision を起点に編集を送る");
+  });
+
+  test("保存をまたいで確定した編集は保存した後の同じ行に当たる", async () => {
+    const uri = writeFile("across-save.csv", csvWithRows(5));
+    const editor = await openHarness(uri);
+    await editor.apply([
+      { type: "insertRows", beforeHandle: 1, handles: [-1], rows: [["n", "n"]] },
+    ]);
+    // 画面はこの revision のときに4行目（r2、ハンドル3）のハンドルを得た
+    const before = editor.revision();
+
+    await editor.save();
+    // 保存後のファイルでは r2 は行4。ハンドル3は r1 になっている
+    await editor.apply([{ type: "setRow", handle: 3, row: ["r2", "またいだ"] }], before);
+
+    assert.strictEqual(editor.postedOf("large/error").length, 0);
+    const { rows } = await editor.rows();
+    assert.deepStrictEqual(rows[3], ["r2", "またいだ"]);
+    assert.deepStrictEqual(rows[2], ["r1", "v1"], "別の行には当たらない");
+    await editor.save();
+    assert.strictEqual(readText(uri), "h1,h2\nn,n\nr0,v0\nr1,v1\nr2,またいだ\nr3,v3\nr4,v4\n");
+  });
+
+  test("2回の保存をまたいだ古い編集は拒否される", async () => {
+    const uri = writeFile("two-saves.csv", csvWithRows(5));
+    const editor = await openHarness(uri);
+    const before = editor.revision();
+    for (const handle of [-1, -2]) {
+      await editor.apply([
+        { type: "insertRows", beforeHandle: 1, handles: [handle], rows: [["n", "n"]] },
+      ]);
+      await editor.save();
+    }
+    const edits = editor.edits.length;
+    const revision = editor.revision();
+
+    await editor.apply([{ type: "setRow", handle: 3, row: ["x", "y"] }], before);
+
+    assert.strictEqual(editor.postedOf("large/error").length, 1, "エラーが伝えられる");
+    assert.strictEqual(editor.edits.length, edits, "編集として通知しない");
+    assert.strictEqual(editor.document.isDirty, false, "文書は変わらない");
+    assert.ok(editor.revision() > revision, "画面に取り直しが伝えられる");
+    const { rows } = await editor.rows();
+    assert.deepStrictEqual(rows, [
+      ["n", "n"],
+      ["n", "n"],
+      ["r0", "v0"],
+      ["r1", "v1"],
+      ["r2", "v2"],
+      ["r3", "v3"],
+      ["r4", "v4"],
+    ]);
+  });
+
+  test("revertをまたいだ古い編集は拒否される", async () => {
+    const uri = writeFile("across-revert.csv", csvWithRows(5));
+    const editor = await openHarness(uri);
+    await editor.apply([
+      { type: "insertRows", beforeHandle: 1, handles: [-1], rows: [["n", "n"]] },
+    ]);
+    const before = editor.revision();
+
+    await editor.provider.revertCustomDocument(editor.document, editor.token);
+    await editor.apply([{ type: "setRow", handle: 1, row: ["x", "y"] }], before);
+
+    assert.strictEqual(editor.postedOf("large/error").length, 1, "エラーが伝えられる");
+    assert.strictEqual(editor.document.isDirty, false, "文書は変わらない");
+    const { rows } = await editor.rows();
+    assert.deepStrictEqual(rows[0], ["r0", "v0"]);
   });
 });

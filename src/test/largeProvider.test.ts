@@ -103,7 +103,7 @@ suite("大容量モードのprovider（LargeCsvEditorProvider）", () => {
   });
 
   suite("初期化", () => {
-    test("init を受けると updateTheme と large/init（ヘッダー・データ行数・文字コード・制限・次の追加行のハンドル）を返す", async () => {
+    test("init を受けると updateTheme と large/init（ヘッダー・データ行数・文字コード・制限・次の追加行のハンドル・revision）を返す", async () => {
       const uri = writeFile("a.csv", csvWithRows(3));
       const editor = await open(uri, "utf-8");
       assert.ok(editor.document instanceof LargeCsvDocument);
@@ -123,6 +123,7 @@ suite("大容量モードのprovider（LargeCsvEditorProvider）", () => {
         encoding: "utf-8",
         restrictions: [...LARGE_MODE_RESTRICTIONS],
         nextHandle: -1,
+        revision: 0,
       });
       assert.ok(editor.webview.html.includes("Content-Security-Policy"));
     });

@@ -49,7 +49,8 @@ function describeMessage(value: unknown): string {
  * - インデックス作成中の進捗と行数の増加は間引いて送る。完了時は間引かずに送る
  * - `large/getRows` は文書の並び（編集を反映したもの）で読む。ハンドルは行のハンドル
  * - `large/applyOps` は文書に当てる。行の取得と編集は文書が届いた順に1つずつ処理する
- *   （受け取ったその場で文書の処理待ちに並べる）
+ *   （受け取ったその場で文書の処理待ちに並べる）。op の revision（webview がハンドルを得たときの revision）から、
+ *   どの行のハンドルの体系か（保存・revert で変わる）を決めて文書に渡す
  * - 文書の内容が変わったら（編集・Undo/Redo・保存・revert）、列名を載せた `large/invalidate` を送る
  * - 拒否・不正な編集は `large/error` を送り、楽観的に反映した画面を戻させるため `large/invalidate` も送る
  */
@@ -59,6 +60,13 @@ export class LargeEditorSession {
   /** webview が `init` を送り、`large/init` を返した後か */
   private ready = false;
   private revision = 0;
+  /**
+   * 行のハンドルの体系ごとの開始 revision（古い順）。保存・revert で体系が変わったときに送る invalidate の
+   * revision を記録する。webview の op の revision がどの体系のハンドルかを決めるのに使う
+   */
+  private generationStarts: { generation: number; revision: number }[] = [
+    { generation: 0, revision: 0 },
+  ];
   private lastProgressAt = 0;
   private lastInvalidateAt = 0;
   /** webview に最後に知らせたデータ行数 */
@@ -119,7 +127,7 @@ export class LargeEditorSession {
         await this.handleGetRows(message.reqId, message.start, message.count);
         return;
       case "large/applyOps":
-        await this.handleApplyOps(message.ops);
+        await this.handleApplyOps(message.ops, message.revision);
         return;
       default:
         // 検索・ソート・フィルタ・範囲コピーは後続フェーズ（2-3 / 2-4）で対応する
@@ -151,6 +159,7 @@ export class LargeEditorSession {
       encoding: this.document.encoding,
       restrictions: [...LARGE_MODE_RESTRICTIONS],
       nextHandle: this.document.nextHandle,
+      revision: this.revision,
     });
     this.ready = true;
     const now = this.options.now();
@@ -187,10 +196,10 @@ export class LargeEditorSession {
     }
   }
 
-  private async handleApplyOps(ops: LargeOp[]): Promise<void> {
+  private async handleApplyOps(ops: LargeOp[], revision: number): Promise<void> {
     try {
       // 当てたら文書の onDidChangeContent で invalidate を送る
-      await this.document.applyOps(ops);
+      await this.document.applyOps(ops, this.generationOf(revision));
     } catch (error) {
       if (this.disposed) {
         return;
@@ -203,11 +212,30 @@ export class LargeEditorSession {
     }
   }
 
+  /** webview が revision のときに得たハンドルの体系 */
+  private generationOf(revision: number): number {
+    for (let i = this.generationStarts.length - 1; i >= 0; i--) {
+      if (this.generationStarts[i].revision <= revision) {
+        return this.generationStarts[i].generation;
+      }
+    }
+    return this.generationStarts[0].generation;
+  }
+
   private onContentChanged(change: LargeDocumentChange): void {
-    if (!this.ready || this.disposed) {
+    if (this.disposed) {
       return;
     }
-    this.postInvalidate(change.rowCount, change.header);
+    // init の前でも revision は進める（init はこの revision を運ぶ）
+    this.revision += 1;
+    if (change.generation !== this.generationStarts[this.generationStarts.length - 1].generation) {
+      this.generationStarts.push({ generation: change.generation, revision: this.revision });
+      // 付け替えられるのは直前の体系まで。それより古い体系の判別に1つ余分に残す
+      this.generationStarts = this.generationStarts.slice(-3);
+    }
+    if (this.ready) {
+      this.postInvalidate(change.rowCount, change.header, this.revision);
+    }
   }
 
   private onProgress(ratio: number): void {
@@ -252,12 +280,15 @@ export class LargeEditorSession {
   }
 
   /** header は列名が変わったかもしれないときに載せる（省略は「変わっていない」） */
-  private postInvalidate(rowCount: number, header?: string[]): void {
-    this.revision += 1;
+  private postInvalidate(
+    rowCount: number,
+    header?: string[],
+    revision: number = ++this.revision
+  ): void {
     this.sentRowCount = rowCount;
     this.post({
       type: "large/invalidate",
-      revision: this.revision,
+      revision,
       rowCount,
       ...(header ? { header } : {}),
     });

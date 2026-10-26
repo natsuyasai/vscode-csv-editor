@@ -43,6 +43,7 @@ export function LargeApp({ init, theme, messages }: LargeAppProps) {
       new RemoteRowSource({
         header: init.header,
         rowCount: init.rowCount,
+        revision: init.revision,
         onError: (message) => setError(message),
       })
   );

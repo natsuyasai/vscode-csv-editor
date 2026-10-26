@@ -116,12 +116,14 @@ export class RemoteRowSource extends ObservableRowSource implements RowSource {
    * - setHeader: ヘッダーを置き換える
    * op より前に送った要求の応答は編集前の内容なので捨て、op を送った後に直近の表示範囲を取り直す
    * （拡張機能はメッセージを順に処理するので、後から送った要求には op の適用後の行が返る）
+   * revision（ops のハンドルを得たときの revision。省略は現在の revision）を添えて送る。拡張機能は
+   * 保存をまたいだハンドルを保存後の行に付け替え、付け替えられない古いものは拒否する
    */
-  applyOps(ops: LargeOp[]): void {
+  applyOps(ops: LargeOp[], revision: number = this.revision): void {
     if (ops.length === 0) {
       return;
     }
-    this.postMessage({ type: "large/applyOps", ops });
+    this.postMessage({ type: "large/applyOps", revision, ops });
     this.inflight.clear();
     this.inflightPages.clear();
     for (const op of ops) {
@@ -149,6 +151,9 @@ export class RemoteRowSource extends ObservableRowSource implements RowSource {
         }
         return true;
       case "large/init":
+        if (message.revision !== undefined) {
+          this.revision = message.revision;
+        }
         this.header = message.header;
         this.reset(message.rowCount);
         return true;

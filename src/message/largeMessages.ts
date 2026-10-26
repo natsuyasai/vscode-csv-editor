@@ -49,7 +49,12 @@ export type LargeProgressKind = "index" | "sort" | "filter" | "search";
 export type LargeMessageToExtension =
   | { type: "large/ready" }
   | { type: "large/getRows"; reqId: number; start: number; count: number }
-  | { type: "large/applyOps"; ops: LargeOp[] }
+  /**
+   * revision: op のハンドルを得たときに webview が持っていた revision（最後に受け取った
+   * `large/invalidate` / `large/init` の revision）。保存・revert で行のハンドルの体系が変わるので、
+   * 拡張機能はこれでどの体系のハンドルかを判断し、直前の保存の前のものなら付け替え、それより古いものは拒否する
+   */
+  | { type: "large/applyOps"; revision: number; ops: LargeOp[] }
   | { type: "large/sort"; jobId: number; column: number; direction: LargeSortDirection }
   | { type: "large/filter"; jobId: number; filters: LargeFilterCondition[] }
   /** from: 検索開始位置（表示順の行位置） */
@@ -80,6 +85,8 @@ export type LargeMessageToWebview =
        * webview の状態が失われて作り直されたときに、既にある追加行とハンドルが重ならないようにする
        */
       nextHandle?: number;
+      /** この状態の revision（webview はこれを起点に invalidate を受け、applyOps に載せる） */
+      revision?: number;
     }
   | { type: "large/rows"; reqId: number; start: number; rows: string[][]; handles: number[] }
   | { type: "large/progress"; kind: LargeProgressKind; ratio: number; jobId?: number }
@@ -179,7 +186,7 @@ export function isLargeMessageToExtension(value: unknown): value is LargeMessage
         value.count <= MAX_ROWS_PER_REQUEST
       );
     case "large/applyOps":
-      return Array.isArray(value.ops) && value.ops.every(isLargeOp);
+      return isNonNegInt(value.revision) && Array.isArray(value.ops) && value.ops.every(isLargeOp);
     case "large/sort":
       return (
         isNonNegInt(value.jobId) &&
@@ -223,7 +230,8 @@ export function isLargeMessageToWebview(value: unknown): value is LargeMessageTo
         typeof value.indexing === "boolean" &&
         typeof value.encoding === "string" &&
         isStringArray(value.restrictions) &&
-        (value.nextHandle === undefined || (isInt(value.nextHandle) && value.nextHandle < 0))
+        (value.nextHandle === undefined || (isInt(value.nextHandle) && value.nextHandle < 0)) &&
+        (value.revision === undefined || isNonNegInt(value.revision))
       );
     case "large/rows":
       return (

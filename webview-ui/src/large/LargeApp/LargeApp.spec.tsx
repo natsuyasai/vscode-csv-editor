@@ -159,7 +159,11 @@ describe("LargeApp", () => {
     });
     fireEvent.keyDown(screen.getByRole("textbox", { name: "セルの編集" }), { key: "Enter" });
     expect(applyOpsMessages()).toEqual([
-      { type: "large/applyOps", ops: [{ type: "setRow", handle: 2, row: ["1", "edited"] }] },
+      {
+        type: "large/applyOps",
+        revision: 0,
+        ops: [{ type: "setRow", handle: 2, row: ["1", "edited"] }],
+      },
     ]);
     expect(cellOf(2, 1)).toHaveTextContent("edited");
   });
@@ -192,6 +196,7 @@ describe("LargeApp", () => {
     expect(applyOpsMessages()).toEqual([
       {
         type: "large/applyOps",
+        revision: 0,
         ops: [{ type: "insertRows", beforeHandle: 1, handles: [-7], rows: [["", ""]] }],
       },
     ]);
@@ -207,6 +212,7 @@ describe("LargeApp", () => {
     expect(applyOpsMessages()).toEqual([
       {
         type: "large/applyOps",
+        revision: 0,
         ops: [{ type: "insertRows", beforeHandle: 1, handles: [-9], rows: [["", ""]] }],
       },
     ]);
@@ -222,7 +228,70 @@ describe("LargeApp", () => {
     expect(applyOpsMessages()).toEqual([
       {
         type: "large/applyOps",
+        revision: 0,
         ops: [{ type: "insertRows", beforeHandle: 1, handles: [-5], rows: [["", ""]] }],
+      },
+    ]);
+  });
+
+  test("編集中に取り直し（保存など）が起きても、確定した編集には編集を始めたときの revision を載せる", () => {
+    show({ ...INIT, rowCount: 3, indexing: false, revision: 2 });
+    respondLatestRows();
+    fireEvent.doubleClick(cellOf(2, 1));
+    receive({ type: "large/invalidate", revision: 5, rowCount: 3 });
+    respondLatestRows();
+    fireEvent.change(screen.getByRole("textbox", { name: "セルの編集" }), {
+      target: { value: "edited" },
+    });
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "セルの編集" }), { key: "Enter" });
+    expect(applyOpsMessages()).toEqual([
+      {
+        type: "large/applyOps",
+        revision: 2,
+        ops: [{ type: "setRow", handle: 2, row: ["1", "edited"] }],
+      },
+    ]);
+  });
+
+  test("編集を始めた後に revision が変わったら、同じハンドルの行が取り直されていても編集を始めたときの行を元にする", () => {
+    show({ ...INIT, rowCount: 3, indexing: false, revision: 2 });
+    respondLatestRows();
+    fireEvent.doubleClick(cellOf(2, 1));
+    // 保存で行のハンドルが振り直され、同じハンドル 2 が別の行になった
+    receive({ type: "large/invalidate", revision: 5, rowCount: 3 });
+    const request = getRowsRequests().at(-1);
+    if (!request) throw new Error("取り直しの要求が無い");
+    receive({
+      type: "large/rows",
+      reqId: request.reqId,
+      start: request.start,
+      rows: [["inserted", "x"], ["0", "row0"], ["1", "row1"]],
+      handles: [1, 2, 3],
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "セルの編集" }), {
+      target: { value: "edited" },
+    });
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "セルの編集" }), { key: "Enter" });
+    expect(applyOpsMessages()).toEqual([
+      {
+        type: "large/applyOps",
+        revision: 2,
+        ops: [{ type: "setRow", handle: 2, row: ["1", "edited"] }],
+      },
+    ]);
+  });
+
+  test("行の挿入には最後に受け取った revision を載せる", () => {
+    show({ ...INIT, rowCount: 3, indexing: false, revision: 2 });
+    receive({ type: "large/invalidate", revision: 5, rowCount: 3 });
+    respondLatestRows();
+    fireEvent.mouseDown(cellOf(1, 0));
+    fireEvent.keyDown(cellOf(1, 0), { key: "I", ctrlKey: true, shiftKey: true });
+    expect(applyOpsMessages()).toEqual([
+      {
+        type: "large/applyOps",
+        revision: 5,
+        ops: [{ type: "insertRows", beforeHandle: 1, handles: [-1], rows: [["", ""]] }],
       },
     ]);
   });

@@ -66,6 +66,8 @@ export interface LargeDocumentChange {
   rowCount: number;
   /** 現在の列名（読み込む前なら undefined） */
   header?: string[];
+  /** 行のハンドルの体系の番号（保存・revert のたびに増える） */
+  generation: number;
 }
 
 /** Undo/Redo の結果。stale は保存・revert より前の編集で、何もしなかった */
@@ -76,6 +78,14 @@ export class LargeEditRejectedError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "LargeEditRejectedError";
+  }
+}
+
+/** 保存・revert をまたいだ古い行のハンドルの編集（付け替えられない）。文書は変わっていない */
+export class LargeEditConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LargeEditConflictError";
   }
 }
 
@@ -173,15 +183,15 @@ const EDIT_LABELS: Record<LargeOp["type"], string> = {
  * 保存（save / saveAs）:
  * - その時点の `segments()` を書き出し（LargeCsvWriter）、書き出したオフセット表で行インデックスを差し替え、
  *   RowStore / EditStack を保存したファイルの恒等の並びで作り直す。以後のハンドルは保存したファイルの行番号になる
- * - 保存中に届いた op は、保存の前の並びのハンドルで指定されているので、保存したファイルの行番号に直してから当てる
+ * - 保存の前の体系のハンドルの op（保存中に届いたもの、保存をまたいで確定したもの）は、
+ *   保存したファイルの行番号に直してから当てる。どの体系かは呼び出し側（session）が op の revision から決める
  * - 保存より前の編集の Undo/Redo は何もしない（行番号の体系が変わるため。既知の制約）
  * - 失敗したら、元のファイル・編集内容・未保存の状態は変えず、元のファイルを開き直す
  *
  * revert: 現在のファイル（最後に保存した状態）の恒等の並びに作り直す。
  *
- * 既知の制約: 保存を始める前に webview が取得したハンドルを、保存の完了後に送ってきた op
- * （セルの編集中に保存し、保存後に確定した場合など）は、保存後の行番号として当たる。
- * 保存で行の挿入・削除があると別の行に当たりうる。
+ * ハンドルの体系（generation）: 保存・revert のたびに進める。直前の保存の前の体系の op だけ付け替え、
+ * それより古い体系・revert の前の体系の op は LargeEditConflictError で拒否する。
  */
 export class LargeCsvDocument implements vscode.CustomDocument {
   private readonly progressEmitter = new vscode.EventEmitter<RowIndexProgress>();
@@ -208,9 +218,9 @@ export class LargeCsvDocument implements vscode.CustomDocument {
   /** ファイルの1行目（読むまで undefined） */
   private fileHeader: string[] | undefined;
   private queue: Promise<unknown> = Promise.resolve();
-  /** ハンドルの体系の番号（保存のたびに増える） */
+  /** 行のハンドルの体系の番号（保存・revert のたびに増える） */
   private generation = 0;
-  /** 直前の保存のハンドルの直し方（generation の1つ前の体系から） */
+  /** 直前の保存のハンドルの直し方（generation の1つ前の体系から。直前が revert なら undefined） */
   private lastRemap: HandleRemap | undefined;
   /** Undo の世代（保存・revert のたびに増える） */
   private epoch = 0;
@@ -344,11 +354,12 @@ export class LargeCsvDocument implements vscode.CustomDocument {
 
   /**
    * op 列を1単位として当てる（webview の `large/applyOps` 1通）。当てたら true（空なら false）。
-   * 作成中は LargeEditRejectedError、不正な op は RowStoreError（どちらも文書は変えない）
+   * generation は ops のハンドルの体系（webview がハンドルを得たときの体系。省略は届いた時点の体系）。
+   * - 現在の体系ならそのまま、直前の保存の前の体系なら保存したファイルの行番号に付け替えて当てる
+   * - それより古い体系・revert の前の体系なら LargeEditConflictError で拒否する
+   * 作成中は LargeEditRejectedError、不正な op（消えた行への op を含む）は RowStoreError。いずれも文書は変えない
    */
-  applyOps(ops: readonly LargeOp[]): Promise<boolean> {
-    // 届いた時点のハンドルの体系（保存中に届いたら、保存の前の体系）
-    const generation = this.generation;
+  applyOps(ops: readonly LargeOp[], generation: number = this.generation): Promise<boolean> {
     return this.serial(() => {
       this.throwIfDisposed();
       if (!this.stack) {
@@ -404,6 +415,9 @@ export class LargeCsvDocument implements vscode.CustomDocument {
       }
       this.resetEdits();
       this.epoch += 1;
+      // revert の前の追加行は無くなるので、revert の前の体系のハンドルの op は付け替えずに拒否する
+      this.generation += 1;
+      this.lastRemap = undefined;
       this.fireChange();
     });
   }
@@ -464,7 +478,11 @@ export class LargeCsvDocument implements vscode.CustomDocument {
   }
 
   private fireChange(): void {
-    this.changeEmitter.fire({ rowCount: this.dataRowCount, header: this.currentHeader });
+    this.changeEmitter.fire({
+      rowCount: this.dataRowCount,
+      header: this.currentHeader,
+      generation: this.generation,
+    });
   }
 
   /** ファイルの1行目（serial の中で呼ぶ） */
@@ -486,8 +504,8 @@ export class LargeCsvDocument implements vscode.CustomDocument {
       return [...ops];
     }
     if (generation !== this.generation - 1 || !this.lastRemap) {
-      throw new LargeEditRejectedError(
-        "保存の前に画面で行った編集を、保存した後のファイルに当てられませんでした"
+      throw new LargeEditConflictError(
+        "保存・元に戻す操作の前後で編集が競合したため、この編集を取り消しました"
       );
     }
     const remap = this.lastRemap;

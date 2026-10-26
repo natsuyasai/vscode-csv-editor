@@ -14,6 +14,8 @@ export interface EditingCell extends CellPosition {
   handle?: number;
   /** 編集を始めたときの行の内容（データ行のみ。確定時に行が取り直されていても置き換え元に使う） */
   snapshot?: string[];
+  /** 編集を始めたときの RowSource の revision（handle の体系。確定時の applyOps に添える） */
+  revision?: number;
   original: string;
   value: string;
 }
@@ -95,8 +97,8 @@ export function useLargeTableEditing({
     return true;
   }, []);
 
-  const apply = (ops: LargeOp[]) => {
-    source.applyOps?.(ops);
+  const apply = (ops: LargeOp[], revision?: number) => {
+    source.applyOps?.(ops, revision);
   };
 
   /** その時点の値（ヘッダーは列名、データ行は未取得なら undefined） */
@@ -106,7 +108,9 @@ export function useLargeTableEditing({
   /**
    * cell の値を value にする op を送る。
    * base（編集を始めたときの状態）があれば、そのときのハンドルの行を置き換える。
-   * 行が取り直されて同じハンドルなら最新の行を、別の行に変わっていれば編集を始めたときの行を元にする
+   * 行が取り直されて同じハンドルなら最新の行を、別の行に変わっていれば編集を始めたときの行を元にする。
+   * 編集を始めた後に revision が変わっていたら（保存でハンドルが振り直されたかもしれない）、
+   * 同じハンドルでも別の行のことがあるので、編集を始めたときの行を元にし、そのときの revision を添えて送る
    */
   const sendValue = (cell: CellPosition, value: string, base?: EditingCell) => {
     if (cell.row === HEADER_ROW) {
@@ -114,10 +118,15 @@ export function useLargeTableEditing({
       return;
     }
     const handle = base?.handle ?? source.getHandle(cell.row);
-    const latest = source.getHandle(cell.row) === handle ? source.getRow(cell.row) : undefined;
+    const sameRevision = base?.handle === undefined || base.revision === source.revision;
+    const latest =
+      sameRevision && source.getHandle(cell.row) === handle ? source.getRow(cell.row) : undefined;
     const row = latest ?? base?.snapshot;
     if (handle !== undefined && row !== undefined) {
-      apply([setCellOp(row, handle, cell.col, value, colCount())]);
+      apply(
+        [setCellOp(row, handle, cell.col, value, colCount())],
+        base?.handle === undefined ? undefined : base.revision
+      );
     }
   };
 
@@ -135,7 +144,14 @@ export function useLargeTableEditing({
         return;
       }
       const original = row[cell.col] ?? "";
-      setEditing({ ...cell, handle, snapshot: row, original, value: initial ?? original });
+      setEditing({
+        ...cell,
+        handle,
+        snapshot: row,
+        revision: source.revision,
+        original,
+        value: initial ?? original,
+      });
     }
     setFocusedCell(cell);
   };

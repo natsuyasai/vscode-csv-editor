@@ -19,10 +19,16 @@ export interface RowSource {
   ensureRange(start: number, end: number): void;
   readonly subscribe: (listener: () => void) => () => void;
   /**
+   * 行のハンドルの体系を表す値（RemoteRowSource は最後に受け取った `large/invalidate` / `large/init` の revision）。
+   * 拡張機能は保存・revert で行のハンドルを振り直すので、ハンドルを得たときの値を applyOps に添える
+   */
+  readonly revision?: number;
+  /**
    * 編集操作の適用。RemoteRowSource は拡張機能へ送ると同時にキャッシュへ反映する。
+   * revision は ops のハンドルを得たときの revision（省略は現在の revision）。
    * 持たない RowSource（Story・テスト用の生成行など）の表は閲覧だけになる
    */
-  applyOps?(ops: LargeOp[]): void;
+  applyOps?(ops: LargeOp[], revision?: number): void;
 }
 
 /** 購読と version の管理を共通化する基底クラス */

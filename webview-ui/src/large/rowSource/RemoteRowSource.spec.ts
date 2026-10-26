@@ -291,6 +291,22 @@ describe("RemoteRowSource", () => {
       expect(source.getRow(0)).toBeUndefined();
     });
 
+    it("large/init に revision があれば以後の revision にする", () => {
+      const { source } = createSource();
+      source.handleMessage({
+        type: "large/init",
+        header: ["x"],
+        rowCount: 7,
+        indexing: false,
+        encoding: "utf8",
+        restrictions: [],
+        revision: 9,
+      });
+      expect(source.revision).toBe(9);
+      source.handleMessage({ type: "large/invalidate", revision: 8, rowCount: 1 });
+      expect(source.rowCount).toBe(7);
+    });
+
     it("reqId 付きの large/error は in-flight を解除し onError に渡す。再度 ensureRange で再要求できる", () => {
       const { source, requests, onError } = createSource();
       source.ensureRange(0, 10);
@@ -329,7 +345,25 @@ describe("RemoteRowSource", () => {
       const { source, sent } = loaded();
       const ops = [{ type: "setRow" as const, handle: 3, row: ["new", "x"] }];
       source.applyOps(ops);
-      expect(sent[0]).toEqual({ type: "large/applyOps", ops });
+      expect(sent[0]).toEqual({ type: "large/applyOps", revision: 0, ops });
+    });
+
+    it("large/applyOps に最後に受け取った invalidate の revision を載せる", () => {
+      const { source, sent } = loaded();
+      source.handleMessage({ type: "large/invalidate", revision: 4, rowCount: 30 });
+      sent.length = 0;
+      const ops = [{ type: "setRow" as const, handle: 3, row: ["new", "x"] }];
+      source.applyOps(ops);
+      expect(sent[0]).toEqual({ type: "large/applyOps", revision: 4, ops });
+    });
+
+    it("revision を渡すと、それを op のハンドルを得たときの revision として載せる", () => {
+      const { source, sent } = loaded();
+      source.handleMessage({ type: "large/invalidate", revision: 6, rowCount: 30 });
+      sent.length = 0;
+      const ops = [{ type: "setRow" as const, handle: 3, row: ["new", "x"] }];
+      source.applyOps(ops, 2);
+      expect(sent[0]).toEqual({ type: "large/applyOps", revision: 2, ops });
     });
 
     it("setRow はキャッシュ内の同じハンドルの行を即座に置き換え、購読者へ通知する", () => {
