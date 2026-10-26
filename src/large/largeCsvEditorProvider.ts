@@ -10,7 +10,7 @@ import {
   type LargeCsvDocumentOptions,
   type LargeEditorDocument,
 } from "./largeCsvDocument";
-import { LargeEditorSession } from "./largeEditorSession";
+import { LargeEditorSession, type LargeWebview } from "./largeEditorSession";
 import { askLargeEncoding } from "./largePrompts";
 import type { PendingEncodings } from "./pendingEncodings";
 import type { Picker } from "./picker";
@@ -36,6 +36,8 @@ export interface LargeCsvEditorProviderOptions {
   now?: () => number;
   /** パースできない行があったときの通知（文書ごとに1回）。既定は出力チャンネルと警告の通知 */
   warn?: (message: string) => void;
+  /** セッションに渡す webview を包む（テストで実際の webview とのやり取りを観測する） */
+  wrapWebview?: (webview: LargeWebview) => LargeWebview;
 }
 
 const defaultWarn = (message: string) => {
@@ -100,7 +102,8 @@ export class LargeCsvEditorProvider implements vscode.CustomReadonlyEditorProvid
     }
     webviewPanel.webview.options = { enableScripts: true };
     webviewPanel.webview.html = getWebviewHtml(webviewPanel.webview, this.extensionUri);
-    const session = new LargeEditorSession(document, webviewPanel.webview, {
+    const webview = this.options.wrapWebview?.(webviewPanel.webview) ?? webviewPanel.webview;
+    const session = new LargeEditorSession(document, webview, {
       progressIntervalMs: this.options.progressIntervalMs ?? PROGRESS_INTERVAL_MS,
       invalidateIntervalMs: this.options.invalidateIntervalMs ?? INVALIDATE_INTERVAL_MS,
       now: this.options.now ?? Date.now,

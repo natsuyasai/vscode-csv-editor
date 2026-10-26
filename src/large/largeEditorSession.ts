@@ -10,6 +10,9 @@ import { logWarning } from "../util/logger";
 import type { LargeCsvDocument } from "./largeCsvDocument";
 import { LARGE_MODE_RESTRICTIONS } from "./largeRestrictions";
 
+/** セッションが使う webview の機能（テストではやり取りを観測する実装で包む） */
+export type LargeWebview = Pick<vscode.Webview, "postMessage" | "onDidReceiveMessage">;
+
 export interface LargeEditorSessionOptions {
   /** 進捗（large/progress）を送る最短の間隔 */
   progressIntervalMs: number;
@@ -55,7 +58,7 @@ export class LargeEditorSession {
 
   constructor(
     private readonly document: LargeCsvDocument,
-    private readonly webview: vscode.Webview,
+    private readonly webview: LargeWebview,
     private readonly options: LargeEditorSessionOptions
   ) {
     this.disposables.push(
