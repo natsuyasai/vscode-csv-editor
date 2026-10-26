@@ -64,6 +64,11 @@ export async function openLargeEditor(uri: vscode.Uri, options: LargeCsvEditorPr
   } as unknown as vscode.WebviewPanel;
 
   const provider = new LargeCsvEditorProvider(vscode.Uri.parse("file:///fake"), options);
+  /** provider が通知した編集（VSCode の Undo/Redo の単位） */
+  const edits: vscode.CustomDocumentEditEvent<LargeEditorDocument>[] = [];
+  const editSubscription = provider.onDidChangeCustomDocument((event) => {
+    edits.push(event);
+  });
   const document: LargeEditorDocument = await provider.openCustomDocument(
     uri,
     { backupId: undefined, untitledDocumentData: undefined },
@@ -77,7 +82,10 @@ export async function openLargeEditor(uri: vscode.Uri, options: LargeCsvEditorPr
   };
 
   return {
+    provider,
     document,
+    edits,
+    token,
     posted,
     webview,
     send,
@@ -88,6 +96,7 @@ export async function openLargeEditor(uri: vscode.Uri, options: LargeCsvEditorPr
     postedOf: (type: string) => posted.filter((m) => m.type === type),
     /** パネルを閉じる（VSCode が文書も破棄する） */
     close: async () => {
+      editSubscription.dispose();
       firePanelDispose();
       document.dispose();
       if (document instanceof LargeCsvDocument) {

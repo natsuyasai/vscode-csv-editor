@@ -1,13 +1,17 @@
 import * as vscode from "vscode";
 
 import { getThemeKind } from "../editor/webviewContent";
-import { isLargeMessageToExtension, type LargeMessageToWebview } from "../message/largeMessages";
+import {
+  isLargeMessageToExtension,
+  type LargeMessageToWebview,
+  type LargeOp,
+} from "../message/largeMessages";
 import { isMessageToExtension } from "../message/messageTypeToExtension";
 import type { UpdateThemeMessage } from "../message/messageTypeToWebview";
 import { disposeAll } from "../util/dispose";
 import { logWarning } from "../util/logger";
 
-import type { LargeCsvDocument } from "./largeCsvDocument";
+import type { LargeCsvDocument, LargeDocumentChange } from "./largeCsvDocument";
 import { LARGE_MODE_RESTRICTIONS } from "./largeRestrictions";
 
 /** セッションが使う webview の機能（テストではやり取りを観測する実装で包む） */
@@ -37,12 +41,17 @@ function describeMessage(value: unknown): string {
 }
 
 /**
- * 大容量モードの1つの webview パネルとのやり取り（2-1: 閲覧のみ）。
+ * 大容量モードの1つの webview パネルとのやり取り。
  *
- * - webview の `init` に `updateTheme` と `large/init` を返す（何度来ても現在の状態を返す）
+ * - webview の `init` に `updateTheme` と `large/init` を返す（何度来ても現在の状態を返す。
+ *   nextHandle で次に使う追加行のハンドルを伝える）
  * - `init` を受けるまでは何も送らない（webview はそれまで大容量モードの受け手を持たない）
  * - インデックス作成中の進捗と行数の増加は間引いて送る。完了時は間引かずに送る
- * - `large/getRows` は表示位置 i をファイルの行 i + 1 として読み、ハンドルはファイル上の行番号
+ * - `large/getRows` は文書の並び（編集を反映したもの）で読む。ハンドルは行のハンドル
+ * - `large/applyOps` は文書に当てる。行の取得と編集は文書が届いた順に1つずつ処理する
+ *   （受け取ったその場で文書の処理待ちに並べる）
+ * - 文書の内容が変わったら（編集・Undo/Redo・保存・revert）、列名を載せた `large/invalidate` を送る
+ * - 拒否・不正な編集は `large/error` を送り、楽観的に反映した画面を戻させるため `large/invalidate` も送る
  */
 export class LargeEditorSession {
   private readonly disposables: vscode.Disposable[] = [];
@@ -65,6 +74,9 @@ export class LargeEditorSession {
       webview.onDidReceiveMessage((message: unknown) => this.receive(message)),
       document.onDidProgress((progress) => {
         this.onProgress(progress.ratio);
+      }),
+      document.onDidChangeContent((change) => {
+        this.onContentChanged(change);
       }),
       vscode.window.onDidChangeActiveColorTheme(() => {
         if (this.ready) {
@@ -106,8 +118,11 @@ export class LargeEditorSession {
       case "large/getRows":
         await this.handleGetRows(message.reqId, message.start, message.count);
         return;
+      case "large/applyOps":
+        await this.handleApplyOps(message.ops);
+        return;
       default:
-        // 2-1 は閲覧のみ（編集・検索・ソート等は後続フェーズで対応する）
+        // 検索・ソート・フィルタ・範囲コピーは後続フェーズ（2-3 / 2-4）で対応する
         logWarning(`大容量モードで未対応のメッセージを無視しました (${message.type})`);
         return;
     }
@@ -135,6 +150,7 @@ export class LargeEditorSession {
       indexing: this.document.indexing && this.indexError === undefined,
       encoding: this.document.encoding,
       restrictions: [...LARGE_MODE_RESTRICTIONS],
+      nextHandle: this.document.nextHandle,
     });
     this.ready = true;
     const now = this.options.now();
@@ -169,6 +185,29 @@ export class LargeEditorSession {
       }
       this.post({ type: "large/error", message: errorMessage(error), reqId });
     }
+  }
+
+  private async handleApplyOps(ops: LargeOp[]): Promise<void> {
+    try {
+      // 当てたら文書の onDidChangeContent で invalidate を送る
+      await this.document.applyOps(ops);
+    } catch (error) {
+      if (this.disposed) {
+        return;
+      }
+      this.post({ type: "large/error", message: errorMessage(error) });
+      if (this.ready) {
+        // webview は送った編集を表示に反映済みなので、文書の状態を取り直させる
+        this.postInvalidate(this.document.dataRowCount, this.document.currentHeader);
+      }
+    }
+  }
+
+  private onContentChanged(change: LargeDocumentChange): void {
+    if (!this.ready || this.disposed) {
+      return;
+    }
+    this.postInvalidate(change.rowCount, change.header);
   }
 
   private onProgress(ratio: number): void {
@@ -212,10 +251,16 @@ export class LargeEditorSession {
     }
   }
 
-  private postInvalidate(rowCount: number): void {
+  /** header は列名が変わったかもしれないときに載せる（省略は「変わっていない」） */
+  private postInvalidate(rowCount: number, header?: string[]): void {
     this.revision += 1;
     this.sentRowCount = rowCount;
-    this.post({ type: "large/invalidate", revision: this.revision, rowCount });
+    this.post({
+      type: "large/invalidate",
+      revision: this.revision,
+      rowCount,
+      ...(header ? { header } : {}),
+    });
   }
 
   private postTheme(): void {

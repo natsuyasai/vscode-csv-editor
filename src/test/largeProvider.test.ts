@@ -16,7 +16,7 @@ import { ScriptedPicker } from "./helpers/fakePicker";
 import { openLargeEditor, settle } from "./helpers/largeProviderHarness";
 
 /**
- * 大容量モードの provider（2-1: 読み取り専用）の webview とのやり取り。
+ * 大容量モードの provider の webview とのやり取り（読み込み・表示。編集と保存は largeEdit.test.ts）。
  * VSCode の画面は使わず、モックの webview / panel で openCustomDocument → resolveCustomEditor を駆動する。
  */
 suite("大容量モードのprovider（LargeCsvEditorProvider）", () => {
@@ -103,7 +103,7 @@ suite("大容量モードのprovider（LargeCsvEditorProvider）", () => {
   });
 
   suite("初期化", () => {
-    test("init を受けると updateTheme と large/init（ヘッダー・データ行数・文字コード・制限）を返す", async () => {
+    test("init を受けると updateTheme と large/init（ヘッダー・データ行数・文字コード・制限・次の追加行のハンドル）を返す", async () => {
       const uri = writeFile("a.csv", csvWithRows(3));
       const editor = await open(uri, "utf-8");
       assert.ok(editor.document instanceof LargeCsvDocument);
@@ -122,6 +122,7 @@ suite("大容量モードのprovider（LargeCsvEditorProvider）", () => {
         indexing: false,
         encoding: "utf-8",
         restrictions: [...LARGE_MODE_RESTRICTIONS],
+        nextHandle: -1,
       });
       assert.ok(editor.webview.html.includes("Content-Security-Policy"));
     });
