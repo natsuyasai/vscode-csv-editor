@@ -54,6 +54,8 @@ export interface FilterInputProps {
     getFilterValue: () => unknown;
     setFilterValue: (value: string) => void;
   };
+  /** 入力欄のアクセシブルネーム（省略時はプレースホルダー） */
+  ariaLabel?: string;
 }
 
 /**

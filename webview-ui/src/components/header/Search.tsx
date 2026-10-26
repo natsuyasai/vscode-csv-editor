@@ -6,6 +6,10 @@ import styles from "./Search.module.scss";
 
 export interface SearchProps {
   isMatching?: boolean;
+  /** 前へ/次へを押せるか。省略時は isMatching と同じ（一致件数を持たない呼び出し側が指定する） */
+  canNavigate?: boolean;
+  /** 状態表示の差し替え。指定すると「N of M」の代わりに表示する（一致件数を持たない呼び出し側向け） */
+  statusText?: string;
   machedCount: number;
   searchedSelectedItemIdx: number;
   onSearch: (text: string) => void;
@@ -16,6 +20,8 @@ export interface SearchProps {
 
 export const Search: FC<SearchProps> = ({
   isMatching,
+  canNavigate,
+  statusText,
   machedCount,
   searchedSelectedItemIdx,
   onSearch,
@@ -26,6 +32,7 @@ export const Search: FC<SearchProps> = ({
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef<HTMLElement>(null);
   const nextButtonRef = useRef<HTMLElement>(null);
+  const navigable = canNavigate ?? isMatching;
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -79,16 +86,16 @@ export const Search: FC<SearchProps> = ({
           onInput={(e) => setSearchText((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => handleKeyDown(e)}
         ></VscodeTextfield>
-        {isMatching && (
-          <div className={styles.searchStatus}>
-            {isMatching ? `${searchedSelectedItemIdx + 1} of ${machedCount}` : ""}
+        {(statusText !== undefined || isMatching) && (
+          <div className={styles.searchStatus} role="status">
+            {statusText ?? `${searchedSelectedItemIdx + 1} of ${machedCount}`}
           </div>
         )}
         <VscodeButton
           aria-label="Previous search result"
           tabIndex={0}
           onClick={() => onPrevious()}
-          disabled={!searchText || !isMatching}
+          disabled={!searchText || !navigable}
         >
           <VscodeIcon name="arrow-up" action-icon />
         </VscodeButton>
@@ -97,7 +104,7 @@ export const Search: FC<SearchProps> = ({
           tabIndex={0}
           ref={nextButtonRef as never}
           onClick={() => onNext()}
-          disabled={!searchText || !isMatching}
+          disabled={!searchText || !navigable}
         >
           <VscodeIcon name="arrow-down" action-icon />
         </VscodeButton>
