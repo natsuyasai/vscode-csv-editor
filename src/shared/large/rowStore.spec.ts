@@ -253,6 +253,22 @@ describe("RowStore", () => {
       ]);
     });
 
+    it("列挙を始めた時点の状態を返し、途中で編集しても影響を受けない（保存中の編集に備える）", () => {
+      const store = new RowStore(6, { chunkSize: 2 });
+      store.apply({ type: "setRow", handle: 2, row: ["e2"] });
+      const expected = segmentsOf(store);
+      const iterator = store.segments()[Symbol.iterator]();
+      const first = iterator.next();
+      store.apply({ type: "insertRows", beforeHandle: 3, handles: [-1], rows: [["n"]] });
+      store.apply({ type: "deleteRows", handles: [2, 4] });
+      store.apply({ type: "setHeader", header: ["H"] });
+      const rest: RowSegment[] = [];
+      for (let r = iterator.next(); !r.done; r = iterator.next()) {
+        rest.push(r.value);
+      }
+      expect([first.value, ...rest]).toEqual(expected);
+    });
+
     it("ヘッダーを上書きすると先頭はヘッダーの行になる", () => {
       const store = new RowStore(3);
       store.apply({ type: "setHeader", header: ["H"] });

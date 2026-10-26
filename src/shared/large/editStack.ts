@@ -77,9 +77,17 @@ export class EditStack {
     return this.currentId !== this.savedId;
   }
 
-  /** 現在の状態を保存した状態とする（save / saveAs の成功後に呼ぶ） */
-  markSaved(): void {
-    this.savedId = this.currentId;
+  /** 現在の状態の番号（編集・undo・redo で変わる。同じ履歴位置なら同じ値） */
+  get version(): number {
+    return this.currentId;
+  }
+
+  /**
+   * version の状態を保存した状態とする（save / saveAs の成功後に呼ぶ）。
+   * 書き出しは非同期で途中に編集が入りうるので、保存を始めた時点の `version` を渡すこと（省略時は現在）。
+   */
+  markSaved(version: number = this.currentId): void {
+    this.savedId = version;
   }
 
   private get currentId(): number {

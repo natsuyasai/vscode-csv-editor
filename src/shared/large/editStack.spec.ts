@@ -108,6 +108,19 @@ describe("EditStack", () => {
       expect(stack.isDirty).toBe(true);
     });
 
+    it("保存を始めた時点の version を markSaved に渡すと、保存中の編集は dirty のまま", () => {
+      const { stack } = setup();
+      stack.apply([{ type: "setRow", handle: 1, row: ["a"] }]);
+      const version = stack.version;
+      stack.apply([{ type: "setRow", handle: 2, row: ["b"] }]);
+      expect(stack.version).not.toBe(version);
+      stack.markSaved(version);
+      expect(stack.isDirty).toBe(true);
+      stack.undo();
+      expect(stack.version).toBe(version);
+      expect(stack.isDirty).toBe(false);
+    });
+
     it("内容が元と同じでも保存位置と違えば dirty（VSCode の dirty と揃える）", () => {
       const { stack } = setup();
       stack.apply([{ type: "setRow", handle: 1, row: ["a"] }]);

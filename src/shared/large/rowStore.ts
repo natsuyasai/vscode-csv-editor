@@ -308,52 +308,19 @@ export class RowStore {
     }
   }
 
-  /** 保存用に、ファイル上の並び順で区間を列挙する（ヘッダーを含む） */
-  *segments(): Generator<RowSegment> {
-    let runStart = -1;
-    let runEnd = -1;
-    if (this.headerOverride !== undefined) {
-      yield { kind: "row", handle: 0, row: this.headerOverride };
-    } else if (this.lineCount > 0) {
-      runStart = 0;
-      runEnd = 1;
-    }
-    for (const chunk of this.chunks) {
-      if (chunk.kind === "range" && this.edits.size === 0) {
-        if (runEnd !== chunk.start) {
-          if (runStart >= 0) {
-            yield { kind: "original", start: runStart, end: runEnd };
-          }
-          runStart = chunk.start;
-        }
-        runEnd = chunk.start + chunk.length;
-        continue;
-      }
-      const len = lengthOf(chunk);
-      for (let i = 0; i < len; i++) {
-        const handle = chunk.kind === "range" ? chunk.start + i : chunk.handles[i];
-        const edited = this.edits.get(handle);
-        if (edited === undefined) {
-          if (runEnd !== handle) {
-            if (runStart >= 0) {
-              yield { kind: "original", start: runStart, end: runEnd };
-            }
-            runStart = handle;
-          }
-          runEnd = handle + 1;
-        } else {
-          if (runStart >= 0) {
-            yield { kind: "original", start: runStart, end: runEnd };
-            runStart = -1;
-            runEnd = -1;
-          }
-          yield { kind: "row", handle, row: edited };
-        }
-      }
-    }
-    if (runStart >= 0) {
-      yield { kind: "original", start: runStart, end: runEnd };
-    }
+  /**
+   * 保存用に、ファイル上の並び順で区間を列挙する（ヘッダーを含む）。
+   * 呼んだ時点の状態のスナップショット（O(チャンク数 + 編集行数)）を列挙するので、
+   * 列挙の途中（非同期の書き出し中）に op を当てても結果は変わらない。
+   */
+  segments(): Iterable<RowSegment> {
+    // チャンクと行の配列はその場で書き換えず置き換えるので、浅いコピーで足りる
+    return enumerateSegments(
+      this.chunks.slice(),
+      new Map(this.edits),
+      this.headerOverride,
+      this.lineCount
+    );
   }
 
   // ---- op ----
@@ -649,5 +616,57 @@ export class RowStore {
     flushRange();
     flushBuffer();
     return out;
+  }
+}
+
+function* enumerateSegments(
+  chunks: readonly Chunk[],
+  edits: ReadonlyMap<number, readonly string[]>,
+  header: readonly string[] | undefined,
+  lineCount: number
+): Generator<RowSegment> {
+  let runStart = -1;
+  let runEnd = -1;
+  if (header !== undefined) {
+    yield { kind: "row", handle: 0, row: header };
+  } else if (lineCount > 0) {
+    runStart = 0;
+    runEnd = 1;
+  }
+  for (const chunk of chunks) {
+    if (chunk.kind === "range" && edits.size === 0) {
+      if (runEnd !== chunk.start) {
+        if (runStart >= 0) {
+          yield { kind: "original", start: runStart, end: runEnd };
+        }
+        runStart = chunk.start;
+      }
+      runEnd = chunk.start + chunk.length;
+      continue;
+    }
+    const len = lengthOf(chunk);
+    for (let i = 0; i < len; i++) {
+      const handle = chunk.kind === "range" ? chunk.start + i : chunk.handles[i];
+      const edited = edits.get(handle);
+      if (edited === undefined) {
+        if (runEnd !== handle) {
+          if (runStart >= 0) {
+            yield { kind: "original", start: runStart, end: runEnd };
+          }
+          runStart = handle;
+        }
+        runEnd = handle + 1;
+      } else {
+        if (runStart >= 0) {
+          yield { kind: "original", start: runStart, end: runEnd };
+          runStart = -1;
+          runEnd = -1;
+        }
+        yield { kind: "row", handle, row: edited };
+      }
+    }
+  }
+  if (runStart >= 0) {
+    yield { kind: "original", start: runStart, end: runEnd };
   }
 }
