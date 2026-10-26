@@ -1,3 +1,4 @@
+/* global structuredClone */
 import type { LargeOp } from "../../message/largeMessages";
 import type { RowStore, RowStoreOp } from "./rowStore";
 
