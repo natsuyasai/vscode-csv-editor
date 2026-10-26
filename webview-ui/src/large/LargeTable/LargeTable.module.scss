@@ -156,3 +156,54 @@
   font: inherit;
   outline: none;
 }
+
+// ヘッダーのラベルとソートボタン
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.headerText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sortButton {
+  flex: none;
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  opacity: 0.5;
+  cursor: pointer;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.3;
+  }
+}
+
+// フィルタ行（ヘッダーの下に固定表示）
+.filterCell,
+.indexFilterCell {
+  display: block;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 4px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}

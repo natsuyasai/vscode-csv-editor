@@ -9,8 +9,10 @@ export interface LargeModeBannerProps {
   encoding: string;
   /** 行インデックス作成の進捗（0〜1）。作成中でなければ null */
   indexingRatio: number | null;
-  /** ソートのキャンセルなど、操作ボタンを置くスロット（2-3 で使う） */
+  /** 検索・フィルタの操作、実行中のジョブの進捗とキャンセルなど、操作を置くスロット */
   actions?: ReactNode;
+  /** 1行目の下に出す注記（ソート・フィルタは編集しても並べ直されない、など） */
+  notice?: ReactNode;
 }
 
 /**
@@ -21,6 +23,7 @@ export function LargeModeBanner({
   encoding,
   indexingRatio,
   actions,
+  notice,
 }: LargeModeBannerProps) {
   const [expanded, setExpanded] = useState(false);
   const listId = useId();
@@ -57,6 +60,7 @@ export function LargeModeBanner({
         )}
         {actions && <span className={styles.actions}>{actions}</span>}
       </div>
+      {notice && <div className={styles.notice}>{notice}</div>}
       {expanded && (
         <ul id={listId} className={styles.list} aria-label="制限している機能">
           {restrictions.map((name) => (

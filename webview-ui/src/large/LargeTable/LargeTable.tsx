@@ -6,10 +6,12 @@ import {
   type Virtualizer,
 } from "@tanstack/react-virtual";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { FilterInput } from "../../components/table-header/FilterInput";
 import { RowContextMenu } from "../../components/table-row/RowContextMenu";
+import type { SortState } from "../LargeApp/largeQuery";
 import type { RowSource } from "../rowSource/RowSource";
 import { useRowSource } from "../rowSource/useRowSource";
-import { HEADER_ROW, revealOffset } from "./cellNavigation";
+import { HEADER_ROW, revealOffset, type CellPosition } from "./cellNavigation";
 import { LargeCellEditor } from "./LargeCellEditor";
 import styles from "./LargeTable.module.scss";
 import { computeScrollScale, rowDomTop, toDomOffset, toVirtualOffset } from "./scrollScaling";
@@ -19,6 +21,8 @@ import { useLargeTableEditing } from "./useLargeTableEditing";
 export const LARGE_ROW_HEIGHT = 40;
 /** 固定ヘッダーの高さ */
 export const LARGE_HEADER_HEIGHT = 40;
+/** フィルタ行（ヘッダーの下に固定表示する）の高さ */
+export const LARGE_FILTER_ROW_HEIGHT = 36;
 /** 列幅（通常モードの既定と同じ） */
 export const LARGE_COLUMN_WIDTH = 150;
 /** 表示範囲の前後に余分に描画する行数 */
@@ -27,6 +31,24 @@ const OVERSCAN = 10;
 /** 行番号列の幅。桁数に合わせて広げる（最小 40px は通常モードと同じ） */
 const rowIndexWidth = (rowCount: number) => Math.max(40, String(rowCount).length * 8 + 16);
 
+/** ソート・フィルタの操作（指定するとヘッダーにソートボタン、必要ならフィルタ行を出す） */
+export interface LargeTableQuery {
+  /** false ならソートボタンを押せない（インデックス作成中） */
+  enabled: boolean;
+  /** 表示するソート条件 */
+  sort: SortState | null;
+  onSortToggle: (column: number) => void;
+  filterRowVisible: boolean;
+  /** 列ごとのフィルタ入力 */
+  filterTexts: readonly string[];
+  onFilterChange: (column: number, text: string) => void;
+}
+
+/** 検索で一致したセルへ選択とスクロールを移す要求。seq が変わるたびに移動する */
+export interface LargeTableJump extends CellPosition {
+  seq: number;
+}
+
 export interface LargeTableProps {
   source: RowSource;
   theme: ThemeKind;
@@ -34,12 +56,23 @@ export interface LargeTableProps {
   readOnly?: boolean;
   /** 追加行の負のハンドルを採番する（省略時はこの表の中で -1 から順に） */
   allocateHandle?: () => number;
+  query?: LargeTableQuery;
+  jump?: LargeTableJump | null;
+  /** 選択中のセルが変わったとき（検索の開始位置に使う） */
+  onSelectionChange?: (cell: CellPosition | null) => void;
 }
 
 /** セルの DOM を探すためのキー（ヘッダーは行 -1） */
 const cellKey = (row: number, col: number) => `${String(row)}:${String(col)}`;
 
 type ScrollCallback = () => void;
+
+const sortAttribute = (sort: SortState | null, col: number) =>
+  sort?.column === col ? (sort.direction === "asc" ? "ascending" : "descending") : "none";
+
+/** 通常モードのヘッダーと同じ 🔼/🔽。ソートしていない列は並べ替えられることを示す印 */
+const sortIndicator = (sort: SortState | null, col: number) =>
+  sort?.column === col ? (sort.direction === "asc" ? "🔼" : "🔽") : "↕";
 
 /**
  * 大容量モードの表。
@@ -52,10 +85,24 @@ type ScrollCallback = () => void;
  *   （useLargeTableEditing.ts）。source が applyOps を持たない・readOnly のときは選択だけ
  * - 列の挿入・削除、行・列のドラッグ&ドロップ、オートフィルは出さない（大容量モードでは使えない）
  */
-export function LargeTable({ source, theme, readOnly = false, allocateHandle }: LargeTableProps) {
+export function LargeTable({
+  source,
+  theme,
+  readOnly = false,
+  allocateHandle,
+  query,
+  jump,
+  onSelectionChange,
+}: LargeTableProps) {
   useRowSource(source);
   const rowCount = source.rowCount;
   const header = source.header;
+  const filterRowVisible = query?.filterRowVisible === true;
+  const headerHeight = LARGE_HEADER_HEIGHT + (filterRowVisible ? LARGE_FILTER_ROW_HEIGHT : 0);
+  // 仮想スクローラのコールバック（描画外で呼ばれる）から最新のヘッダーの高さと表示領域を参照する
+  const headerHeightRef = useRef(headerHeight);
+  const rectRef = useRef<{ width: number; height: number } | null>(null);
+  const applyRectRef = useRef<((rect: { width: number; height: number }) => void) | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
@@ -73,12 +120,22 @@ export function LargeTable({ source, theme, readOnly = false, allocateHandle }: 
     estimateSize: () => LARGE_ROW_HEIGHT,
     overscan: OVERSCAN,
     // 表示領域の高さから固定ヘッダーの分を除く
-    observeElementRect: (instance: Virtualizer<HTMLDivElement, HTMLTableRowElement>, cb) =>
-      observeElementRect(instance, (rect) => {
-        const height = Math.max(0, rect.height - LARGE_HEADER_HEIGHT);
+    observeElementRect: (instance: Virtualizer<HTMLDivElement, HTMLTableRowElement>, cb) => {
+      const apply = (rect: { width: number; height: number }) => {
+        const height = Math.max(0, rect.height - headerHeightRef.current);
         setViewportHeight(height);
         cb({ width: rect.width, height });
-      }),
+      };
+      applyRectRef.current = apply;
+      const stop = observeElementRect(instance, (rect) => {
+        rectRef.current = rect;
+        apply(rect);
+      });
+      return () => {
+        applyRectRef.current = null;
+        stop?.();
+      };
+    },
     // DOM のスクロール位置を仮想のスクロール位置に変換して渡す。
     // 仮想スクローラが DOM の最大スクロール量と比べて補正しないよう、isScrolling は常に false で渡す
     observeElementOffset: (instance, cb) => {
@@ -98,6 +155,15 @@ export function LargeTable({ source, theme, readOnly = false, allocateHandle }: 
     scrollToFn: (offset, options, instance) =>
       elementScroll(toDomOffset(offset, scaleRef.current), options, instance),
   });
+
+  // フィルタ行の表示でヘッダーの高さが変わると、表示領域（ヘッダーを除く高さ）も変わる。
+  // スクロール領域自体の大きさは変わらず測り直しが起きないため、最後に測った大きさから計算し直す
+  useLayoutEffect(() => {
+    headerHeightRef.current = headerHeight;
+    if (rectRef.current) {
+      applyRectRef.current?.(rectRef.current);
+    }
+  }, [headerHeight]);
 
   // 行数・表示領域が変わると変換の比率が変わるため、現在の DOM 位置から仮想位置を取り直す
   useLayoutEffect(() => {
@@ -150,6 +216,28 @@ export function LargeTable({ source, theme, readOnly = false, allocateHandle }: 
     // 選択が変わったときだけ動かす（スクロール中に選択位置へ引き戻さない）
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusedCell]);
+
+  // 選択の変化を知らせる（検索は選択中のセルの行から始める）
+  const onSelectionChangeRef = useRef(onSelectionChange);
+  onSelectionChangeRef.current = onSelectionChange;
+  useEffect(() => {
+    onSelectionChangeRef.current?.(focusedCell);
+  }, [focusedCell]);
+
+  // 検索で一致したセルを選択し、その行が表示領域の先頭になる位置へスクロールする。
+  // フォーカスは検索欄に残す（select の第2引数 false）。ジャンプは DOM の位置へ変換して設定する
+  useLayoutEffect(() => {
+    const element = scrollRef.current;
+    if (!jump || !element || source.rowCount === 0) {
+      return;
+    }
+    const row = Math.min(jump.row, source.rowCount - 1);
+    select({ row, col: jump.col }, false);
+    element.scrollTop = toDomOffset(row * LARGE_ROW_HEIGHT, scaleRef.current);
+    reportOffsetRef.current?.();
+    // 要求（seq）が変わったときだけ動かす
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jump?.seq]);
 
   // 選択したセルへフォーカスを移す。行がまだ描画されていなければ、描画された後の描画で移す
   useEffect(() => {
@@ -221,8 +309,8 @@ export function LargeTable({ source, theme, readOnly = false, allocateHandle }: 
         style={{ width: `${String(tableWidth)}px` }}
         onKeyDown={handleGridKeyDown}
       >
-        <thead className={styles.thead} style={{ height: `${String(LARGE_HEADER_HEIGHT)}px` }}>
-          <tr className={styles.row}>
+        <thead className={styles.thead} style={{ height: `${String(headerHeight)}px` }}>
+          <tr className={styles.row} style={{ height: `${String(LARGE_HEADER_HEIGHT)}px` }}>
             <th scope="col" className={styles.indexHeader} style={indexStyle}>
               <span className={styles.visuallyHidden}>行番号</span>
             </th>
@@ -231,6 +319,9 @@ export function LargeTable({ source, theme, readOnly = false, allocateHandle }: 
                 // 列名は重複しうるため位置をキーにする
                 key={col}
                 scope="col"
+                // ソートボタンを含めても列名がアクセシブルネームになるようにする
+                aria-label={query ? name : undefined}
+                aria-sort={query ? sortAttribute(query.sort, col) : undefined}
                 aria-selected={isFocused(HEADER_ROW, col)}
                 tabIndex={isFocused(HEADER_ROW, col) ? 0 : -1}
                 data-cell={cellKey(HEADER_ROW, col)}
@@ -238,12 +329,51 @@ export function LargeTable({ source, theme, readOnly = false, allocateHandle }: 
                 style={columnStyle}
                 title={name}
                 onMouseDown={() => select({ row: HEADER_ROW, col })}
-                onDoubleClick={() => startEditing({ row: HEADER_ROW, col })}
+                onDoubleClick={(e) => {
+                  // ソートボタンの連打では編集を始めない
+                  if (!(e.target instanceof Element && e.target.closest("button"))) {
+                    startEditing({ row: HEADER_ROW, col });
+                  }
+                }}
               >
-                {editorFor(HEADER_ROW, col, false) ?? name}
+                {editorFor(HEADER_ROW, col, false) ??
+                  (query ? (
+                    <div className={styles.headerContent}>
+                      <span className={styles.headerText}>{name}</span>
+                      <button
+                        type="button"
+                        className={styles.sortButton}
+                        aria-label={`列「${name}」をソート`}
+                        disabled={!query.enabled}
+                        // 列の選択の操作と混ざらないようにする
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={() => query.onSortToggle(col)}
+                      >
+                        {sortIndicator(query.sort, col)}
+                      </button>
+                    </div>
+                  ) : (
+                    name
+                  ))}
               </th>
             ))}
           </tr>
+          {query && filterRowVisible && (
+            <tr className={styles.row} style={{ height: `${String(LARGE_FILTER_ROW_HEIGHT)}px` }}>
+              <td className={styles.indexFilterCell} style={indexStyle} />
+              {header.map((name, col) => (
+                <td key={col} className={styles.filterCell} style={columnStyle}>
+                  <FilterInput
+                    ariaLabel={`列「${name}」のフィルター`}
+                    column={{
+                      getFilterValue: () => query.filterTexts[col] ?? "",
+                      setFilterValue: (value) => query.onFilterChange(col, value),
+                    }}
+                  />
+                </td>
+              ))}
+            </tr>
+          )}
         </thead>
         <tbody className={styles.tbody} style={{ height: `${String(scale.domHeight)}px` }}>
           {items.map((item) => {
