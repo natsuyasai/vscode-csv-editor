@@ -5,14 +5,13 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { setTimeout as sleep } from "timers/promises";
-import { CSVEditorProvider } from "../editor/csvEditorProvider";
-import { Message } from "../message/messageTypeToExtension";
+import { createProviderHarness, replaceRows } from "./helpers/providerHarness";
 
 /**
  * 大きなCSV(1万行)の編集結果の反映 (issue #90)
  *
  * webviewのデータ管理(行ID・状態の一本化)は内部実装のため直接観測できない。
- * 観測可能な範囲として、1万行のCSVでwebviewから送られる `update` / `save` が
+ * 観測可能な範囲として、1万行のCSVでwebviewから送られる差分の操作（applyOps）と `save` が
  * 1セルだけ変更された内容でドキュメントとディスクへ正しく反映されることを検証する。
  */
 suite("大きなCSVの編集結果の反映 (issue #90)", () => {
@@ -40,41 +39,6 @@ suite("大きなCSVの編集結果の反映 (issue #90)", () => {
     fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
-  function createHarness(document: vscode.TextDocument) {
-    let messageHandler: ((message: Message) => unknown) | undefined;
-    const mockWebview = {
-      html: "",
-      cspSource: "vscode-resource:",
-      asWebviewUri: (uri: vscode.Uri) => uri,
-      postMessage: () => Promise.resolve(true),
-      onDidReceiveMessage: (handler: (message: Message) => unknown) => {
-        messageHandler = handler;
-        return { dispose: () => {} };
-      },
-    } as unknown as vscode.Webview;
-    const mockPanel = {
-      webview: mockWebview,
-      title: "CSV Editor",
-      onDidDispose: () => ({ dispose: () => {} }),
-      onDidChangeViewState: () => ({ dispose: () => {} }),
-      dispose: () => {},
-    } as unknown as vscode.WebviewPanel;
-    const context = {
-      subscriptions: [],
-      extensionUri: vscode.Uri.parse("file:///fake"),
-    } as unknown as vscode.ExtensionContext;
-    new CSVEditorProvider(context).resolveCustomTextEditor(document, mockPanel, {
-      isCancellationRequested: false,
-      onCancellationRequested: () => ({ dispose: () => {} }),
-    });
-    return {
-      send: async (message: Message) => {
-        assert.ok(messageHandler, "Message handler should be registered");
-        await messageHandler(message);
-      },
-    };
-  }
-
   async function openDocument() {
     const filePath = path.join(tempDir, "large.csv");
     fs.writeFileSync(filePath, ORIGINAL, "utf8");
@@ -84,14 +48,14 @@ suite("大きなCSVの編集結果の反映 (issue #90)", () => {
     };
   }
 
-  test("1万行のCSVで1セルを編集したupdateがその1セルだけ変更してドキュメントへ反映される", async function () {
+  test("1万行のCSVで1セルを編集した操作がその1セルだけ変更してドキュメントへ反映される", async function () {
     this.timeout(30000);
     const { document } = await openDocument();
     assert.strictEqual(document.lineCount - 1, ROWS + 1);
-    const harness = createHarness(document);
+    const harness = createProviderHarness(document);
 
     await harness.send({ type: "init" });
-    await harness.send({ type: "update", payload: EDITED });
+    await harness.sendOps([replaceRows(EDITED_ROW + 1, 1, [editedLines[EDITED_ROW].split(",")])]);
     await sleep(200);
 
     assert.strictEqual(document.getText(), EDITED);
@@ -102,12 +66,12 @@ suite("大きなCSVの編集結果の反映 (issue #90)", () => {
   test("1万行のCSVを保存すると編集内容がディスクへ書き込まれる", async function () {
     this.timeout(30000);
     const { filePath, document } = await openDocument();
-    const harness = createHarness(document);
+    const harness = createProviderHarness(document);
 
     await harness.send({ type: "init" });
-    await harness.send({ type: "update", payload: EDITED });
+    await harness.sendOps([replaceRows(EDITED_ROW + 1, 1, [editedLines[EDITED_ROW].split(",")])]);
     await sleep(200);
-    await harness.send({ type: "save", payload: EDITED });
+    await harness.send({ type: "save" });
     await sleep(500);
 
     assert.strictEqual(document.isDirty, false);

@@ -5,8 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { setTimeout as sleep } from "timers/promises";
-import { CSVEditorProvider } from "../editor/csvEditorProvider";
-import { Message } from "../message/messageTypeToExtension";
+import { createProviderHarness, replaceRows } from "./helpers/providerHarness";
 
 /**
  * ソート・フィルター中の編集 (issue #79)
@@ -14,7 +13,8 @@ import { Message } from "../message/messageTypeToExtension";
  * 選択・コピー/ペースト・オートフィル等の位置計算はwebview内部の挙動のため、
  * 拡張機能テストからは直接観測できない（webview側は vitest の結合テストで検証）。
  * ここでは観測可能な部分として、ソート表示中の操作結果としてwebviewから送られる
- * `update` が、データ順を保ったままドキュメントへ反映・保存されることを検証する。
+ * 差分の操作（applyOps）が、データ順を保ったままドキュメントへ反映・保存されることを検証する。
+ *   （c と a の間の b は参照が変わらないが、diffRows は先頭・末尾の一致だけを除くので b も含めた置換になる）
  *   データ順: a,3 / b,1 / c,2  (num昇順の表示順: b, c, a)
  *   表示上 c の行から "x\ny" を貼り付けた結果 → c(data2)=x, a(data0)=y
  */
@@ -33,41 +33,6 @@ suite("ソート中の編集結果の反映 (issue #79)", () => {
     fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
-  function createHarness(document: vscode.TextDocument) {
-    let messageHandler: ((message: Message) => unknown) | undefined;
-    const mockWebview = {
-      html: "",
-      cspSource: "vscode-resource:",
-      asWebviewUri: (uri: vscode.Uri) => uri,
-      postMessage: () => Promise.resolve(true),
-      onDidReceiveMessage: (handler: (message: Message) => unknown) => {
-        messageHandler = handler;
-        return { dispose: () => {} };
-      },
-    } as unknown as vscode.Webview;
-    const mockPanel = {
-      webview: mockWebview,
-      title: "CSV Editor",
-      onDidDispose: () => ({ dispose: () => {} }),
-      onDidChangeViewState: () => ({ dispose: () => {} }),
-      dispose: () => {},
-    } as unknown as vscode.WebviewPanel;
-    const context = {
-      subscriptions: [],
-      extensionUri: vscode.Uri.parse("file:///fake"),
-    } as unknown as vscode.ExtensionContext;
-    new CSVEditorProvider(context).resolveCustomTextEditor(document, mockPanel, {
-      isCancellationRequested: false,
-      onCancellationRequested: () => ({ dispose: () => {} }),
-    });
-    return {
-      send: async (message: Message) => {
-        assert.ok(messageHandler, "Message handler should be registered");
-        await messageHandler(message);
-      },
-    };
-  }
-
   async function openDocument() {
     const filePath = path.join(tempDir, "sorted.csv");
     fs.writeFileSync(filePath, ORIGINAL, "utf8");
@@ -77,12 +42,18 @@ suite("ソート中の編集結果の反映 (issue #79)", () => {
     };
   }
 
-  test("表示順ではなくデータ順を保ったupdateがドキュメントへ反映される", async () => {
+  test("表示順ではなくデータ順を保った操作がドキュメントへ反映される", async () => {
     const { document } = await openDocument();
-    const harness = createHarness(document);
+    const harness = createProviderHarness(document);
 
     await harness.send({ type: "init" });
-    await harness.send({ type: "update", payload: EDITED_BY_WEBVIEW });
+    await harness.sendOps([
+      replaceRows(1, 3, [
+        ["y", "3"],
+        ["b", "1"],
+        ["x", "2"],
+      ]),
+    ]);
     await sleep(100);
 
     assert.strictEqual(document.getText(), EDITED_BY_WEBVIEW);
@@ -99,12 +70,18 @@ suite("ソート中の編集結果の反映 (issue #79)", () => {
   test("保存するとデータ順のままディスクへ書き込まれる", async function () {
     this.timeout(10000);
     const { filePath, document } = await openDocument();
-    const harness = createHarness(document);
+    const harness = createProviderHarness(document);
 
     await harness.send({ type: "init" });
-    await harness.send({ type: "update", payload: EDITED_BY_WEBVIEW });
+    await harness.sendOps([
+      replaceRows(1, 3, [
+        ["y", "3"],
+        ["b", "1"],
+        ["x", "2"],
+      ]),
+    ]);
     await sleep(100);
-    await harness.send({ type: "save", payload: EDITED_BY_WEBVIEW });
+    await harness.send({ type: "save" });
     await sleep(300);
 
     assert.strictEqual(document.isDirty, false);

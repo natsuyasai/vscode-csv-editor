@@ -1,0 +1,82 @@
+// バナー全体
+.container {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-editor-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: 12px;
+}
+
+// 1行目（タイトル・文字コード・開閉ボタン・進捗・操作）
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.title {
+  font-weight: bold;
+  color: var(--vscode-editorWarning-foreground, var(--vscode-editor-foreground));
+}
+
+.encoding {
+  color: var(--vscode-descriptionForeground);
+}
+
+// 制限一覧の開閉ボタン
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--vscode-textLink-activeForeground);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+  }
+}
+
+// インデックス作成の進捗
+.progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progressBar {
+  width: 120px;
+  height: 6px;
+  accent-color: var(--vscode-progressBar-background);
+}
+
+.actions {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+// 制限している機能の一覧
+.list {
+  margin: 4px 0 2px;
+  padding-left: 24px;
+}
+
+// 1行目の下の注記
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--vscode-descriptionForeground);
+}

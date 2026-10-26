@@ -2,7 +2,7 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 import { setTimeout as sleep } from "timers/promises";
 import { suite, test } from "mocha";
-import { createProviderHarness, openCsv, useTempDir } from "./helpers/providerHarness";
+import { createProviderHarness, openCsv, replaceRows, useTempDir } from "./helpers/providerHarness";
 
 suite("VSCodeのUndo/Redoとwebviewの同期", () => {
   const temp = useTempDir("undo-redo");
@@ -24,13 +24,13 @@ suite("VSCodeのUndo/Redoとwebviewの同期", () => {
     await vscode.window.showTextDocument(document);
     const harness = createProviderHarness(document);
     await harness.send({ type: "init" });
-    await harness.send({ type: "update", payload: EDITED });
+    await harness.sendOps([replaceRows(2, 0, [["3", "4"]])]);
     await sleep(50);
     assert.strictEqual(document.getText(), EDITED);
     return { document, harness };
   }
 
-  test("webviewからのupdate適用後にundoするとドキュメントが戻り、webviewへ通知される", async () => {
+  test("webviewからの編集適用後にundoするとドキュメントが戻り、webviewへ通知される", async () => {
     const { document, harness } = await setup("undo.csv");
     const before = harness.postedOf("update").length;
 

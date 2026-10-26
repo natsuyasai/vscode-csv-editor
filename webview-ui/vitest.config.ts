@@ -19,7 +19,10 @@ export default mergeConfig(
           extends: true,
           test: {
             name: "unit",
-            include: ["src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+            include: [
+              "src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
+              "../src/shared/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
+            ],
             globals: true,
             environment: "jsdom",
             setupFiles: "./src/test-utils/setup.ts",

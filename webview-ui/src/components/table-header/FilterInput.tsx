@@ -8,7 +8,7 @@ import styles from "./FilterInput.module.scss";
  * 列のフィルタリングを行うための入力フィールドを提供します。
  * ユーザーが入力したテキストに基づいて列の値をフィルタリングします。
  */
-export const FilterInput: FC<FilterInputProps> = ({ column }) => {
+export const FilterInput: FC<FilterInputProps> = ({ column, ariaLabel }) => {
   const columnFilterValue = column.getFilterValue() as string;
 
   return (
@@ -20,6 +20,7 @@ export const FilterInput: FC<FilterInputProps> = ({ column }) => {
         column.setFilterValue(e.target.value);
       }}
       placeholder="フィルター..."
+      aria-label={ariaLabel}
     />
   );
 };

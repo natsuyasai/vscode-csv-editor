@@ -48,6 +48,19 @@
           }
         ],
         "priority": "option"
+      },
+      {
+        "viewType": "csv-editor.largeEditor",
+        "displayName": "CSV Editor (Large File)",
+        "selector": [
+          {
+            "filenamePattern": "*.csv"
+          },
+          {
+            "filenamePattern": "*.CSV"
+          }
+        ],
+        "priority": "option"
       }
     ],
     "commands": [
@@ -60,7 +73,7 @@
       "editor/title": [
         {
           "command": "csv-editor.openEditor",
-          "when": "resourceExtname =~ /^\\.[cC][sS][vV]$/ && activeCustomEditorId != csv-editor.openEditor",
+          "when": "resourceExtname =~ /^\\.[cC][sS][vV]$/ && activeCustomEditorId != csv-editor.openEditor && activeCustomEditorId != csv-editor.largeEditor",
           "group": "navigation"
         }
       ]
@@ -99,5 +112,8 @@
     "prettier": "^3.9.10",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.0"
+  },
+  "dependencies": {
+    "iconv-lite": "^0.7.3"
   }
 }

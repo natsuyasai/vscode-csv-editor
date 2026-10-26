@@ -2,7 +2,13 @@ import * as assert from "assert";
 import * as fs from "fs";
 import { setTimeout as sleep } from "timers/promises";
 import { suite, test } from "mocha";
-import { createProviderHarness, openCsv, replaceAll, useTempDir } from "./helpers/providerHarness";
+import {
+  createProviderHarness,
+  openCsv,
+  replaceAll,
+  replaceRows,
+  useTempDir,
+} from "./helpers/providerHarness";
 
 suite("reload メッセージ", () => {
   const temp = useTempDir("reload");
@@ -22,7 +28,7 @@ suite("reload メッセージ", () => {
     const document = await openCsv(temp.writeCsv("reload-dirty.csv", "a,b\n1,2\n"));
     const harness = createProviderHarness(document);
     await harness.send({ type: "init" });
-    await harness.send({ type: "update", payload: "a,b\n1,2\n3,4\n" });
+    await harness.sendOps([replaceRows(2, 0, [["3", "4"]])]);
     await sleep(100);
     assert.ok(document.isDirty);
     const before = harness.postedOf("update").length;

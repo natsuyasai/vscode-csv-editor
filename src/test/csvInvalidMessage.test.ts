@@ -71,11 +71,27 @@ suite("不正な webview メッセージの無視 (issue #89)", () => {
     ["type 欠落", {}],
     ["未知の type", { type: "evil", payload: "x" }],
     ["type が文字列でない", { type: 1, payload: "x" }],
-    ["update の payload 欠落", { type: "update" }],
-    ["update の payload が number", { type: "update", payload: 123 }],
-    ["update の payload が object", { type: "update", payload: { a: 1 } }],
-    ["save の payload 欠落", { type: "save" }],
+    ["廃止した全文の update", { type: "update", payload: "name,num\nx,1\n" }],
     ["save の payload が number", { type: "save", payload: 1 }],
+    ["applyOps の epoch 欠落", { type: "applyOps", ops: [] }],
+    ["applyOps の epoch が小数", { type: "applyOps", epoch: 1.5, ops: [] }],
+    ["applyOps の ops が配列でない", { type: "applyOps", epoch: 0, ops: "x" }],
+    [
+      "applyOps の op の start が負数",
+      {
+        type: "applyOps",
+        epoch: 0,
+        ops: [{ type: "replaceRows", start: -1, deleteCount: 0, rows: [] }],
+      },
+    ],
+    [
+      "applyOps の op の rows が string[][] でない",
+      {
+        type: "applyOps",
+        epoch: 0,
+        ops: [{ type: "replaceRows", start: 0, deleteCount: 0, rows: [[1]] }],
+      },
+    ],
     ["webview 向け type (updateTheme)", { type: "updateTheme", payload: "dark" }],
   ];
 
@@ -96,14 +112,20 @@ suite("不正な webview メッセージの無視 (issue #89)", () => {
     });
   });
 
-  test("不正メッセージの後でも正常な update は反映される", async () => {
+  test("不正メッセージの後でも正常な applyOps は反映される", async () => {
     const filePath = path.join(tempDir, "valid-after.csv");
     fs.writeFileSync(filePath, ORIGINAL, "utf8");
     const document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
     const harness = createHarness(document);
 
-    await harness.send({ type: "update", payload: 1 });
-    await harness.send({ type: "update", payload: "name,num\na,3\nb,2\n" });
+    await harness.send({ type: "applyOps", epoch: "1", ops: [] });
+    await harness.send({ type: "init" });
+    const { epoch } = harness.posted.at(-1) as { epoch: number };
+    await harness.send({
+      type: "applyOps",
+      epoch,
+      ops: [{ type: "replaceRows", start: 2, deleteCount: 1, rows: [["b", "2"]] }],
+    });
     await sleep(100);
 
     assert.strictEqual(document.getText(), "name,num\na,3\nb,2\n");

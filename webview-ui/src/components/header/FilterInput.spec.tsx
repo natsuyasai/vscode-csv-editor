@@ -83,4 +83,15 @@ describe("FilterInput", () => {
     // スタイルは実装の詳細なので、存在確認のみ
     expect(input).toBeInTheDocument();
   });
+
+  it("ariaLabel を渡すと入力欄のアクセシブルネームになる", () => {
+    const mockColumn = {
+      getFilterValue: () => "",
+      setFilterValue: vi.fn(),
+    };
+
+    render(<FilterInput column={mockColumn} ariaLabel="name のフィルター" />);
+
+    expect(screen.getByRole("textbox", { name: "name のフィルター" })).toBeInTheDocument();
+  });
 });

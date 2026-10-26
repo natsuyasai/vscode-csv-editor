@@ -1,0 +1,22 @@
+// 画面全体（バナー + 表）
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+// 表の領域（残りの高さ全部）
+.main {
+  flex: 1;
+  min-height: 0;
+}
+
+// 拡張機能からのエラー
+.error {
+  margin: 0;
+  padding: 4px 8px;
+  color: var(--vscode-errorForeground);
+  background-color: var(--vscode-inputValidation-errorBackground, transparent);
+  font-size: 12px;
+}
