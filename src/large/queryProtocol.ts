@@ -46,6 +46,8 @@ export interface ViewJobRequest {
   /** normalizeFilters 済みの条件（空ならフィルタしない） */
   filters: FilterCondition[];
   sort: { column: number; direction: SortDirection } | null;
+  /** ソートする行数（フィルタ後）の上限。超えたら失敗にする（ワーカーのメモリを守るため） */
+  maxSortRows?: number;
   tuning?: QueryTuning;
 }
 

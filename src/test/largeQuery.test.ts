@@ -482,6 +482,23 @@ suite("大容量モードでの検索・ソート・フィルタ", function () {
     });
   });
 
+  test("行数が上限を超えるとソートは拒否される", async () => {
+    const editor = await openHarness(writeFile("too-many.csv", CITY_CSV), {
+      document: { workerPath, maxSortRows: 9 },
+    });
+    const id = await editor.sort(1, "asc");
+    assert.strictEqual(editor.errorsOf(id).length, 1, "エラーが伝えられる");
+    assert.match(String(editor.errorsOf(id)[0].message), /上限/);
+    assert.deepStrictEqual(editor.document.queryState, { sort: null, filters: [] });
+
+    const filtered = await editor.filter([{ column: 1, text: "to" }]);
+    assert.deepStrictEqual(editor.errorsOf(filtered), []);
+    // フィルタ後は上限以下なのでソートできる
+    const sorted = await editor.sort(1, "asc");
+    assert.deepStrictEqual(editor.errorsOf(sorted), []);
+    assert.strictEqual(editor.lastInvalidate()?.rowCount, 5);
+  });
+
   test("インデックス作成中のソートは拒否される", async () => {
     const uri = writeFile("indexing.csv", CITY_CSV);
     const { build, created } = await ControlledRowIndex.factory(uri.fsPath);

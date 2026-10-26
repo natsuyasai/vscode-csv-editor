@@ -57,6 +57,8 @@ export interface LargeCsvDocumentOptions {
   workerPath?: string;
   /** ワーカーの読み方の調整（テストで小さくして、走査の途中でキャンセル・保存できるようにする） */
   queryTuning?: QueryTuning;
+  /** ソートできる行数（フィルタ後）の上限。既定 MAX_SORT_ROWS（テストで小さくする） */
+  maxSortRows?: number;
 }
 
 /** 表示位置で指定したデータ行の読み取り結果 */
@@ -142,6 +144,13 @@ interface ActiveQuery {
 }
 
 const EMPTY_QUERY: LargeQueryState = { sort: null, filters: [] };
+
+/**
+ * ソートできる行数（フィルタ後）の上限。ワーカーは行ごとに比較キーの文字列を持つので、
+ * 500MB・約480万行（"alpha-123-1" のような英数字の列）でワーカーのヒープが約1.4GB になった（計測値）。
+ * V8 の既定のヒープ上限（約4GB）に収まるよう、1,000万行で止める
+ */
+export const MAX_SORT_ROWS = 10_000_000;
 
 const copyQuery = (query: LargeQueryState): LargeQueryState => ({
   sort: query.sort ? { ...query.sort } : null,
@@ -843,6 +852,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
           rows: { order: store.handlesSnapshot(), edits: store.editedEntries() },
           filters: normalizeFilters(next.filters),
           sort: next.sort,
+          maxSortRows: this.options.maxSortRows ?? MAX_SORT_ROWS,
           tuning: this.options.queryTuning,
         };
       },

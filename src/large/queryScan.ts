@@ -292,6 +292,12 @@ async function runViewJob(request: ViewJobRequest, context: ScanContext): Promis
       stats: { readMs, totalMs: performance.now() - startedAt, peakHeapUsed },
     };
   }
+  const limit = request.maxSortRows ?? Infinity;
+  if (kept.length > limit) {
+    throw new Error(
+      `ソートできる行数の上限（${limit.toLocaleString()} 行）を超えています（${kept.length.toLocaleString()} 行）。フィルタで絞り込んでからソートしてください`
+    );
+  }
   const kind = detector.kind;
   for (let i = 0; i < values.length; i++) {
     values[i] = sortKey(values[i], kind);
