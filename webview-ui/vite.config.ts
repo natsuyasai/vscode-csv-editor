@@ -18,7 +18,8 @@ const BuildAfterScriptPlugin = () => {
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), BuildAfterScriptPlugin()],
-  server: { fs: { allow: [resolve("..")] } },
+  // 既定（workspace root）が上書きされるため、必要なディレクトリだけを明示する
+  server: { fs: { allow: [resolve("."), resolve("../src/shared"), resolve("../src/message")] } },
   resolve: {
     alias: {
       "@message": resolve("../src/message"),
