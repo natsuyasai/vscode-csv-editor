@@ -9,6 +9,7 @@ vi.mock("./utilities/vscode", () => ({
 }));
 
 // EditableTableはApp連携の検証に必要な最小限のスタブに置き換える
+// （差分の送信・保存・エポックの振る舞いは App.incrementalSync.feature で検証する）
 vi.mock("./components/editable-table/EditableTable", async () => {
   const React = await import("react");
   return {
@@ -37,16 +38,6 @@ vi.mock("./components/editable-table/EditableTable", async () => {
           >
             edit1
           </button>
-          <button
-            onClick={() =>
-              setCSVArray([
-                ["a", "b"],
-                ["1", "3"],
-              ])
-            }
-          >
-            edit2
-          </button>
           <button onClick={onApply}>apply</button>
         </div>
       );
@@ -60,7 +51,7 @@ function receive(type: "init" | "update", payload: string) {
   });
 }
 
-function updateCalls() {
+function sentMessages() {
   return postMessage.mock.calls.map((c) => c[0] as { type: string; payload?: string });
 }
 
@@ -73,52 +64,6 @@ describe("App 拡張機能との同期", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-  });
-
-  test("編集後はデバウンスしてupdateメッセージを1回だけ送る", () => {
-    render(<App />);
-    receive("init", "a,b\n1,1\n");
-    postMessage.mockClear();
-
-    fireEvent.click(screen.getByText("edit1"));
-    fireEvent.click(screen.getByText("edit2"));
-    expect(updateCalls()).toHaveLength(0);
-
-    act(() => {
-      vi.advanceTimersByTime(1000);
-    });
-    expect(updateCalls()).toEqual([{ type: "update", payload: "a,b\n1,3\n" }]);
-  });
-
-  test("Ctrl+S相当のApplyで保留中のupdateを破棄し最新テキストでsaveを送る", () => {
-    render(<App />);
-    receive("init", "a,b\n1,1\n");
-    postMessage.mockClear();
-
-    fireEvent.click(screen.getByText("edit1"));
-    fireEvent.click(screen.getByText("apply"));
-    act(() => {
-      vi.advanceTimersByTime(1000);
-    });
-
-    expect(updateCalls()).toEqual([{ type: "save", payload: "a,b\n1,2\n" }]);
-  });
-
-  test("自分の編集と同一テキストのupdateでは再パース・再生成しない", () => {
-    render(<App />);
-    receive("init", "a,b\n1,1\n");
-    fireEvent.click(screen.getByText("edit1"));
-    const mountCount = tableMount.mock.calls.length;
-
-    receive("update", "a,b\n1,2\n");
-
-    expect(tableMount.mock.calls.length).toBe(mountCount);
-    expect(screen.getByTestId("cells").textContent).toBe(
-      JSON.stringify([
-        ["a", "b"],
-        ["1", "2"],
-      ])
-    );
   });
 
   test("外部変更は反映し、未送信の編集を破棄してテーブルを作り直す(Undo履歴クリア)", () => {
@@ -140,6 +85,6 @@ describe("App 拡張機能との同期", () => {
       ])
     );
     expect(tableMount.mock.calls.length).toBe(mountCount + 1);
-    expect(updateCalls()).toHaveLength(0);
+    expect(sentMessages()).toHaveLength(0);
   });
 });
