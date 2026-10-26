@@ -1,14 +1,13 @@
 // WebViewの内容を表示するためのクラス
 import * as vscode from "vscode";
-import { ThemeKind, UpdateMessage, UpdateThemeMessage } from "../message/messageTypeToWebview";
+import { UpdateMessage, UpdateThemeMessage } from "../message/messageTypeToWebview";
 import { ApplyOpsMessage, isMessageToExtension } from "../message/messageTypeToExtension";
 import { applyRowOpsToText, verifyAppliedRows } from "../shared/csv/applyRowOpsToText";
 import type { RowOpsTextEdits } from "../shared/csv/applyRowOpsToText";
 import { CsvFormat, DEFAULT_CSV_FORMAT, detectCsvFormat } from "../shared/csv/csvFormat";
 import { disposeAll } from "../util/dispose";
-import { getUri } from "../util/getUri";
+import { getThemeKind, getWebviewHtml } from "./webviewContent";
 import { loggerDisposable, logWarning } from "../util/logger";
-import { getNonce } from "../util/util";
 
 /** ログ用に不正メッセージの概要だけを返す（payload の内容は出力しない） */
 function describeInvalidMessage(value: unknown): string {
@@ -76,12 +75,12 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     webviewPanel.webview.options = {
       enableScripts: true,
     };
-    webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
+    webviewPanel.webview.html = getWebviewHtml(webviewPanel.webview, this.context.extensionUri);
 
     function updateTheme() {
       webviewPanel.webview.postMessage({
         type: "updateTheme",
-        payload: CSVEditorProvider.getThemeKind(),
+        payload: getThemeKind(),
       } satisfies UpdateThemeMessage);
     }
 
@@ -263,58 +262,6 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
     webviewPanel.onDidDispose(() => {
       disposeAll(disposables);
     });
-  }
-
-  private static getThemeKind(): ThemeKind {
-    switch (vscode.window.activeColorTheme.kind) {
-      case vscode.ColorThemeKind.Light:
-      case vscode.ColorThemeKind.HighContrastLight:
-        return "light";
-      case vscode.ColorThemeKind.Dark:
-      case vscode.ColorThemeKind.HighContrast:
-        return "dark";
-      default:
-        return "light"; // Default to light if unknown
-    }
-  }
-
-  /**
-   * Get the static HTML used for in our editor's webviews.
-   */
-  private getHtmlForWebview(webview: vscode.Webview): string {
-    const extensionUri = this.context.extensionUri;
-    // The CSS file from the React build output
-    const stylesUri = getUri(webview, extensionUri, ["webview-ui", "build", "assets", "index.css"]);
-    // The JS file from the React build output
-    const scriptUri = getUri(webview, extensionUri, ["webview-ui", "build", "assets", "index.js"]);
-    const codiconsUri = getUri(webview, extensionUri, [
-      "webview-ui",
-      "build",
-      "assets",
-      "codicon.css",
-    ]);
-
-    // Use a nonce to whitelist which scripts can be run
-    const nonce = getNonce();
-    return /*html*/ `
-      <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <!-- CSP は default-src none を基点に必要なものだけ許可する（安全側）。
-               img-src / connect-src 等を追加する場合も、必要最小限のソースのみ個別に許可し、unsafe-inline や * は使わないこと -->
-          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource}; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
-          <link rel="stylesheet" href="${codiconsUri.toString()}" id="vscode-codicon-stylesheet">
-          <link rel="stylesheet" type="text/css" href="${stylesUri.toString()}" />
-          <title>CSVEditor</title>
-        </head>
-        <body>
-          <div id="root"></div>
-          <script type="module" nonce="${nonce}" src="${scriptUri.toString()}"></script>
-        </body>
-      </html>
-    `;
   }
 
   /**
