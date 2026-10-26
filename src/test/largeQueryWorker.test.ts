@@ -270,6 +270,59 @@ suite("検索・ソート・フィルタの走査とワーカー", function () {
     fs.renameSync(filePath, filePath + ".moved");
   });
 
+  test("ソートする行数が上限を超えたら、全部を読む前に失敗してファイルを閉じる", async () => {
+    const { source, filePath } = await prepare(500);
+    const ratios: number[] = [];
+    let released = false;
+    await assert.rejects(
+      runQueryJob(
+        {
+          kind: "view",
+          source,
+          rows: { order: Float64Array.from({ length: 500 }, (_, i) => i + 1), edits: [] },
+          // すべての行に合うフィルタ（フィルタ後の行数は読み終えるまで分からない）
+          filters: normalizeFilters([{ column: 0, text: "r" }]),
+          sort: { column: 0, direction: "asc" },
+          maxSortRows: 50,
+          tuning: { batchRows: 10, progressIntervalMs: 0 },
+        },
+        {
+          isCancelled: () => false,
+          onProgress: (ratio) => {
+            ratios.push(ratio);
+          },
+          onReleased: () => {
+            released = true;
+          },
+        }
+      ),
+      /上限/
+    );
+    assert.ok(
+      Math.max(0, ...ratios) < 0.2,
+      `上限を超えた時点で止める（進捗 ${String(ratios.at(-1))}）`
+    );
+    assert.ok(released);
+    fs.renameSync(filePath, filePath + ".moved");
+
+    // フィルタが無ければ読む前に分かる
+    const { source: second } = await prepare(60);
+    await assert.rejects(
+      runQueryJob(
+        {
+          kind: "view",
+          source: second,
+          rows: { order: Float64Array.from({ length: 60 }, (_, i) => i + 1), edits: [] },
+          filters: [],
+          sort: { column: 0, direction: "asc" },
+          maxSortRows: 50,
+        },
+        noopContext()
+      ),
+      /上限/
+    );
+  });
+
   suite("ワーカー（dist/largeCsvWorker.js）", () => {
     let client: QueryWorkerClient | undefined;
 

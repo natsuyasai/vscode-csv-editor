@@ -256,6 +256,15 @@ async function runViewJob(request: ViewJobRequest, context: ScanContext): Promis
   const kept: number[] = [];
   const values: string[] = [];
   const detector = new SortKindDetector();
+  // 上限を超えたら、キーを溜め込む前に止める（ワーカーのメモリを守るため）
+  const limit = sort ? (request.maxSortRows ?? Infinity) : Infinity;
+  const overLimit = (rows: number) =>
+    new Error(
+      `ソートできる行数の上限（${limit.toLocaleString()} 行）を超えています（${rows.toLocaleString()} 行以上）。フィルタで絞り込んでからソートしてください`
+    );
+  if (filters.length === 0 && order.length > limit) {
+    throw overLimit(order.length);
+  }
   await withReader(request, context, (scanner) =>
     scanPositions(
       scanner,
@@ -268,6 +277,9 @@ async function runViewJob(request: ViewJobRequest, context: ScanContext): Promis
           return false;
         }
         kept.push(handle);
+        if (kept.length > limit) {
+          throw overLimit(kept.length);
+        }
         if (sort) {
           const value = row[sort.column] ?? "";
           detector.observe(value);
@@ -291,12 +303,6 @@ async function runViewJob(request: ViewJobRequest, context: ScanContext): Promis
       handles: Float64Array.from(kept),
       stats: { readMs, totalMs: performance.now() - startedAt, peakHeapUsed },
     };
-  }
-  const limit = request.maxSortRows ?? Infinity;
-  if (kept.length > limit) {
-    throw new Error(
-      `ソートできる行数の上限（${limit.toLocaleString()} 行）を超えています（${kept.length.toLocaleString()} 行）。フィルタで絞り込んでからソートしてください`
-    );
   }
   const kind = detector.kind;
   for (let i = 0; i < values.length; i++) {
