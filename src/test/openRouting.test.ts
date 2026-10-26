@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { suite, test } from "mocha";
+import { suite, teardown, test } from "mocha";
 import * as vscode from "vscode";
 
 import { LARGE_VIEW_TYPE } from "../large/largeCsvEditorProvider";
@@ -30,8 +30,12 @@ interface Opened {
   normalDecision?: "sync" | "async";
 }
 
+/** このテストで作った Picker（答えが選択肢に無くてキャンセル扱いになっていないかを teardown で確かめる） */
+const createdPickers: ScriptedPicker[] = [];
+
 function createRouter(sizes: Record<string, number>, ...answers: unknown[]) {
   const picker = new ScriptedPicker(...answers);
+  createdPickers.push(picker);
   const pending = new PendingEncodings();
   const opened: Opened[] = [];
   const closed: vscode.Tab[] = [];
@@ -80,6 +84,12 @@ const customTab = (uri: vscode.Uri, viewType: string, viewColumn = vscode.ViewCo
   }) as unknown as vscode.Tab;
 
 suite("入口の振り分け（OpenRouter）", () => {
+  teardown(() => {
+    for (const picker of createdPickers.splice(0)) {
+      assert.deepStrictEqual(picker.mismatches, [], "答えはすべて選択肢にある");
+    }
+  });
+
   suite("コマンドの対象のURI", () => {
     test("引数のURIを優先する", () => {
       const arg = fileUri("arg.csv");

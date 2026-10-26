@@ -112,10 +112,13 @@ suite("大容量CSVを開く", function () {
   });
 
   setup(async () => {
+    picker = new ScriptedPicker();
     await closeAllEditorsAndWait();
   });
 
   teardown(async () => {
+    // 答えが選択肢に無くてキャンセル扱いになると、キャンセルを期待するテストが素通りするため確かめる
+    assert.deepStrictEqual(picker.mismatches, [], "答えはすべて選択肢にある");
     // 残った振り分けが本物の QuickPick を出さないよう、すべてキャンセルする Picker にしておく
     api.setPickerForTesting(new ScriptedPicker());
     await closeAllEditorsAndWait();
