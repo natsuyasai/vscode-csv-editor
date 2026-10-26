@@ -310,4 +310,159 @@ describe("RemoteRowSource", () => {
       );
     });
   });
+
+  describe("applyOps（楽観的更新）", () => {
+    type ApplyOps = Extract<LargeMessageToExtension, { type: "large/applyOps" }>;
+
+    /** 30行（3ページ）をすべて取得済みにした RowSource。ハンドルは行位置と同じ */
+    const loaded = (rowCount = 30, range: [number, number] = [0, rowCount]) => {
+      const created = createSource({ rowCount });
+      created.source.ensureRange(range[0], range[1]);
+      for (const request of created.requests()) {
+        created.respond(request);
+      }
+      created.sent.length = 0;
+      return created;
+    };
+
+    it("large/applyOps で op をそのまま拡張機能へ送る", () => {
+      const { source, sent } = loaded();
+      const ops = [{ type: "setRow" as const, handle: 3, row: ["new", "x"] }];
+      source.applyOps(ops);
+      expect(sent[0]).toEqual({ type: "large/applyOps", ops });
+    });
+
+    it("setRow はキャッシュ内の同じハンドルの行を即座に置き換え、購読者へ通知する", () => {
+      const { source, requests } = loaded();
+      const listener = vi.fn();
+      source.subscribe(listener);
+      source.applyOps([{ type: "setRow", handle: 13, row: ["edited", "y"] }]);
+      expect(source.getRow(13)).toEqual(["edited", "y"]);
+      expect(source.getHandle(13)).toBe(13);
+      expect(source.getRow(12)).toEqual(["v12", "x"]);
+      expect(listener).toHaveBeenCalled();
+      // 取得済みの行は取り直さない
+      expect(requests()).toHaveLength(0);
+    });
+
+    it("op より前に送った要求の応答（編集前の行）は捨て、op を送った後に取り直す", () => {
+      const { source, sent, requests, respond } = createSource({ rowCount: 30 });
+      source.ensureRange(0, 10);
+      const stale = requests()[0];
+      source.applyOps([{ type: "setRow", handle: 3, row: ["edited", "y"] }]);
+      // 編集前の内容で遅れて届いた応答は使わない
+      respond(stale, "old");
+      expect(source.getRow(3)).toBeUndefined();
+      // applyOps の後に同じ範囲を要求し直す（拡張機能は op を適用してから応答する）
+      const types = sent.map((m) => m.type);
+      expect(types.indexOf("large/applyOps")).toBeLessThan(types.lastIndexOf("large/getRows"));
+      const retry = requests()[requests().length - 1];
+      expect(retry.reqId).not.toBe(stale.reqId);
+      expect(retry.start).toBe(0);
+    });
+
+    it("insertRows は beforeHandle の位置に行を差し込み、行数と後ろの行をずらす", () => {
+      const { source } = loaded();
+      source.applyOps([
+        { type: "insertRows", beforeHandle: 15, handles: [-1, -2], rows: [["n1"], ["n2"]] },
+      ]);
+      expect(source.rowCount).toBe(32);
+      expect(source.getRow(14)).toEqual(["v14", "x"]);
+      expect(source.getRow(15)).toEqual(["n1"]);
+      expect(source.getHandle(15)).toBe(-1);
+      expect(source.getHandle(16)).toBe(-2);
+      expect(source.getRow(17)).toEqual(["v15", "x"]);
+      expect(source.getHandle(17)).toBe(15);
+      expect(source.getRow(31)).toEqual(["v29", "x"]);
+    });
+
+    it("beforeHandle が null の insertRows は末尾に追加する", () => {
+      const { source } = loaded();
+      source.applyOps([{ type: "insertRows", beforeHandle: null, handles: [-1], rows: [["n"]] }]);
+      expect(source.rowCount).toBe(31);
+      expect(source.getRow(30)).toEqual(["n"]);
+      expect(source.getHandle(30)).toBe(-1);
+      expect(source.getRow(29)).toEqual(["v29", "x"]);
+    });
+
+    it("deleteRows はハンドルの行を除き、行数と後ろの行を詰める", () => {
+      const { source } = loaded();
+      source.applyOps([{ type: "deleteRows", handles: [15] }]);
+      expect(source.rowCount).toBe(29);
+      expect(source.getRow(14)).toEqual(["v14", "x"]);
+      expect(source.getRow(15)).toEqual(["v16", "x"]);
+      expect(source.getHandle(15)).toBe(16);
+      expect(source.getRow(28)).toEqual(["v29", "x"]);
+      expect(source.getRow(29)).toBeUndefined();
+    });
+
+    it("位置がずれて中身が揃わなくなったページは捨てて取り直す", () => {
+      // 100行のうち 0〜19 行目（2ページ）と 50〜59 行目（離れた1ページ）だけを取得済みにする
+      const { source, requests, respond, sent } = createSource({ rowCount: 100 });
+      source.ensureRange(50, 60);
+      source.ensureRange(0, 20);
+      for (const request of requests()) {
+        respond(request);
+      }
+      sent.length = 0;
+      source.applyOps([{ type: "insertRows", beforeHandle: 5, handles: [-1], rows: [["n"]] }]);
+      expect(source.getRow(5)).toEqual(["n"]);
+      expect(source.getRow(19)).toEqual(["v18", "x"]);
+      // 20行目は未取得だった次のページの行がずれて入るはずなので、空のまま取り直す
+      expect(source.getRow(20)).toBeUndefined();
+      expect(source.getRow(55)).toBeUndefined();
+      // 直近の表示範囲（0〜19）は揃っているので、取り直しは不要
+      expect(requests()).toHaveLength(0);
+    });
+
+    it("キャッシュに無いハンドルへの挿入は位置が分からないため、行数だけ変えて全体を取り直す", () => {
+      const { source, requests } = loaded(30, [0, 10]);
+      source.applyOps([{ type: "insertRows", beforeHandle: 25, handles: [-1], rows: [["n"]] }]);
+      expect(source.rowCount).toBe(31);
+      expect(source.getRow(0)).toBeUndefined();
+      expect(requests()).toHaveLength(1);
+      expect(requests()[0].start).toBe(0);
+    });
+
+    it("setHeader はヘッダーを即座に置き換える", () => {
+      const { source } = loaded();
+      const listener = vi.fn();
+      source.subscribe(listener);
+      source.applyOps([{ type: "setHeader", header: ["A", "B"] }]);
+      expect(source.header).toEqual(["A", "B"]);
+      expect(listener).toHaveBeenCalled();
+    });
+
+    it("op を送った後の large/invalidate で拡張機能の状態に収束する", () => {
+      const { source, requests, respond, sent } = loaded();
+      source.applyOps([{ type: "setRow", handle: 3, row: ["optimistic", "x"] }]);
+      expect((sent[0] as ApplyOps).type).toBe("large/applyOps");
+      source.handleMessage({ type: "large/invalidate", revision: 1, rowCount: 30 });
+      expect(source.getRow(3)).toBeUndefined();
+      for (const request of requests()) {
+        respond(request, "server");
+      }
+      expect(source.getRow(3)).toEqual(["server3", "x"]);
+    });
+
+    it("large/invalidate の header でヘッダーを置き換え、header が無ければそのまま", () => {
+      const { source } = loaded();
+      source.applyOps([{ type: "setHeader", header: ["optimistic", "b"] }]);
+      source.handleMessage({ type: "large/invalidate", revision: 1, rowCount: 30 });
+      expect(source.header).toEqual(["optimistic", "b"]);
+      source.handleMessage({
+        type: "large/invalidate",
+        revision: 2,
+        rowCount: 30,
+        header: ["a", "b"],
+      });
+      expect(source.header).toEqual(["a", "b"]);
+    });
+
+    it("空の ops は送らない", () => {
+      const { source, sent } = loaded();
+      source.applyOps([]);
+      expect(sent).toHaveLength(0);
+    });
+  });
 });

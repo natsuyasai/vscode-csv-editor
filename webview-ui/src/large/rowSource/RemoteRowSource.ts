@@ -1,6 +1,7 @@
 import {
   MAX_ROWS_PER_REQUEST,
   type LargeMessageToExtension,
+  type LargeOp,
   type LargeMessageToWebview,
 } from "@message/largeMessages";
 import { vscode } from "../../utilities/vscode";
@@ -40,6 +41,9 @@ export interface RemoteRowSourceOptions {
  * 拡張機能へ `large/getRows` を送って行を取得する RowSource。
  * 行は PAGE 単位でキャッシュし（LRU）、要求中のページは再要求しない。
  * `large/invalidate` を受けたらキャッシュと要求中の応答を破棄し、直近の表示範囲を取り直す。
+ *
+ * 編集（applyOps）は `large/applyOps` を送ると同時にキャッシュへ反映する（楽観的更新）。
+ * 拡張機能は op を適用した後に `large/invalidate` を送る想定で、それを受けて正しい状態に収束する。
  */
 export class RemoteRowSource extends ObservableRowSource implements RowSource {
   header: string[];
@@ -104,6 +108,31 @@ export class RemoteRowSource extends ObservableRowSource implements RowSource {
     this.requestPages(missing);
   }
 
+  /**
+   * 編集操作を拡張機能へ送り、同時にキャッシュへ反映する。
+   * - setRow: キャッシュ内の同じハンドルの行を置き換える
+   * - insertRows / deleteRows: 位置以降の行をずらす。ずらした結果、中身が揃わなくなったページは捨てる。
+   *   キャッシュに無いハンドルは位置が分からないため、行数だけ変えてキャッシュ全体を捨てる
+   * - setHeader: ヘッダーを置き換える
+   * op より前に送った要求の応答は編集前の内容なので捨て、op を送った後に直近の表示範囲を取り直す
+   * （拡張機能はメッセージを順に処理するので、後から送った要求には op の適用後の行が返る）
+   */
+  applyOps(ops: LargeOp[]): void {
+    if (ops.length === 0) {
+      return;
+    }
+    this.postMessage({ type: "large/applyOps", ops });
+    this.inflight.clear();
+    this.inflightPages.clear();
+    for (const op of ops) {
+      this.applyOptimistic(op);
+    }
+    this.notify();
+    if (this.lastRange) {
+      this.ensureRange(this.lastRange[0], this.lastRange[1]);
+    }
+  }
+
   /** 受信メッセージを処理する。この RowSource が扱うメッセージなら true */
   handleMessage(message: LargeMessageToWebview): boolean {
     switch (message.type) {
@@ -113,6 +142,9 @@ export class RemoteRowSource extends ObservableRowSource implements RowSource {
       case "large/invalidate":
         if (message.revision >= this.revision) {
           this.revision = message.revision;
+          if (message.header) {
+            this.header = message.header;
+          }
           this.reset(message.rowCount);
         }
         return true;
@@ -128,6 +160,106 @@ export class RemoteRowSource extends ObservableRowSource implements RowSource {
         return true;
       default:
         return false;
+    }
+  }
+
+  private applyOptimistic(op: LargeOp): void {
+    switch (op.type) {
+      case "setRow":
+        for (const [page, cached] of this.pages) {
+          const offset = cached.handles.indexOf(op.handle);
+          if (offset !== -1) {
+            const rows = [...cached.rows];
+            rows[offset] = op.row;
+            this.pages.set(page, { rows, handles: cached.handles });
+          }
+        }
+        break;
+      case "insertRows": {
+        const position =
+          op.beforeHandle === null ? this.rowCount : this.findPosition(op.beforeHandle);
+        if (position === undefined) {
+          this.discardAll(this.rowCount + op.rows.length);
+        } else {
+          this.splice(position, 0, op.rows, op.handles);
+        }
+        break;
+      }
+      case "deleteRows":
+        for (const handle of op.handles) {
+          const position = this.findPosition(handle);
+          if (position === undefined) {
+            this.discardAll(Math.max(0, this.rowCount - 1));
+          } else {
+            this.splice(position, 1, [], []);
+          }
+        }
+        break;
+      case "setHeader":
+        this.header = op.header;
+        break;
+    }
+  }
+
+  /** キャッシュ内でハンドルの行がある表示位置。無ければ undefined */
+  private findPosition(handle: number): number | undefined {
+    for (const [page, cached] of this.pages) {
+      const offset = cached.handles.indexOf(handle);
+      if (offset !== -1) {
+        return page * this.pageSize + offset;
+      }
+    }
+    return undefined;
+  }
+
+  /** 行数を変えてキャッシュを全部捨てる（位置が分からない編集） */
+  private discardAll(rowCount: number): void {
+    this.rowCount = rowCount;
+    this.pages.clear();
+  }
+
+  /**
+   * position から deleteCount 行を除き rows を差し込んだように、キャッシュと行数を更新する。
+   * position のページから連続して取得済みのページをつなげて差し込み、ページ単位に切り直す。
+   * 切り直した最後のページが（未取得の次のページの行が入るはずで）揃わない場合と、
+   * 連続していない後ろのページ（位置がずれる）は捨てる
+   */
+  private splice(position: number, deleteCount: number, rows: string[][], handles: number[]): void {
+    const firstPage = Math.floor(position / this.pageSize);
+    const runStart = firstPage * this.pageSize;
+    const runRows: string[][] = [];
+    const runHandles: number[] = [];
+    for (let page = firstPage; ; page++) {
+      const cached = this.pages.get(page);
+      if (!cached) {
+        break;
+      }
+      runRows.push(...cached.rows);
+      runHandles.push(...cached.handles);
+    }
+    const runReachesEnd = runStart + runRows.length >= this.rowCount;
+    for (const page of [...this.pages.keys()]) {
+      if (page >= firstPage) {
+        this.pages.delete(page);
+      }
+    }
+    this.rowCount = this.rowCount - deleteCount + rows.length;
+
+    const offset = position - runStart;
+    if (offset > runRows.length) {
+      return;
+    }
+    runRows.splice(offset, deleteCount, ...rows);
+    runHandles.splice(offset, deleteCount, ...handles);
+    for (let i = 0; i < runRows.length; i += this.pageSize) {
+      const pageRows = runRows.slice(i, i + this.pageSize);
+      if (pageRows.length < this.pageSize && !runReachesEnd) {
+        break;
+      }
+      this.pages.set(firstPage + i / this.pageSize, {
+        rows: pageRows,
+        handles: runHandles.slice(i, i + this.pageSize),
+      });
     }
   }
 
