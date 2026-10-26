@@ -20,13 +20,24 @@ interface Entry {
   inverses: RowStoreOp[];
 }
 
+export interface EditStackOptions {
+  /**
+   * RowStore に op を1つ当てるたびに呼ぶ（apply・undo の逆操作・redo・失敗時の巻き戻しを含む、当てた順）。
+   * ソート・フィルタの表示順を RowStore の並びの変化に追従させるのに使う
+   */
+  onApplied?: (op: RowStoreOp) => void;
+}
+
 export class EditStack {
   private readonly done: Entry[] = [];
   private undone: Entry[] = [];
   private nextId = 1;
   private savedId = 0;
 
-  constructor(private readonly store: RowStore) {}
+  constructor(
+    private readonly store: RowStore,
+    private readonly options: EditStackOptions = {}
+  ) {}
 
   /**
    * op 列を1単位として当てる。途中の op が不正なら、それまでの op を巻き戻して RowStoreError を投げる
@@ -48,7 +59,7 @@ export class EditStack {
       return false;
     }
     for (let i = entry.inverses.length - 1; i >= 0; i--) {
-      this.store.apply(entry.inverses[i]);
+      this.applyOne(entry.inverses[i]);
     }
     this.undone.push(entry);
     return true;
@@ -98,14 +109,20 @@ export class EditStack {
     const inverses: RowStoreOp[] = [];
     try {
       for (const op of ops) {
-        inverses.push(this.store.apply(op));
+        inverses.push(this.applyOne(op));
       }
     } catch (error) {
       for (let i = inverses.length - 1; i >= 0; i--) {
-        this.store.apply(inverses[i]);
+        this.applyOne(inverses[i]);
       }
       throw error;
     }
     return inverses;
+  }
+
+  private applyOne(op: RowStoreOp): RowStoreOp {
+    const inverse = this.store.apply(op);
+    this.options.onApplied?.(op);
+    return inverse;
   }
 }

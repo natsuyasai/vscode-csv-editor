@@ -12,6 +12,37 @@ function setup(lineCount = 4) {
 }
 
 describe("EditStack", () => {
+  it("onApplied に、当てた op を当てた順に知らせる（undo は逆操作、redo は元の op）", () => {
+    const store = new RowStore(4);
+    const applied: string[] = [];
+    const stack = new EditStack(store, {
+      onApplied: (op) => {
+        applied.push(op.type);
+      },
+    });
+    stack.apply([
+      { type: "insertRows", beforeHandle: 1, handles: [-1], rows: [["n"]] },
+      { type: "deleteRows", handles: [2] },
+    ]);
+    expect(applied).toEqual(["insertRows", "deleteRows"]);
+    stack.undo();
+    expect(applied.slice(2)).toEqual(["restoreRows", "deleteRows"]);
+    stack.redo();
+    expect(applied.slice(4)).toEqual(["insertRows", "deleteRows"]);
+  });
+
+  it("onApplied は途中で失敗して巻き戻した op も、巻き戻しの逆操作とあわせて知らせる", () => {
+    const store = new RowStore(4);
+    const applied: string[] = [];
+    const stack = new EditStack(store, { onApplied: (op) => applied.push(op.type) });
+    expect(() =>
+      stack.apply([
+        { type: "deleteRows", handles: [1] },
+        { type: "setRow", handle: 99, row: [] },
+      ])
+    ).toThrow(RowStoreError);
+    expect(applied).toEqual(["deleteRows", "restoreRows"]);
+  });
   it("初期状態は undo も redo もできず、dirty でない", () => {
     const { stack } = setup();
     expect(stack.canUndo).toBe(false);

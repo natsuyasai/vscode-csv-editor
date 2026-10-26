@@ -16,6 +16,27 @@ function segmentsOf(store: RowStore): RowSegment[] {
 }
 
 describe("RowStore", () => {
+  describe("スナップショット（ワーカーへ渡す）", () => {
+    it("handlesSnapshot は並びのハンドルを Float64Array で返す", () => {
+      const store = new RowStore(6, { chunkSize: 2 });
+      store.apply({ type: "insertRows", beforeHandle: 3, handles: [-1, -2], rows: [["a"], ["b"]] });
+      store.apply({ type: "deleteRows", handles: [4] });
+      expect(Array.from(store.handlesSnapshot())).toEqual(store.handlesInRange(0, store.rowCount));
+      expect(Array.from(store.handlesSnapshot())).toEqual([1, 2, -1, -2, 3, 5]);
+    });
+
+    it("editedEntries は並びにある編集した行と追加行の内容を返す", () => {
+      const store = new RowStore(4);
+      store.apply({ type: "setRow", handle: 2, row: ["x"] });
+      store.apply({ type: "insertRows", beforeHandle: null, handles: [-1], rows: [["n"]] });
+      expect(new Map(store.editedEntries())).toEqual(
+        new Map([
+          [2, ["x"]],
+          [-1, ["n"]],
+        ])
+      );
+    });
+  });
   describe("初期状態", () => {
     it("ヘッダーを除いたデータ行のハンドル 1..N を表示順に持つ", () => {
       const store = new RowStore(4);

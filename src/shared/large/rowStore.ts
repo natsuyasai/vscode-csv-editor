@@ -272,6 +272,29 @@ export class RowStore {
     return -1;
   }
 
+  /** 並びのハンドルすべて（表示位置の順。ワーカーへ渡すスナップショット）。O(行数) */
+  handlesSnapshot(): Float64Array {
+    const result = new Float64Array(this.count);
+    let base = 0;
+    for (const chunk of this.chunks) {
+      if (chunk.kind === "range") {
+        for (let i = 0; i < chunk.length; i++) {
+          result[base + i] = chunk.start + i;
+        }
+        base += chunk.length;
+      } else {
+        result.set(chunk.handles, base);
+        base += chunk.handles.length;
+      }
+    }
+    return result;
+  }
+
+  /** 並びにある、編集した元の行と追加行の内容（スナップショット。内容の配列は書き換えないこと） */
+  editedEntries(): [number, readonly string[]][] {
+    return [...this.edits];
+  }
+
   /** 並びにあるか（ヘッダー 0 は含まない） */
   has(handle: number): boolean {
     if (handle < 0) {
