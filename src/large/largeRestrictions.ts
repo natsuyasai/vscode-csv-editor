@@ -10,13 +10,8 @@ export const PERMANENT_RESTRICTIONS: readonly string[] = [
   "オートフィル",
 ];
 
-/** まだ対応していない機能（2-3: 検索・ソート・フィルタ、2-4: 範囲コピー&ペースト）。編集・保存は 2-2 で対応済み */
-export const PENDING_RESTRICTIONS: readonly string[] = [
-  "検索",
-  "ソート",
-  "フィルタ",
-  "範囲コピー&ペースト",
-];
+/** まだ対応していない機能（2-4: 範囲コピー&ペースト）。編集・保存は 2-2、検索・ソート・フィルタは 2-3 で対応済み */
+export const PENDING_RESTRICTIONS: readonly string[] = ["範囲コピー&ペースト"];
 
 /** webview に送る制限中の機能の一覧 */
 export const LARGE_MODE_RESTRICTIONS: readonly string[] = [
