@@ -84,4 +84,12 @@ describe("InMemoryRowSource", () => {
     source.applyOps([{ type: "setHeader", header: ["x"] }]);
     expect(listener).not.toHaveBeenCalled();
   });
+
+  it("ハンドルを渡すと、行のハンドルとして使う（ファイルの行番号と同じ形にできる）", () => {
+    const source = new InMemoryRowSource(["id"], [["a"], ["b"]], [1, 2]);
+    expect(source.getHandle(0)).toBe(1);
+    expect(source.getHandle(1)).toBe(2);
+    source.applyOps([{ type: "setRow", handle: 2, row: ["B"] }]);
+    expect(source.getRow(1)).toEqual(["B"]);
+  });
 });

@@ -11,10 +11,14 @@ export class InMemoryRowSource extends ObservableRowSource implements RowSource 
   header: string[];
   private entries: Entry[];
 
-  constructor(header: string[], rows: string[][]) {
+  /**
+   * @param handles 行のハンドル（省略時は 0 始まりの行位置）。
+   *   ファイルの行番号と同じ形（データ行は 1 始まり）で試すときに渡す
+   */
+  constructor(header: string[], rows: string[][], handles?: number[]) {
     super();
     this.header = header;
-    this.entries = rows.map((row, handle) => ({ handle, row }));
+    this.entries = rows.map((row, i) => ({ handle: handles?.[i] ?? i, row }));
   }
 
   get rowCount(): number {
