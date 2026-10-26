@@ -1,12 +1,22 @@
 import type { LargeMessageToExtension, LargeMessageToWebview } from "@message/largeMessages";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { LargeApp } from "./LargeApp";
 import { createLargeMessageHub, type LargeMessageHub } from "./largeMessageHub";
 
-const postMessage = vi.hoisted(() => vi.fn());
+const { postMessage, webviewState } = vi.hoisted(() => ({
+  postMessage: vi.fn(),
+  webviewState: { value: undefined as unknown },
+}));
 
 vi.mock("@/utilities/vscode", () => ({
-  vscode: { postMessage },
+  vscode: {
+    postMessage,
+    getState: () => webviewState.value,
+    setState: (state: unknown) => {
+      webviewState.value = state;
+      return state;
+    },
+  },
 }));
 
 type LargeInit = Extract<LargeMessageToWebview, { type: "large/init" }>;
@@ -39,9 +49,31 @@ const sent = () => postMessage.mock.calls.map((call) => call[0] as { type: strin
 const getRowsRequests = () =>
   sent().filter((message): message is GetRows => message.type === "large/getRows");
 
+/** 最後の getRows に、ハンドルがファイルの行番号（1 始まり）の行で応答する */
+function respondLatestRows() {
+  const requests = getRowsRequests();
+  const request = requests[requests.length - 1];
+  receive({
+    type: "large/rows",
+    reqId: request.reqId,
+    start: request.start,
+    rows: Array.from({ length: request.count }, (_, i) => [String(i), `row${String(i)}`]),
+    handles: Array.from({ length: request.count }, (_, i) => request.start + i + 1),
+  });
+}
+
+const cellOf = (rowNumber: number, col: number) => {
+  const row = screen.getByRole("rowheader", { name: String(rowNumber) }).closest("tr");
+  if (!row) throw new Error("行が無い");
+  return within(row).getAllByRole("gridcell")[col];
+};
+
+const applyOpsMessages = () => sent().filter((message) => message.type === "large/applyOps");
+
 describe("LargeApp", () => {
   beforeEach(() => {
     postMessage.mockClear();
+    webviewState.value = undefined;
     Object.defineProperty(HTMLElement.prototype, "clientHeight", {
       configurable: true,
       value: 600,
@@ -115,6 +147,60 @@ describe("LargeApp", () => {
       );
     });
     expect(screen.getByRole("progressbar")).toHaveAttribute("value", "0");
+  });
+
+  test("セルを編集すると large/applyOps でハンドルを指定した行の置き換えを送り、即座に表示する", () => {
+    show({ ...INIT, rowCount: 3, indexing: false });
+    respondLatestRows();
+    fireEvent.doubleClick(cellOf(2, 1));
+    fireEvent.change(screen.getByRole("textbox", { name: "セルの編集" }), {
+      target: { value: "edited" },
+    });
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "セルの編集" }), { key: "Enter" });
+    expect(applyOpsMessages()).toEqual([
+      { type: "large/applyOps", ops: [{ type: "setRow", handle: 2, row: ["1", "edited"] }] },
+    ]);
+    expect(cellOf(2, 1)).toHaveTextContent("edited");
+  });
+
+  test("インデックス作成中は編集できず、作成が終わると編集できる", () => {
+    show({ ...INIT, rowCount: 3, indexing: true });
+    respondLatestRows();
+    fireEvent.doubleClick(cellOf(1, 1));
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    receive({ type: "large/progress", kind: "index", ratio: 1 });
+    fireEvent.doubleClick(cellOf(1, 1));
+    expect(screen.getByRole("textbox", { name: "セルの編集" })).toHaveValue("row0");
+  });
+
+  test("インデックス作成中の large/init で開き直すと編集できなくなる", () => {
+    show({ ...INIT, rowCount: 3, indexing: false });
+    receive({ ...INIT, rowCount: 3, indexing: true });
+    respondLatestRows();
+    expect(cellOf(1, 1)).toHaveTextContent("row0");
+    fireEvent.doubleClick(cellOf(1, 1));
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  test("追加行のハンドルは webview の状態に保存した続きから採番し、次の値を保存する", () => {
+    webviewState.value = { largeNextHandle: -7 };
+    show({ ...INIT, rowCount: 3, indexing: false });
+    respondLatestRows();
+    fireEvent.mouseDown(cellOf(1, 0));
+    fireEvent.keyDown(cellOf(1, 0), { key: "I", ctrlKey: true, shiftKey: true });
+    expect(applyOpsMessages()).toEqual([
+      {
+        type: "large/applyOps",
+        ops: [{ type: "insertRows", beforeHandle: 1, handles: [-7], rows: [["", ""]] }],
+      },
+    ]);
+    expect(webviewState.value).toEqual({ largeNextHandle: -8 });
+  });
+
+  test("large/invalidate の header で列名を更新する", () => {
+    show({ ...INIT, rowCount: 3, indexing: false });
+    receive({ type: "large/invalidate", revision: 1, rowCount: 3, header: ["id", "氏名"] });
+    expect(screen.getByRole("columnheader", { name: "氏名" })).toBeInTheDocument();
   });
 
   test.each([

@@ -1,8 +1,10 @@
 import type { LargeMessageToWebview } from "@message/largeMessages";
 import type { ThemeKind } from "@message/messageTypeToWebview";
 import { useCallback, useEffect, useState } from "react";
+import { vscode } from "../../utilities/vscode";
 import { LargeModeBanner } from "../LargeModeBanner/LargeModeBanner";
 import { LargeTable } from "../LargeTable/LargeTable";
+import { createHandleAllocator, createVscodeHandleStorage } from "../rowSource/handleAllocator";
 import { RemoteRowSource } from "../rowSource/RemoteRowSource";
 import styles from "./LargeApp.module.scss";
 import type { LargeMessageHub } from "./largeMessageHub";
@@ -21,10 +23,13 @@ export interface LargeAppProps {
 const toIndexingRatio = (ratio: number): number | null => (ratio >= 1 ? null : ratio);
 
 /**
- * 大容量モード（`csv-editor.largeEditor`）の webview のルート（2-1 では閲覧のみ）。
+ * 大容量モード（`csv-editor.largeEditor`）の webview のルート。
  * - 行は RemoteRowSource で拡張機能から表示範囲の分だけ取得する
+ * - 編集は RemoteRowSource が `large/applyOps` で送り、同時に表示へ反映する。
+ *   拡張機能はインデックス作成が終わってから編集を受け付けるため、作成中は表を編集できなくする
+ * - 追加行の負のハンドルは webview の状態に保存した続きから採番する（webview を作り直しても重ならない）
  * - キーボードショートカットは登録しない。特に Ctrl+Z / Ctrl+Y は処理も preventDefault /
- *   stopPropagation もせず、VSCode の Undo/Redo に委ねる（スパイク S1 の決定）
+ *   stopPropagation もせず、VSCode の Undo/Redo に委ねる（スパイク S1 の決定）。Ctrl+S も VSCode の保存に任せる
  */
 export function LargeApp({ init, theme, messages }: LargeAppProps) {
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +45,10 @@ export function LargeApp({ init, theme, messages }: LargeAppProps) {
         onError: (message) => setError(message),
       })
   );
+  const [allocateHandle] = useState(() => {
+    const allocator = createHandleAllocator(createVscodeHandleStorage(vscode));
+    return () => allocator.next();
+  });
 
   const handleMessage = useCallback(
     (message: LargeMessageToWebview) => {
@@ -81,7 +90,12 @@ export function LargeApp({ init, theme, messages }: LargeAppProps) {
         </p>
       )}
       <main className={styles.main}>
-        <LargeTable source={source} theme={theme} />
+        <LargeTable
+          source={source}
+          theme={theme}
+          readOnly={indexingRatio !== null}
+          allocateHandle={allocateHandle}
+        />
       </main>
     </div>
   );
