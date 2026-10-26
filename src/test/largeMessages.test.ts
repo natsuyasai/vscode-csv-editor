@@ -45,6 +45,9 @@ suite("大容量モードのメッセージ型ガード", () => {
       { type: "large/filter", jobId: 2, filters: [{ column: 1, text: "a" }] },
       { type: "large/search", jobId: 3, query: "abc", from: 0, direction: "forward" },
       { type: "large/search", jobId: 3, query: "", from: 10, direction: "backward" },
+      // fromCol: 開始セルの列（そのセルの次から探す。省略は行の端から）
+      { type: "large/search", jobId: 3, query: "a", from: 2, fromCol: 0, direction: "forward" },
+      { type: "large/search", jobId: 3, query: "a", from: 2, fromCol: 5, direction: "backward" },
       { type: "large/cancel", jobId: 3 },
       { type: "large/getRange", reqId: 4, range },
       {
@@ -115,6 +118,8 @@ suite("大容量モードのメッセージ型ガード", () => {
       { type: "large/search", jobId: 1, query: 1, from: 0, direction: "forward" },
       { type: "large/search", jobId: 1, query: "a", from: -1, direction: "forward" },
       { type: "large/search", jobId: 1, query: "a", from: 0, direction: "x" },
+      { type: "large/search", jobId: 1, query: "a", from: 0, fromCol: -1, direction: "forward" },
+      { type: "large/search", jobId: 1, query: "a", from: 0, fromCol: "1", direction: "forward" },
       { type: "large/cancel" },
       { type: "large/cancel", jobId: -1 },
       { type: "large/getRange", reqId: 1 },
@@ -149,6 +154,12 @@ suite("大容量モードのメッセージ型ガード", () => {
       // revision: この状態の revision（webview は以後の applyOps にこの値以上を載せる）
       { ...init, revision: 0 },
       { ...init, revision: 7, nextHandle: -2 },
+      // query: 適用中のソート・フィルタ（webview が作り直されたときに表示を合わせる）
+      { ...init, query: { sort: null, filters: [] } },
+      {
+        ...init,
+        query: { sort: { column: 1, direction: "desc" }, filters: [{ column: 0, text: "a" }] },
+      },
       { type: "large/rows", reqId: 1, start: 0, rows: [["a"], []], handles: [0, -1] },
       { type: "large/rows", reqId: 1, start: 5, rows: [], handles: [] },
       { type: "large/progress", kind: "index", ratio: 0 },
@@ -160,11 +171,21 @@ suite("大容量モードのメッセージ型ガード", () => {
       // header の省略は「ヘッダーは変わっていない」
       { type: "large/invalidate", revision: 1, rowCount: 3, header: ["id", "name"] },
       { type: "large/invalidate", revision: 1, rowCount: 3, header: [] },
+      // query はソート・フィルタの状態が変わったとき（適用・解除・revert）に載せる
+      { type: "large/invalidate", revision: 2, rowCount: 3, query: { sort: null, filters: [] } },
+      {
+        type: "large/invalidate",
+        revision: 2,
+        rowCount: 3,
+        query: { sort: { column: 0, direction: "asc" }, filters: [] },
+      },
       { type: "large/searchResult", jobId: 1, match: null },
       { type: "large/searchResult", jobId: 1, match: { row: 5, col: 2 } },
       { type: "large/range", reqId: 2, rows: [["a", "b"]] },
       { type: "large/error", message: "失敗" },
       { type: "large/error", message: "失敗", reqId: 3 },
+      // jobId: 失敗・取り消したジョブ
+      { type: "large/error", message: "失敗", jobId: 4 },
     ];
     const invalid: unknown[] = [
       undefined,
@@ -220,6 +241,12 @@ suite("大容量モードのメッセージ型ガード", () => {
       { type: "large/error" },
       { type: "large/error", message: 1 },
       { type: "large/error", message: "a", reqId: -1 },
+      { type: "large/error", message: "a", jobId: 1.5 },
+      { ...init, query: { sort: null } },
+      { ...init, query: { sort: { column: 0, direction: null }, filters: [] } },
+      { ...init, query: { sort: null, filters: [{ column: -1, text: "a" }] } },
+      { type: "large/invalidate", revision: 1, rowCount: 3, query: null },
+      { type: "large/invalidate", revision: 1, rowCount: 3, query: { sort: "x", filters: [] } },
     ];
     check(isLargeMessageToWebview, valid, invalid);
   });

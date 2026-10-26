@@ -42,6 +42,15 @@ export interface LargeFilterCondition {
 
 export type LargeSearchDirection = "forward" | "backward";
 
+/**
+ * 適用中のソート・フィルタ（拡張機能が持つ表示順の条件）。
+ * sort は1列だけ（null はソートなし）。filters は空でない条件だけ（空の条件は解除として扱う）
+ */
+export interface LargeQueryState {
+  sort: { column: number; direction: "asc" | "desc" } | null;
+  filters: LargeFilterCondition[];
+}
+
 export type LargeProgressKind = "index" | "sort" | "filter" | "search";
 
 // ---- webview → 拡張機能 ----
@@ -57,12 +66,18 @@ export type LargeMessageToExtension =
   | { type: "large/applyOps"; revision: number; ops: LargeOp[] }
   | { type: "large/sort"; jobId: number; column: number; direction: LargeSortDirection }
   | { type: "large/filter"; jobId: number; filters: LargeFilterCondition[] }
-  /** from: 検索開始位置（表示順の行位置） */
+  /**
+   * from: 検索開始位置（表示順の行位置）。
+   * fromCol: 開始セルの列。渡すとセル (from, fromCol) の次（forward は右・下、backward は左・上）から探す。
+   * 省略すると行 from の端（forward は左端、backward は右端）のセルから探す。端まで行ったら反対の端に折り返し、
+   * 一周して開始セルに戻るまで探す（一致がそのセルだけなら、そのセルを返す）
+   */
   | {
       type: "large/search";
       jobId: number;
       query: string;
       from: number;
+      fromCol?: number;
       direction: LargeSearchDirection;
     }
   | { type: "large/cancel"; jobId: number }
@@ -87,17 +102,32 @@ export type LargeMessageToWebview =
       nextHandle?: number;
       /** この状態の revision（webview はこれを起点に invalidate を受け、applyOps に載せる） */
       revision?: number;
+      /** 適用中のソート・フィルタ（rowCount はこれを当てた表示行数） */
+      query?: LargeQueryState;
     }
   | { type: "large/rows"; reqId: number; start: number; rows: string[][]; handles: number[] }
+  /**
+   * 進捗。ソート・フィルタ・検索（jobId 付き）は、ジョブが終わると（完了・取り消し・失敗のいずれでも）
+   * 必ず ratio: 1 を1回送る
+   */
   | { type: "large/progress"; kind: LargeProgressKind; ratio: number; jobId?: number }
   /**
-   * 行のキャッシュを捨てさせる（インデックス作成中の行数の増加、編集の適用、Undo/Redo の後）。
-   * header はヘッダーが変わったかもしれないとき（setHeader の適用・Undo/Redo）に載せる。省略は「変わっていない」
+   * 行のキャッシュを捨てさせる（インデックス作成中の行数の増加、編集の適用、Undo/Redo、ソート・フィルタの後）。
+   * rowCount は表示行数（ソート・フィルタ中はフィルタ後の行数）。
+   * header はヘッダーが変わったかもしれないとき（setHeader の適用・Undo/Redo）に載せる。省略は「変わっていない」。
+   * query はソート・フィルタの状態が変わったとき（適用・解除・revert での解除）に載せる。省略は「変わっていない」
    */
-  | { type: "large/invalidate"; revision: number; rowCount: number; header?: string[] }
+  | {
+      type: "large/invalidate";
+      revision: number;
+      rowCount: number;
+      header?: string[];
+      query?: LargeQueryState;
+    }
   | { type: "large/searchResult"; jobId: number; match: { row: number; col: number } | null }
   | { type: "large/range"; reqId: number; rows: string[][] }
-  | { type: "large/error"; message: string; reqId?: number };
+  /** jobId は失敗・取り消し（保存・revert による）したソート・フィルタ・検索のジョブ */
+  | { type: "large/error"; message: string; reqId?: number; jobId?: number };
 
 // ---- 型ガード ----
 
@@ -165,6 +195,23 @@ function isFilterCondition(value: unknown): value is LargeFilterCondition {
   return isRecord(value) && isNonNegInt(value.column) && typeof value.text === "string";
 }
 
+function isQueryState(value: unknown): value is LargeQueryState {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.filters) ||
+    !value.filters.every(isFilterCondition)
+  ) {
+    return false;
+  }
+  const { sort } = value;
+  return (
+    sort === null ||
+    (isRecord(sort) &&
+      isNonNegInt(sort.column) &&
+      (sort.direction === "asc" || sort.direction === "desc"))
+  );
+}
+
 /**
  * webview から受信した値が大容量モードの拡張機能向けメッセージとして妥当かを検証する型ガード。
  * webview は信頼境界の外側のため、数値は有限な 0 以上の整数、getRows の count は
@@ -204,6 +251,7 @@ export function isLargeMessageToExtension(value: unknown): value is LargeMessage
         isNonNegInt(value.jobId) &&
         typeof value.query === "string" &&
         isNonNegInt(value.from) &&
+        (value.fromCol === undefined || isNonNegInt(value.fromCol)) &&
         (value.direction === "forward" || value.direction === "backward")
       );
     case "large/cancel":
@@ -231,7 +279,8 @@ export function isLargeMessageToWebview(value: unknown): value is LargeMessageTo
         typeof value.encoding === "string" &&
         isStringArray(value.restrictions) &&
         (value.nextHandle === undefined || (isInt(value.nextHandle) && value.nextHandle < 0)) &&
-        (value.revision === undefined || isNonNegInt(value.revision))
+        (value.revision === undefined || isNonNegInt(value.revision)) &&
+        (value.query === undefined || isQueryState(value.query))
       );
     case "large/rows":
       return (
@@ -253,7 +302,8 @@ export function isLargeMessageToWebview(value: unknown): value is LargeMessageTo
       return (
         isNonNegInt(value.revision) &&
         isNonNegInt(value.rowCount) &&
-        (value.header === undefined || isStringArray(value.header))
+        (value.header === undefined || isStringArray(value.header)) &&
+        (value.query === undefined || isQueryState(value.query))
       );
     case "large/searchResult":
       return (
@@ -265,7 +315,9 @@ export function isLargeMessageToWebview(value: unknown): value is LargeMessageTo
       return isNonNegInt(value.reqId) && isRows(value.rows);
     case "large/error":
       return (
-        typeof value.message === "string" && (value.reqId === undefined || isNonNegInt(value.reqId))
+        typeof value.message === "string" &&
+        (value.reqId === undefined || isNonNegInt(value.reqId)) &&
+        (value.jobId === undefined || isNonNegInt(value.jobId))
       );
     default:
       return false;
