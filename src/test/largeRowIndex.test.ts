@@ -210,7 +210,7 @@ suite("RowIndex（行インデックスの非同期作成）", () => {
   });
 
   suite("キャンセルとエラー", () => {
-    test("中断すると done は AbortError で reject され、以後の行は増えない", async () => {
+    test("中断すると done は AbortError で reject され、完了しない", async () => {
       const controller = new AbortController();
       const index = RowIndex.build(writeFile("abort.csv", "x\n".repeat(10_000)), {
         skipBom: true,

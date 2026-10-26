@@ -102,7 +102,6 @@ async function main() {
     console.warn("注意: --expose-gc なしで実行しているため、メモリ値は GC 前の値を含む");
   }
   const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "large-index-bench-"));
-  const generated = values.file === undefined;
   try {
     const { RowIndex, FileRowReader, skipsBom } = await loadModules(workDir);
     const filePath = values.file ?? generate(workDir);
@@ -169,7 +168,8 @@ async function main() {
       )
     );
   } finally {
-    if (generated && !values.keep) {
+    // 作業ディレクトリ（バンドルと生成した CSV）は消す。--file で渡したファイルは作業ディレクトリの外なので消さない
+    if (!values.keep) {
       fs.rmSync(workDir, { recursive: true, force: true });
     } else {
       console.log(`作業ディレクトリ: ${workDir}`);
