@@ -98,6 +98,14 @@
 - 拡張機能とwebview間の通信はpostMessage APIを介して行う
 - 状態管理にはZustand、データ操作にはカスタムフックを使用
 
+### 共通モジュール `src/shared/`
+
+拡張機能と webview の両方から使う純粋ロジックの置き場。
+
+- **npm パッケージを一切 import しない**（ルートに実行時依存はなく、`src/` から `webview-ui/node_modules` は解決できない）。標準 JS/TS のみで書く。環境はルートの `lib: ES2022`（DOM なし）と webview の `isolatedModules`（型の re-export は `export type`）の両方で通ること。
+- **参照方法**: 拡張機能側は**相対 import**（`../shared/csv/xxx`）。ルートの `tsc -p . --outDir out`（`compile-tests`）はパスエイリアスを書き換えないため、`@shared` は webview 専用（vite / tsconfig のエイリアス）。
+- **テスト**: `*.spec.ts` / `*.feature.spec.ts` / `.feature` は同じディレクトリに置き、webview の vitest unit プロジェクト（`webview-ui` で `npx vitest --project unit --run shared/`）で実行・型検査（`tsconfig.test.json`）される。spec はルートの tsconfig / eslint の対象外（本体は対象）。spec が使う npm パッケージ（`fast-check` と `@amiceli/vitest-cucumber` 以外を使うときは `webview-ui/vite.config.ts` の alias と `webview-ui/tsconfig.json` の paths に追加する）。`.feature` の `loadFeature` は `./xxx.feature` の相対パスで書く。
+
 ## 通信アーキテクチャ
 
 メッセージパッシングは`src/message/`内の型付きインターフェースを使用します:

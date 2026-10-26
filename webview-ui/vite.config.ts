@@ -18,9 +18,14 @@ const BuildAfterScriptPlugin = () => {
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), BuildAfterScriptPlugin()],
+  server: { fs: { allow: [resolve("..")] } },
   resolve: {
     alias: {
       "@message": resolve("../src/message"),
+      "@shared": resolve("../src/shared"),
+      // src/shared（rootの外）のspecから解決できるよう、テストで使うパッケージはwebview-ui側へ固定する
+      "fast-check": resolve("node_modules/fast-check"),
+      "@amiceli/vitest-cucumber": resolve("node_modules/@amiceli/vitest-cucumber"),
       "@": resolve("src/"),
     },
   },

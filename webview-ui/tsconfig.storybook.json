@@ -14,7 +14,8 @@
     ".storybook/**/*",
     "./src/**/*",
     "./scss-modules.d.ts",
-    "../src/message/**/*"
+    "../src/message/**/*",
+    "../src/shared/**/*"
   ],
   "exclude": [
     "node_modules",
@@ -22,6 +23,7 @@
     "build",
     "coverage",
     "src/**/*.spec.*",
+    "../src/shared/**/*.spec.*",
     "src/**/*.test.*",
     "src/test-utils/setup.ts"
   ]
