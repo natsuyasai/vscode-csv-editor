@@ -85,6 +85,7 @@
 3. シナリオアウトラインのステップは `<列名>` のまま書き、値は第2引数 `vars` から文字列で受け取る（`any` なので `String()` / `Number()` で変換し、lint の no-unsafe-* を避ける）。
 4. `.feature` 中の `\n` などはライブラリが解釈しない（バックスラッシュ文字のまま）。TS 側のステップ文字列では `\\n` と書き、必要な変換は自前で行う。BOM などの不可視文字は `.feature` に直接書かず文言で表す。
 5. import/order: `@amiceli/vitest-cucumber` の import は `react` などより前に置く（lint で確認）。
+6. **ステップをまたいで `vi.fn` の呼び出しを検証しない（記録が消える）**: vitest-cucumber は各ステップを別のテスト（`test.for`）として実行し、vitest 5 は既定で `clearMocks: true`（`vitest.config.ts` で未設定）のためテストごとに `vi.clearAllMocks()` が走る。あるステップで呼んだ `vi.fn` の記録は次のステップでは空になり、`not.toHaveBeenCalled()` は常に通り、`toHaveBeenCalled*` は常に落ちる（指摘が複数回あった）。操作と検証が別のステップになるときは、カウンタや `vi.hoisted` の配列など自前の記録で数える（参照例: `App.incrementalSync.feature.spec.tsx` の `recorder`、`LargeTableClipboard.feature.spec.tsx` の `clipboardCalls`）。同じ理由で RTL は自動 cleanup の無い `@testing-library/react/pure` を使い、`AfterEachScenario` で `cleanup()` する。
 
 ## プロジェクト構造
 
