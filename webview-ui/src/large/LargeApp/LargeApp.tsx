@@ -44,11 +44,15 @@ const toIndexingRatio = (ratio: number): number | null => (ratio >= 1 ? null : r
  * - 検索・ソート・フィルタは拡張機能側で走査し、webview は LargeQueryController でジョブ（jobId・進捗・
  *   キャンセル・古い結果の無視）を管理する。ソート・フィルタの結果は適用した時点のスナップショットで、
  *   編集しても並べ直されない（注記と再適用ボタンを出す）。インデックス作成中は使えない
+ * - 範囲のコピー・貼り付け（Ctrl+C / Ctrl+V）は表が処理する。上限（10万セル）を超えた・失敗したときの
+ *   メッセージは表の上に出す
  * - キーボードショートカットは検索の Ctrl+F だけを登録する。特に Ctrl+Z / Ctrl+Y は処理も preventDefault /
  *   stopPropagation もせず、VSCode の Undo/Redo に委ねる（スパイク S1 の決定）。Ctrl+S も VSCode の保存に任せる
  */
 export function LargeApp({ init, theme, messages, postMessage }: LargeAppProps) {
   const [error, setError] = useState<string | null>(null);
+  /** 表の操作のメッセージ（範囲のコピー・貼り付けが上限を超えた・失敗したとき） */
+  const [notice, setNotice] = useState<string | null>(null);
   const [restrictions, setRestrictions] = useState(init.restrictions);
   const [encoding, setEncoding] = useState(init.encoding);
   const [indexingRatio, setIndexingRatio] = useState<number | null>(init.indexing ? 0 : null);
@@ -204,6 +208,11 @@ export function LargeApp({ init, theme, messages, postMessage }: LargeAppProps) 
           {error}
         </p>
       )}
+      {notice !== null && (
+        <p role="alert" className={styles.error}>
+          {notice}
+        </p>
+      )}
       <main className={styles.main}>
         <LargeTable
           source={source}
@@ -213,6 +222,7 @@ export function LargeApp({ init, theme, messages, postMessage }: LargeAppProps) 
           query={tableQuery}
           jump={query.jump}
           onSelectionChange={handleSelectionChange}
+          onNotice={setNotice}
         />
       </main>
       {searchOpen &&
