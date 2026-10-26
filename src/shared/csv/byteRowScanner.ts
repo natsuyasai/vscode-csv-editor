@@ -6,6 +6,7 @@
  *   それ以降に現れる別種の改行はセルの内容として扱う。
  * - 空行も1行と数え、最後の行区切りの後に何も無ければそこに行は無い。
  * - 先頭の UTF-8 BOM（EF BB BF）は行に含めない（オフセットは元のバイト列上の位置のまま）。
+ *   UTF-8 以外（Shift_JIS / EUC-JP）では EF BB BF は BOM ではないので、`skipBom: false` を指定して内容として扱う。
  *
  * 前提: LF(0x0A)・CR(0x0D)・`"`(0x22) が多バイト文字の一部に現れない文字コード
  * （UTF-8 / Shift_JIS / EUC-JP）。UTF-16 などには使えない。
@@ -28,7 +29,7 @@ export type ByteRowCallback = (start: number, end: number, next: number) => void
 export interface ByteScanSummary {
   /** 検出した行区切り。クォート外に改行が無ければ null */
   delimiter: RecordDelimiter | null;
-  /** 先頭の BOM を除いた内容の開始位置（BOM があれば 3、無ければ 0） */
+  /** 先頭の BOM を除いた内容の開始位置（BOM を飛ばしたら 3、それ以外は 0） */
   contentStart: number;
   /** 走査したバイト数の合計 */
   byteLength: number;
@@ -46,10 +47,20 @@ export interface ByteRowScanner {
   finish(): ByteScanSummary;
 }
 
-export function createByteRowScanner(onRow: ByteRowCallback): ByteRowScanner {
+/** 走査のオプション */
+export interface ByteRowScannerOptions {
+  /** 先頭の UTF-8 BOM（EF BB BF）を行に含めず飛ばすか。既定 true。UTF-8 以外の文字コードでは false にする */
+  skipBom?: boolean;
+}
+
+export function createByteRowScanner(
+  onRow: ByteRowCallback,
+  options: ByteRowScannerOptions = {}
+): ByteRowScanner {
+  const skipBom = options.skipBom ?? true;
   let finished = false;
   /** BOM の判定のために貯めている先頭のバイト（判定後は null） */
-  let head: Uint8Array | null = new Uint8Array(0);
+  let head: Uint8Array | null = skipBom ? new Uint8Array(0) : null;
   let contentStart = 0;
   /** 次に走査するチャンクの先頭の位置（それまでに走査したバイト数） */
   let offset = 0;

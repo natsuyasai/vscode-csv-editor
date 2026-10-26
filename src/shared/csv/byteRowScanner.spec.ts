@@ -82,6 +82,48 @@ describe("scanRowsBytes", () => {
     });
   });
 
+  describe("BOM を飛ばさない（skipBom: false。Shift_JIS / EUC-JP 用）", () => {
+    /** skipBom: false で走査し、確定した行の範囲と最終結果を返す */
+    function scanKeepingBom(chunks: Uint8Array[]) {
+      const rows: { start: number; end: number; next: number }[] = [];
+      const scanner = createByteRowScanner((start, end, next) => rows.push({ start, end, next }), {
+        skipBom: false,
+      });
+      for (const chunk of chunks) {
+        scanner.push(chunk);
+      }
+      return { rows, summary: scanner.finish() };
+    }
+
+    it("先頭の EF BB BF を最初の行の内容として扱う", () => {
+      const { rows, summary } = scanKeepingBom([bytes(0xef, 0xbb, 0xbf, 0x61, 0x0a, 0x62)]);
+      expect(summary.contentStart).toBe(0);
+      expect(rows).toEqual([
+        { start: 0, end: 4, next: 5 },
+        { start: 5, end: 6, next: 6 },
+      ]);
+    });
+
+    it("EF BB BF だけでも1行と数える", () => {
+      const { rows, summary } = scanKeepingBom([bytes(0xef, 0xbb, 0xbf)]);
+      expect(summary).toEqual({ delimiter: null, contentStart: 0, byteLength: 3 });
+      expect(rows).toEqual([{ start: 0, end: 3, next: 3 }]);
+    });
+
+    it("1バイトずつ与えても先頭の EF BB BF を行に含める", () => {
+      const data = bytes(0xef, 0xbb, 0xbf, 0x61, 0x0a, 0x62);
+      expect(scanKeepingBom(perByte(data))).toEqual(scanKeepingBom([data]));
+    });
+
+    it("skipBom を省略すると BOM を飛ばす（既定は true）", () => {
+      const rows: number[] = [];
+      const scanner = createByteRowScanner((start) => rows.push(start), {});
+      scanner.push(bytes(0xef, 0xbb, 0xbf, 0x61));
+      expect(scanner.finish().contentStart).toBe(3);
+      expect(rows).toEqual([3]);
+    });
+  });
+
   describe("BOM", () => {
     it("UTF-8 の BOM（EF BB BF）は最初の行に含めない", () => {
       const result = scanRowsBytes(bytes(0xef, 0xbb, 0xbf, 0x61, 0x0a, 0x62));
