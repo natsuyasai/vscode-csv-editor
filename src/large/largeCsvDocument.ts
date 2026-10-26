@@ -221,7 +221,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
   private closed: Promise<void> = Promise.resolve();
 
   private constructor(
-    uri: vscode.Uri,
+    readonly uri: vscode.Uri,
     readonly encoding: LargeEncoding,
     private readonly options: LargeCsvDocumentOptions
   ) {
@@ -266,8 +266,12 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     return new LargeCsvDocument(uri, encoding, options);
   }
 
-  /** 文書のファイル（別名で保存すると保存先に変わる） */
-  get uri(): vscode.Uri {
+  /**
+   * 読み書きするファイル（別名で保存すると保存先に変わる）。
+   * `uri` は VSCode が開いた URI のまま変えない（拡張ホストは文書を `uri` で引くので、変えると
+   * 編集の通知・保存・破棄が別の文書に向いてしまう）
+   */
+  get fileUri(): vscode.Uri {
     return this.currentUri;
   }
 
@@ -382,7 +386,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
     return this.serial(() => this.saveTo(this.currentUri, signal));
   }
 
-  /** 別のファイルへ保存し、以後はそのファイルを文書にする */
+  /** 別のファイルへ保存し、以後はそのファイルを読み書きする（`uri` は変えない） */
   saveAs(destination: vscode.Uri, signal?: AbortSignal): Promise<void> {
     if (destination.scheme !== "file") {
       return Promise.reject(new Error("大容量モードで保存できるのはローカルのファイルだけです"));

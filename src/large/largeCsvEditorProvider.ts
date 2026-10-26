@@ -213,7 +213,7 @@ export class LargeCsvEditorProvider implements vscode.CustomEditorProvider<Large
     }
     this.staleNotified.add(document);
     (this.options.info ?? defaultInfo)(
-      `${path.basename(document.uri.fsPath)}: 保存より前の編集は元に戻せません（大容量モードでは保存すると行の番号が変わるため）`
+      `${path.basename(document.fileUri.fsPath)}: 保存より前の編集は元に戻せません（大容量モードでは保存すると行の番号が変わるため）`
     );
   }
 

@@ -497,7 +497,16 @@ suite("大容量モードでの編集と保存", function () {
 
     assert.strictEqual(readText(target), csvWithRows(5).replace("r0,v0", "r0,別名"));
     assert.strictEqual(readText(uri), csvWithRows(5), "元のファイルは変わらない");
-    assert.strictEqual(editor.document.uri.fsPath, target.fsPath, "文書は別名のファイルになる");
+    assert.strictEqual(
+      editor.document.fileUri.fsPath,
+      target.fsPath,
+      "以後は別名のファイルを読み書きする"
+    );
+    assert.strictEqual(
+      editor.document.uri.fsPath,
+      uri.fsPath,
+      "VSCode が文書を引く URI は変えない"
+    );
     assert.strictEqual(
       editor.pending.take(target),
       "utf-8",
