@@ -37,6 +37,9 @@ vi.mock("./components/editable-table/EditableTable", async () => {
             editRow1
           </button>
           <button onClick={() => setCSVArray([...csvArray, ["3", "3"]])}>appendRow</button>
+          <button onClick={() => setCSVArray([...csvArray.slice(0, -1), ["5", "6", "7"]])}>
+            editLastRow
+          </button>
           <button onClick={onApply}>apply</button>
         </div>
       );
@@ -203,6 +206,28 @@ describeFeature(feature, ({ Background, Scenario, BeforeEachScenario, AfterEachS
           ["0", "0"],
         ])
       );
+    });
+  });
+
+  Scenario("編集していない不揃いな行は操作に含まれない", ({ Given, When, And, Then }) => {
+    Given('拡張機能からエポック 6 で "a,b,c\\n1\\n2,3,4\\n" の全文を受け取っている', () => {
+      receiveUpdate(6, "a,b,c\n1\n2,3,4\n");
+    });
+    When('最終行を "5,6,7" に編集する', () => {
+      fireEvent.click(screen.getByText("editLastRow"));
+    });
+    And("デバウンスの時間が経過する", () => {
+      elapseDebounce();
+    });
+    Then('送られた操作は 2 行目から 1 行を [["5","6","7"]] に置き換えるものだけである', () => {
+      // 表示用に空セルで埋めた2行目("1","","")は送られない
+      expect(sent()).toEqual([
+        {
+          type: "applyOps",
+          epoch: 6,
+          ops: [{ type: "replaceRows", start: 2, deleteCount: 1, rows: [["5", "6", "7"]] }],
+        },
+      ]);
     });
   });
 
