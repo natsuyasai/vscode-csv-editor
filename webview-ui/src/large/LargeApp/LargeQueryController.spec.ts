@@ -345,6 +345,27 @@ describe("LargeQueryController", () => {
       expect(ofType("large/search")[1].from).toBe(8);
     });
 
+    test("検索の結果を待っている間の前へ/次へも、直前の一致を基準にする", () => {
+      const { controller, found, ofType } = setup();
+      controller.submitSearch("abc", CTX);
+      found(1, 7, 2);
+      controller.continueSearch("forward", { rowCount: 1000, selectedRow: 7 });
+      controller.continueSearch("backward", { rowCount: 1000, selectedRow: 7 });
+      expect(ofType("large/search").map((m) => [m.from, m.direction])).toEqual([
+        [0, "forward"],
+        [8, "forward"],
+        [6, "backward"],
+      ]);
+    });
+
+    test("見つからなかった後は、選択中の行から新しく探す", () => {
+      const { controller, ofType } = setup();
+      controller.submitSearch("abc", CTX);
+      controller.handleMessage({ type: "large/searchResult", jobId: 1, match: null });
+      controller.submitSearch("abc", { rowCount: 1000, selectedRow: 30 });
+      expect(ofType("large/search")[1].from).toBe(30);
+    });
+
     test("検索語を変えると、選択中の行から新しく探す", () => {
       const { controller, found, ofType } = setup();
       controller.submitSearch("abc", CTX);

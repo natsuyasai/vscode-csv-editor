@@ -169,7 +169,7 @@ export class LargeQueryController {
     if (query === "") {
       return;
     }
-    const fresh = query !== this.lastQuery || this.snapshot.searchStatus !== "found";
+    const fresh = query !== this.lastQuery || this.snapshot.match === null;
     this.search(query, "forward", fresh, context);
   }
 
@@ -178,7 +178,7 @@ export class LargeQueryController {
     if (this.lastQuery === null) {
       return;
     }
-    this.search(this.lastQuery, direction, this.snapshot.searchStatus !== "found", context);
+    this.search(this.lastQuery, direction, this.snapshot.match === null, context);
   }
 
   /** 実行中のジョブを取り消し、表示を適用済みの条件に戻す */
@@ -396,7 +396,7 @@ export class LargeQueryController {
         jump: { row: match.row, col: match.col, seq: this.nextJumpSeq++ },
       });
     } else {
-      this.update({ job: null, searchStatus: "notFound" });
+      this.update({ job: null, searchStatus: "notFound", match: null });
     }
   }
 
