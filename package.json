@@ -2,7 +2,7 @@
   "name": "csv-editor",
   "displayName": "csv-editor",
   "description": "Edit CSV files in a spreadsheet-like table editor with sorting, filtering, undo/redo, and copy/paste.",
-  "version": "0.0.4-alpha5",
+  "version": "0.0.1",
   "license": "MIT",
   "keywords": [
     "csv",
