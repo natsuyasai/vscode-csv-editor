@@ -5,7 +5,7 @@ import eslint from "@eslint/js";
 
 const ignores = {
   name: "eslint-ignores",
-  ignores: ["node_modules", "dist", ".vscode-test", "out", "webview-ui"],
+  ignores: ["node_modules", "dist", ".vscode-test", "out", "webview-ui", "src/shared/**/*.spec.ts"],
 };
 
 export default [

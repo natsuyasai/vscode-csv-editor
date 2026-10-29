@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "types": [
+      "vite/client"
+    ],
+    "composite": true,
+    "rootDir": "..",
+    "outDir": "./dist/app"
+  },
+  "include": [
+    "./src/**/*",
+    "./scss-modules.d.ts",
+    "../src/message/**/*",
+    "../src/shared/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "src/**/*.spec.*",
+    "../src/shared/**/*.spec.*",
+    "src/**/*.test.*",
+    "src/**/*.stories.*",
+    "src/test-utils/**"
+  ]
+}

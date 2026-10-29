@@ -1,5 +1,6 @@
+import type { LargeMessageToExtension } from "@message/largeMessages";
 import type { WebviewApi } from "vscode-webview";
-import { Message } from "../../../src/message/messageTypeToExtention";
+import { Message } from "../../../src/message/messageTypeToExtension";
 
 /**
  * A utility wrapper around the acquireVsCodeApi() function, which enables
@@ -29,7 +30,7 @@ class VSCodeAPIWrapper {
    *
    * @param message Abitrary data (must be JSON serializable) to send to the extension context.
    */
-  public postMessage(message: Message) {
+  public postMessage(message: Message | LargeMessageToExtension) {
     if (this.vsCodeApi) {
       this.vsCodeApi.postMessage(message);
     } else {

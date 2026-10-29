@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "types": [
+      "vitest/globals"
+    ],
+    "composite": true,
+    "rootDir": "..",
+    "outDir": "./dist/test"
+  },
+  "include": [
+    "__mocks__/**/*",
+    "./src/**/*",
+    "../src/message/**/*",
+    "../src/shared/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "src/**/*.stories.*",
+    "src/test-utils/appStoryUtils.ts",
+    "src/test-utils/rowSizeSelect.ts"
+  ]
+}

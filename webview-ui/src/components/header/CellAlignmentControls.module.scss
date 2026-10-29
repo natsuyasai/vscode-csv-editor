@@ -1,0 +1,31 @@
+.container {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 4px 12px;
+  background: var(--vscode-sideBar-background);
+  border: 1px solid var(--vscode-sideBar-border);
+  border-radius: 4px;
+}
+
+.placeholder {
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
+.section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label {
+  color: var(--vscode-foreground);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 4px;
+}

@@ -4,35 +4,69 @@ import { suite, test, beforeEach, afterEach } from "mocha";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { setTimeout as sleep } from "timers/promises";
 import { CSVEditorProvider } from "../editor/csvEditorProvider";
-import { Message, UpdateMessage, SaveMessage } from "../message/messageTypeToExtention";
+import { ApplyOpsMessage, Message, SaveMessage } from "../message/messageTypeToExtension";
+import { replaceRows } from "./helpers/providerHarness";
 
 suite("CSVEditorProvider", () => {
-  vscode.window.showInformationMessage("CSVEditorProviderテストを開始します。");
+  test("registerが返すDisposableでカスタムエディタの登録を解除できる", () => {
+    // コマンド csv-editor.openEditor は入口の振り分け（registerOpenRouting）が登録する（openRouting.test.ts）
+    // 拡張機能が有効化済みでも衝突しないよう、登録APIをスタブに差し替えて検証する
+    const commandsApi = vscode.commands as {
+      registerCommand: (
+        command: string,
+        callback: (...args: unknown[]) => unknown
+      ) => vscode.Disposable;
+    };
+    const windowApi = vscode.window as {
+      registerCustomEditorProvider: (viewType: string, provider: unknown) => vscode.Disposable;
+    };
+    const originalRegisterCommand = commandsApi.registerCommand;
+    const originalRegisterCustomEditorProvider = windowApi.registerCustomEditorProvider;
 
-  test("registerメソッドはDisposableを返す", async () => {
-    // コマンドが既に登録されているか確認
-    const commands = await vscode.commands.getCommands(true);
-    const csvEditorCommandExists = commands.includes("csv-editor.openEditor");
-    
-    if (csvEditorCommandExists) {
-      // 既にコマンドが登録されている場合は、登録されていることを確認するだけ
-      assert.ok(true, "CSV Editor command is already registered");
-      return;
+    const registeredCommands: string[] = [];
+    const registeredViewTypes: string[] = [];
+    const disposedNames: string[] = [];
+    const trackedDisposable = (name: string): vscode.Disposable => ({
+      dispose: () => {
+        disposedNames.push(name);
+      },
+    });
+    commandsApi.registerCommand = (command) => {
+      registeredCommands.push(command);
+      return trackedDisposable(`command:${command}`);
+    };
+    windowApi.registerCustomEditorProvider = (viewType) => {
+      registeredViewTypes.push(viewType);
+      return trackedDisposable(`editor:${viewType}`);
+    };
+
+    try {
+      const context = {
+        subscriptions: [],
+        extensionUri: vscode.Uri.parse("file:///fake"),
+      } as unknown as vscode.ExtensionContext;
+
+      const disposable = CSVEditorProvider.register(context);
+      assert.deepStrictEqual(registeredCommands, []);
+      assert.deepStrictEqual(registeredViewTypes, ["csv-editor.openEditor"]);
+      assert.deepStrictEqual(disposedNames, [], "dispose前は何も解除されない");
+
+      disposable.dispose();
+      assert.deepStrictEqual(
+        [...disposedNames].sort(),
+        ["editor:csv-editor.openEditor"],
+        "カスタムエディタが解除される"
+      );
+
+      // 解除後に再度登録しても問題ない
+      CSVEditorProvider.register(context).dispose();
+      assert.strictEqual(registeredViewTypes.length, 2);
+    } finally {
+      commandsApi.registerCommand = originalRegisterCommand;
+      windowApi.registerCustomEditorProvider = originalRegisterCustomEditorProvider;
     }
-
-    // コマンドがまだ登録されていない場合のみ、新規登録をテスト
-    const context = {
-      subscriptions: [],
-      extensionUri: vscode.Uri.parse("file:///fake"),
-    } as unknown as vscode.ExtensionContext;
-
-    const disposable = CSVEditorProvider.register(context);
-    assert.ok(disposable);
-    assert.strictEqual(typeof disposable.dispose, "function");
-    
-    // テスト後にクリーンアップ
-    disposable.dispose();
   });
 
   suite("E2Eテスト - Webview", () => {
@@ -127,7 +161,7 @@ suite("CSVEditorProvider", () => {
 
     test("webviewから拡張機能へのメッセージ送信", async () => {
       const document = await vscode.workspace.openTextDocument(testCsvFile);
-      let messageHandler: ((message: Message) => void) | undefined;
+      let messageHandler: ((message: Message) => unknown) | undefined;
 
       const mockWebview = {
         html: "",
@@ -155,15 +189,18 @@ suite("CSVEditorProvider", () => {
 
       assert.ok(messageHandler, "Message handler should be registered");
 
-      // webviewからの更新メッセージをシミュレート
-      const updatedCsvData =
-        "Name,Age,Department,Status\n" +
-        "田中太郎,31,Engineering,Active\n" +
-        "佐藤花子,25,Marketing,Active";
-
-      const updateMessage: UpdateMessage = {
-        type: "update",
-        payload: updatedCsvData,
+      // webviewからの編集（差分の操作）をシミュレート
+      await messageHandler({ type: "init" });
+      // init への応答（最初の全文送信）のエポックは 1
+      const updateMessage: ApplyOpsMessage = {
+        type: "applyOps",
+        epoch: 1,
+        ops: [
+          replaceRows(1, 5, [
+            ["田中太郎", "31", "Engineering", "Active"],
+            ["佐藤花子", "25", "Marketing", "Active"],
+          ]),
+        ],
       };
 
       // モックワークスペース編集
@@ -175,7 +212,7 @@ suite("CSVEditorProvider", () => {
       };
 
       // メッセージハンドラーを呼び出し
-      messageHandler(updateMessage);
+      await messageHandler(updateMessage);
 
       // 適切な編集が適用されたか確認
       assert.ok(appliedEdit);
@@ -186,7 +223,7 @@ suite("CSVEditorProvider", () => {
 
     test("webviewメッセージを通じてフィルター操作を実行", async () => {
       const document = await vscode.workspace.openTextDocument(testCsvFile);
-      let messageHandler: ((message: Message) => void) | undefined;
+      let messageHandler: ((message: Message) => unknown) | undefined;
       const sentMessages: { type: string; payload?: string }[] = [];
 
       const mockWebview = {
@@ -216,95 +253,177 @@ suite("CSVEditorProvider", () => {
         onCancellationRequested: () => ({ dispose: () => {} }),
       });
 
-      // フィルター操作をシミュレート（Engineering部署のみ表示）
-      const filteredData =
-        "Name,Age,Department,Status\n" +
-        "田中太郎,30,Engineering,Active\n" +
-        "山田次郎,32,Engineering,Inactive";
-
-      const updateMessage: UpdateMessage = {
-        type: "update",
-        payload: filteredData,
-      };
-
       // webviewからinitメッセージを送信して初期化
       if (messageHandler) {
-        messageHandler({ type: "init" });
+        await messageHandler({ type: "init" });
       }
+
+      // 行を削除した結果の操作をシミュレート（Engineering部署の行だけを残す）
+      const updateMessage: ApplyOpsMessage = {
+        type: "applyOps",
+        epoch: 1,
+        ops: [replaceRows(2, 3, [])],
+      };
 
       // フィルター操作をシミュレート
       if (messageHandler) {
-        messageHandler(updateMessage);
+        await messageHandler(updateMessage);
       }
 
       // メッセージが送信されたか確認
       assert.ok(sentMessages.length > 0);
     });
 
-    test("保存実行", async () => {
-      const document = await vscode.workspace.openTextDocument(testCsvFile);
-      let messageHandler: ((message: Message) => void) | undefined;
-
+    function createHarness(document: vscode.TextDocument) {
+      const sentMessages: { type: string; payload?: string; epoch?: number }[] = [];
+      let messageHandler: ((message: Message | ApplyOpsMessage) => unknown) | undefined;
       const mockWebview = {
         html: "",
         cspSource: "vscode-resource:",
         asWebviewUri: (uri: vscode.Uri) => uri,
-        postMessage: () => Promise.resolve(true),
-        onDidReceiveMessage: (handler: (message: Message) => void) => {
+        postMessage: (message: { type: string; payload?: string; epoch?: number }) => {
+          sentMessages.push(message);
+          return Promise.resolve(true);
+        },
+        onDidReceiveMessage: (handler: (message: Message | ApplyOpsMessage) => unknown) => {
           messageHandler = handler;
           return { dispose: () => {} };
         },
       } as unknown as vscode.Webview;
-
+      let disposeHandler: (() => void) | undefined;
       const mockPanel = {
         webview: mockWebview,
         title: "CSV Editor",
-        onDidDispose: () => ({ dispose: () => {} }),
+        onDidDispose: (handler: () => void) => {
+          disposeHandler = handler;
+          return { dispose: () => {} };
+        },
         onDidChangeViewState: () => ({ dispose: () => {} }),
         dispose: () => {},
       } as unknown as vscode.WebviewPanel;
-
       provider.resolveCustomTextEditor(document, mockPanel, {
         isCancellationRequested: false,
         onCancellationRequested: () => ({ dispose: () => {} }),
       });
+      const send = async (message: Message | ApplyOpsMessage) => {
+        assert.ok(messageHandler, "Message handler should be registered");
+        await messageHandler(message);
+      };
+      return {
+        sentMessages,
+        send,
+        /** init を送り、最後に受け取った全文のエポック付きで操作を送る */
+        sendOps: async (ops: ApplyOpsMessage["ops"]) => {
+          const epoch = sentMessages.filter((m) => m.type === "update").at(-1)?.epoch;
+          assert.strictEqual(typeof epoch, "number", "init 済みであること");
+          await send({ type: "applyOps", epoch: epoch as number, ops });
+        },
+        dispose: () => disposeHandler?.(),
+      };
+    }
 
-      // 保存メッセージをシミュレート
+    const waitForEvents = () => sleep(100);
+
+    test("applyOpsメッセージはドキュメントを更新してダーティにするが保存しない", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      const harness = createHarness(document);
+      const newText = "Name,Age\n田中太郎,31";
+
+      await harness.send({ type: "init" });
+      await harness.sendOps([
+        replaceRows(0, 6, [
+          ["Name", "Age"],
+          ["田中太郎", "31"],
+        ]),
+      ]);
+
+      assert.strictEqual(document.getText(), newText);
+      assert.strictEqual(document.isDirty, true);
+      assert.strictEqual(
+        fs.readFileSync(testCsvFile.fsPath, "utf8").includes("田中太郎,31"),
+        false,
+        "ファイルは保存されていない"
+      );
+      harness.dispose();
+    });
+
+    test("全行を置き換える操作で末尾の行まで置き換わる", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      const harness = createHarness(document);
+
+      await harness.send({ type: "init" });
+      await harness.sendOps([replaceRows(0, 6, [["A"]])]);
+
+      // 元のファイルに末尾改行がないため、置き換えた後も末尾改行は付かない
+      assert.strictEqual(document.getText(), "A");
+      harness.dispose();
+    });
+
+    test("自分が適用した編集はwebviewへ送り返さない", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      const harness = createHarness(document);
+
+      await harness.send({ type: "init" });
+      await harness.sendOps([replaceRows(1, 1, [["A", "B"]])]);
+      await waitForEvents();
+
+      assert.strictEqual(
+        harness.sentMessages.filter((m) => m.type === "update").length,
+        1,
+        "init への応答以外に、エコーのupdateは送られない"
+      );
+      harness.dispose();
+    });
+
+    test("外部からの変更はwebviewへupdateとして送る", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      const harness = createHarness(document);
+
+      const edit = new vscode.WorkspaceEdit();
+      edit.insert(document.uri, new vscode.Position(0, 0), "X");
+      await vscode.workspace.applyEdit(edit);
+      await waitForEvents();
+
+      const updates = harness.sentMessages.filter((m) => m.type === "update");
+      assert.strictEqual(updates.length, 1);
+      assert.strictEqual(updates[0].payload, document.getText());
+      harness.dispose();
+    });
+
+    test("内容の変わらない操作ではドキュメントを変更しない", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      const harness = createHarness(document);
+
+      await harness.send({ type: "init" });
+      await harness.sendOps([replaceRows(1, 1, [["田中太郎", "30", "Engineering", "Active"]])]);
+
+      assert.strictEqual(document.isDirty, false);
+      harness.dispose();
+    });
+
+    test("saveメッセージは先に送った操作を反映して保存する", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      const harness = createHarness(document);
       const saveData = "Name,Age,Department\n田中太郎,31,Engineering";
-      const saveMessage: SaveMessage = {
-        type: "save",
-        payload: saveData,
-      };
 
-      // モックワークスペース操作
-      let appliedEdit: vscode.WorkspaceEdit | undefined;
-      let savedUri: vscode.Uri | undefined;
+      await harness.send({ type: "init" });
+      await harness.sendOps([
+        replaceRows(0, 6, [
+          ["Name", "Age", "Department"],
+          ["田中太郎", "31", "Engineering"],
+        ]),
+      ]);
+      await harness.send({ type: "save" } satisfies SaveMessage);
 
-      const originalApplyEdit = vscode.workspace.applyEdit;
-      const originalSave = vscode.workspace.save;
-
-      vscode.workspace.applyEdit = (edit: vscode.WorkspaceEdit) => {
-        appliedEdit = edit;
-        return Promise.resolve(true);
-      };
-
-      // @ts-expect-error: access private static
-      vscode.workspace.save = (uri: vscode.Uri) => {
-        savedUri = uri;
-        return Promise.resolve(true);
-      };
-
-      if (messageHandler) {
-        messageHandler(saveMessage);
-      }
-
-      // 編集と保存が実行されたか確認
-      assert.ok(appliedEdit);
-      assert.strictEqual(savedUri?.toString(), document.uri.toString());
-
-      // クリーンアップ
-      vscode.workspace.applyEdit = originalApplyEdit;
-      vscode.workspace.save = originalSave;
+      assert.strictEqual(document.isDirty, false);
+      assert.strictEqual(fs.readFileSync(testCsvFile.fsPath, "utf8"), saveData);
+      await waitForEvents();
+      assert.strictEqual(
+        harness.sentMessages.filter((m) => m.type === "update").length,
+        1,
+        "保存時もupdateは送り返さない（init への応答の1回だけ）"
+      );
+      harness.dispose();
     });
 
     test("テーマ変更", async () => {
@@ -350,6 +469,45 @@ suite("CSVEditorProvider", () => {
       assert.ok(themeMessage.payload === "light" || themeMessage.payload === "dark");
     });
 
+    test("パネルを閉じた後はテーマ変更を通知しない（テーマ変更リスナーが解除される）", async () => {
+      const document = await vscode.workspace.openTextDocument(testCsvFile);
+      // テーマ変更イベントを手動で発火できるよう差し替える
+      const themeEmitter = new vscode.EventEmitter<vscode.ColorTheme>();
+      const windowApi = vscode.window as {
+        onDidChangeActiveColorTheme: vscode.Event<vscode.ColorTheme>;
+      };
+      const originalOnDidChangeTheme = windowApi.onDidChangeActiveColorTheme;
+      windowApi.onDidChangeActiveColorTheme = themeEmitter.event;
+      try {
+        const harness = createHarness(document);
+
+        themeEmitter.fire(vscode.window.activeColorTheme);
+        const themeMessagesBeforeDispose = harness.sentMessages.filter(
+          (m) => m.type === "updateTheme"
+        );
+        assert.strictEqual(
+          themeMessagesBeforeDispose.length,
+          1,
+          "パネル表示中はテーマ変更を通知する"
+        );
+
+        harness.dispose();
+        themeEmitter.fire(vscode.window.activeColorTheme);
+
+        const themeMessagesAfterDispose = harness.sentMessages.filter(
+          (m) => m.type === "updateTheme"
+        );
+        assert.strictEqual(
+          themeMessagesAfterDispose.length,
+          1,
+          "パネルを閉じた後はテーマ変更を通知しない"
+        );
+      } finally {
+        windowApi.onDidChangeActiveColorTheme = originalOnDidChangeTheme;
+        themeEmitter.dispose();
+      }
+    });
+
     test("特殊文字を含む複雑なCSVデータ読み込み", async () => {
       // 特殊文字を含むCSVファイルを作成
       const complexCsvContent =
@@ -363,7 +521,7 @@ suite("CSVEditorProvider", () => {
       const complexCsvUri = vscode.Uri.file(complexCsvPath);
 
       const document = await vscode.workspace.openTextDocument(complexCsvUri);
-      let messageHandler: ((message: Message) => void) | undefined;
+      let messageHandler: ((message: Message) => unknown) | undefined;
 
       const mockWebview = {
         html: "",
@@ -389,13 +547,15 @@ suite("CSVEditorProvider", () => {
         onCancellationRequested: () => ({ dispose: () => {} }),
       });
 
-      // 複雑なデータの更新をシミュレート
-      const updatedComplexData =
-        "Name,Description,Price\n" + '"田中, 太郎","Updated ""quoted"" text",1500';
-
-      const updateMessage: UpdateMessage = {
-        type: "update",
-        payload: updatedComplexData,
+      // 複雑なデータの更新をシミュレート（1行目を書き換え、残りの行を削除する）
+      if (messageHandler) {
+        await messageHandler({ type: "init" });
+      }
+      // init への応答（最初の全文送信）のエポックは 1
+      const updateMessage: ApplyOpsMessage = {
+        type: "applyOps",
+        epoch: 1,
+        ops: [replaceRows(1, 3, [["田中, 太郎", 'Updated "quoted" text', "1500"]])],
       };
 
       let appliedEdit: vscode.WorkspaceEdit | undefined;
@@ -406,7 +566,7 @@ suite("CSVEditorProvider", () => {
       };
 
       if (messageHandler) {
-        messageHandler(updateMessage);
+        await messageHandler(updateMessage);
       }
 
       assert.ok(appliedEdit);
@@ -430,7 +590,7 @@ suite("CSVEditorProvider", () => {
       const largeCsvUri = vscode.Uri.file(largeCsvPath);
 
       const document = await vscode.workspace.openTextDocument(largeCsvUri);
-      let messageHandler: ((message: Message) => void) | undefined;
+      let messageHandler: ((message: Message) => unknown) | undefined;
 
       const mockWebview = {
         html: "",
@@ -461,14 +621,15 @@ suite("CSVEditorProvider", () => {
       // 大きなファイルでも適切に処理されることを確認
       assert.ok(endTime - startTime < 5000); // 5秒以内に処理完了
 
-      // フィルター操作をシミュレート
-      const filteredData =
-        "ID,Name,Email,Department,Salary,Status\n" +
-        "1,User1,user1@example.com,Engineering,50100,Active";
-
-      const updateMessage: UpdateMessage = {
-        type: "update",
-        payload: filteredData,
+      // 2行目以降の行を削除した結果の操作をシミュレート
+      if (messageHandler) {
+        await messageHandler({ type: "init" });
+      }
+      // init への応答（最初の全文送信）のエポックは 1
+      const updateMessage: ApplyOpsMessage = {
+        type: "applyOps",
+        epoch: 1,
+        ops: [replaceRows(2, 999, [])],
       };
 
       let appliedEdit: vscode.WorkspaceEdit | undefined;
@@ -479,7 +640,7 @@ suite("CSVEditorProvider", () => {
       };
 
       if (messageHandler) {
-        messageHandler(updateMessage);
+        await messageHandler(updateMessage);
       }
 
       assert.ok(appliedEdit);

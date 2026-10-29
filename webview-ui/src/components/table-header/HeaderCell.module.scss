@@ -1,0 +1,65 @@
+// ヘッダーセル
+.headerCell {
+  display: table-cell;
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  box-sizing: border-box;
+  user-select: none;
+  outline-offset: -2px;
+  overflow: hidden;
+}
+
+// ヘッダー編集用textarea
+.headerEditTextarea {
+  width: 100%;
+  height: 100%;
+  resize: vertical;
+  padding: 4px;
+  border: none;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  outline: none;
+}
+
+// ヘッダーセルの内容
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// ヘッダーリサイズハンドル
+.headerResizeHandle {
+  position: absolute;
+  right: -2px; // 中心を右端に配置
+  top: 0;
+  bottom: 0;
+  width: 6px; // 操作しやすいよう少し大きめに
+  cursor: col-resize;
+  z-index: 10;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  pointer-events: auto;
+
+  &:hover {
+    background-color: var(--vscode-focusBorder);
+  }
+
+  &:focus-visible {
+    background-color: var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: -2px;
+  }
+
+  &:active {
+    background-color: var(--vscode-focusBorder);
+  }
+}
+
+.headerResizeHandleHover {
+  background-color: var(--vscode-focusBorder);
+}

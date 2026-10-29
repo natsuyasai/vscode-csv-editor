@@ -1,24 +1,23 @@
-name: Setup Node and Checkout
-description: Setup Node and Checkout
+name: Setup Node and install dependencies
+description: Setup Node.js with npm cache and install root / webview-ui dependencies with npm ci
 
 runs:
   using: composite
   steps:
     - name: Set up Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
-        node-version: 20
+        node-version: 24
+        cache: npm
+        cache-dependency-path: |
+          package-lock.json
+          webview-ui/package-lock.json
 
-    - name: restore root node modules
-      id: cache-root-node_modules
-      uses: actions/cache@v4
-      with:
-        path: node_modules
-        key: ${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+    - name: Install root dependencies
+      shell: bash
+      run: npm ci
 
-    - name: restore ui node modules
-      id: cache-ui-node_modules
-      uses: actions/cache@v4
-      with:
-        path: webview-ui/node_modules
-        key: ${{ runner.os }}-${{ hashFiles('webview-ui/package-lock.json') }}
+    - name: Install webview-ui dependencies
+      shell: bash
+      working-directory: webview-ui
+      run: npm ci

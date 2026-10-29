@@ -1,4 +1,7 @@
+import { inheritRowId } from "@/utilities/rowIdentity";
 import { useHistory } from "./useHistory";
+
+const NEW_COLUMN_HEADER = "new column";
 
 export function useUpdateCsvArray(
   csvArray: Array<Array<string>>,
@@ -25,29 +28,25 @@ export function useUpdateCsvArray(
     setDataAndPushHistory(newArray, csvArray);
   }
 
+  /** 行も列も存在しない状態（空ファイル） */
+  function isEmptyCsv() {
+    return csvArray.length === 0 || csvArray[0].length === 0;
+  }
+
   function insertRow(insertRowIdx: number) {
-    const newRow = csvArray[0].map(() => "");
-    if (insertRowIdx >= csvArray.length - 1) {
-      setCSVArrayAndPushHistory([...csvArray, newRow]);
+    if (isEmptyCsv()) {
+      // 空ファイルは1列のCSVとして作成する（ヘッダー有効時はヘッダー行も作る）
+      setCSVArrayAndPushHistory(isIgnoreHeaderRow ? [[""]] : [[NEW_COLUMN_HEADER], [""]]);
       return;
     }
-    const reducer = (acc: string[][], row: string[], index: number) => {
-      if (index === insertRowIdx) {
-        acc.push(newRow);
-      }
-      acc.push(row);
-      return acc;
-    };
-    if (isIgnoreHeaderRow) {
-      const updatedCSVArray = [...csvArray.reduce(reducer, [] as Array<Array<string>>)];
-      setCSVArrayAndPushHistory(updatedCSVArray);
-    } else {
-      const updatedCSVArray = [
-        csvArray[0],
-        ...csvArray.slice(1).reduce(reducer, [] as Array<Array<string>>),
-      ];
-      setCSVArrayAndPushHistory(updatedCSVArray);
-    }
+    const newRow = csvArray[0].map(() => "");
+    // insertRowIdx はデータ行(ヘッダー行を除く)の位置。範囲外は先頭/末尾に丸める
+    const headerOffset = isIgnoreHeaderRow ? 0 : 1;
+    const dataRowCount = csvArray.length - headerOffset;
+    const position = Math.min(Math.max(insertRowIdx, 0), dataRowCount) + headerOffset;
+    const updatedCSVArray = [...csvArray];
+    updatedCSVArray.splice(position, 0, newRow);
+    setCSVArrayAndPushHistory(updatedCSVArray);
   }
 
   function deleteRow(deleteRowIdx: number) {
@@ -92,26 +91,28 @@ export function useUpdateCsvArray(
     if (!isIgnoreHeaderRow) {
       correctionRowIdx += 1;
     }
+    // 変更のない行は同じ参照のまま使い、変更する行だけ行IDを引き継いで作り直す
     const updatedCSVArray = csvArray.map((row, idx) => {
-      const newRow = [...row];
-      if (idx === correctionRowIdx) {
-        // 先頭にインデックス表示列があるので補正する
-        newRow[colIdx - 1] = text;
+      if (idx !== correctionRowIdx) {
+        return row;
       }
-      return newRow;
+      const newRow = [...row];
+      newRow[colIdx] = text;
+      return inheritRowId(row, newRow);
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
 
   function insertCol(insertColIdx: number) {
-    if (csvArray.length === 0) {
+    if (isEmptyCsv()) {
+      setCSVArrayAndPushHistory(isIgnoreHeaderRow ? [[""]] : [[NEW_COLUMN_HEADER]]);
       return;
     }
     const updatedCSVArray = csvArray.map((row, rowIdx) => {
       const newRow = [...row];
-      // 先頭にインデックス表示列があるので補正する
-      newRow.splice(insertColIdx - 1, 0, rowIdx === 0 ? "new column" : "");
-      return newRow;
+      const isHeaderRow = !isIgnoreHeaderRow && rowIdx === 0;
+      newRow.splice(insertColIdx, 0, isHeaderRow ? NEW_COLUMN_HEADER : "");
+      return inheritRowId(row, newRow);
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
@@ -122,9 +123,8 @@ export function useUpdateCsvArray(
     }
     const updatedCSVArray = csvArray.map((row) => {
       const newRow = [...row];
-      // 先頭にインデックス表示列があるので補正する
-      newRow.splice(deleteColIdx - 1, 1);
-      return newRow;
+      newRow.splice(deleteColIdx, 1);
+      return inheritRowId(row, newRow);
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
@@ -133,16 +133,13 @@ export function useUpdateCsvArray(
     if (csvArray.length === 0) {
       return;
     }
-    if (isIgnoreHeaderRow) {
-      return;
-    }
     const updatedCSVArray = csvArray.map((row, rowIdx) => {
-      const newRow = [...row];
-      if (rowIdx === 0) {
-        // 先頭にインデックス表示列があるので補正する
-        newRow[idx - 1] = text;
+      if (rowIdx !== 0) {
+        return row;
       }
-      return newRow;
+      const newRow = [...row];
+      newRow[idx] = text;
+      return inheritRowId(row, newRow);
     });
     setCSVArrayAndPushHistory(updatedCSVArray);
   }
@@ -150,10 +147,9 @@ export function useUpdateCsvArray(
   function moveColumns(sourceIdx: number, targetIdx: number) {
     const newCsvArray = csvArray.map((row) => {
       const newRow = [...row];
-      // 先頭にインデックス表示列があるので補正するs
-      const [movedCell] = newRow.splice(sourceIdx - 1, 1);
-      newRow.splice(targetIdx - 1, 0, movedCell);
-      return newRow;
+      const [movedCell] = newRow.splice(sourceIdx, 1);
+      newRow.splice(targetIdx, 0, movedCell);
+      return inheritRowId(row, newRow);
     });
 
     setCSVArrayAndPushHistory(newCsvArray);
@@ -182,6 +178,34 @@ export function useUpdateCsvArray(
     setCSVArrayAndPushHistory(newCsvArray);
   }
 
+  function updateCells(cells: Array<{ rowIdx: number; colIdx: number; value: string }>) {
+    if (csvArray.length === 0 || cells.length === 0) {
+      return;
+    }
+
+    // 変更のある行だけ、行IDを引き継いで作り直す。それ以外は同じ参照のまま使う
+    const updatedCSVArray = [...csvArray];
+    const copiedRows = new Set<number>();
+
+    cells.forEach(({ rowIdx, colIdx, value }) => {
+      let correctionRowIdx = rowIdx;
+      if (!isIgnoreHeaderRow) {
+        correctionRowIdx += 1;
+      }
+      if (correctionRowIdx >= 0 && correctionRowIdx < updatedCSVArray.length) {
+        if (!copiedRows.has(correctionRowIdx)) {
+          copiedRows.add(correctionRowIdx);
+          updatedCSVArray[correctionRowIdx] = inheritRowId(csvArray[correctionRowIdx], [
+            ...csvArray[correctionRowIdx],
+          ]);
+        }
+        updatedCSVArray[correctionRowIdx][colIdx] = value;
+      }
+    });
+
+    setCSVArrayAndPushHistory(updatedCSVArray);
+  }
+
   return {
     insertRow,
     deleteRow,
@@ -190,6 +214,7 @@ export function useUpdateCsvArray(
     deleteCol,
     updateCol,
     updateCell,
+    updateCells,
     moveColumns,
     moveRows,
     undo,

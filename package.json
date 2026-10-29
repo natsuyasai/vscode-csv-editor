@@ -1,17 +1,36 @@
 {
   "name": "csv-editor",
   "displayName": "csv-editor",
-  "description": "edit csv",
-  "version": "0.0.4-alpha5",
+  "description": "Edit CSV files in a spreadsheet-like table editor with sorting, filtering, undo/redo, and copy/paste.",
+  "version": "0.0.1",
+  "license": "MIT",
+  "keywords": [
+    "csv",
+    "editor",
+    "table",
+    "spreadsheet",
+    "tsv",
+    "excel",
+    "data"
+  ],
   "repository": {
+    "type": "git",
     "url": "https://github.com/natsuyasai/vscode-csv-editor"
+  },
+  "homepage": "https://github.com/natsuyasai/vscode-csv-editor#readme",
+  "bugs": {
+    "url": "https://github.com/natsuyasai/vscode-csv-editor/issues"
+  },
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
   },
   "publisher": "natsuyasai",
   "engines": {
     "vscode": "^1.99.0"
   },
   "categories": [
-    "Other"
+    "Data Science"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
@@ -23,6 +42,22 @@
         "selector": [
           {
             "filenamePattern": "*.csv"
+          },
+          {
+            "filenamePattern": "*.CSV"
+          }
+        ],
+        "priority": "option"
+      },
+      {
+        "viewType": "csv-editor.largeEditor",
+        "displayName": "CSV Editor (Large File)",
+        "selector": [
+          {
+            "filenamePattern": "*.csv"
+          },
+          {
+            "filenamePattern": "*.CSV"
           }
         ],
         "priority": "option"
@@ -38,7 +73,7 @@
       "editor/title": [
         {
           "command": "csv-editor.openEditor",
-          "when": "resourceExtname == .csv && editorLangId == plaintext",
+          "when": "resourceExtname =~ /^\\.[cC][sS][vV]$/ && activeCustomEditorId != csv-editor.openEditor && activeCustomEditorId != csv-editor.largeEditor",
           "group": "navigation"
         }
       ]
@@ -58,23 +93,27 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src",
-    "test": "vscode-test"
+    "lint": "eslint src && node scripts/check-feature-sync.mjs",
+    "test:scripts": "node --test scripts/*.test.mjs",
+    "test": "vscode-test",
+    "format": "prettier --write \"src/**/*.ts\""
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
+    "@types/node": "24.x",
     "@types/vscode": "^1.99.0",
-    "@typescript-eslint/eslint-plugin": "^8.43.0",
-    "@typescript-eslint/parser": "^8.43.0",
-    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
-    "esbuild": "^0.25.9",
-    "eslint": "^9.35.0",
-    "eslint-config-prettier": "^10.1.2",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
     "npm-run-all": "^4.1.5",
-    "prettier": "^3.6.2",
-    "typescript": "^5.9.2",
-    "typescript-eslint": "^8.33.0"
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.0"
+  },
+  "dependencies": {
+    "iconv-lite": "^0.7.3"
   }
 }

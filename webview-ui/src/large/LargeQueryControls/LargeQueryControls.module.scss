@@ -1,0 +1,41 @@
+// 実行中のジョブの進捗とキャンセル
+.job {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progressBar {
+  width: 120px;
+  height: 6px;
+  accent-color: var(--vscode-progressBar-background);
+}
+
+// バナーの操作ボタン（VSCode の副ボタンに合わせる）
+.button {
+  padding: 2px 8px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 2px;
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  &[aria-pressed="true"] {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+  }
+}

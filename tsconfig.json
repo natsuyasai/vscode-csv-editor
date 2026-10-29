@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"module": "Node16",
 		"target": "ES2022",
-		"outDir": "dsit",
+		"outDir": "out",
 		"lib": [
 			"ES2022"
 		],
@@ -34,6 +34,7 @@
 	"exclude": [
 		"node_modules",
 		".vscode-test",
-		"webview-ui"
+		"webview-ui",
+		"src/shared/**/*.spec.ts"
 	],
 }

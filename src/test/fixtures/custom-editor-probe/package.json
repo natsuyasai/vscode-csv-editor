@@ -1,0 +1,35 @@
+{
+  "name": "custom-editor-probe-fixture",
+  "displayName": "Custom Editor Probe Fixture",
+  "description": "テスト用: カスタムエディタの viewType を contributes だけ宣言する。provider はテストコードから登録する。",
+  "version": "0.0.0",
+  "private": true,
+  "publisher": "csv-editor-test",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "csv-editor-test.probeText",
+        "displayName": "Probe (CustomTextEditor)",
+        "selector": [
+          {
+            "filenamePattern": "*.probecsv"
+          }
+        ],
+        "priority": "option"
+      },
+      {
+        "viewType": "csv-editor-test.probeCustom",
+        "displayName": "Probe (CustomEditor)",
+        "selector": [
+          {
+            "filenamePattern": "*.probecsv"
+          }
+        ],
+        "priority": "option"
+      }
+    ]
+  }
+}
