@@ -1,0 +1,214 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create.outputs.result }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.create_tag.outputs.tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Read version from package.json
+        id: version
+        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag matches version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          ver="${{ steps.version.outputs.version }}"
+          if [ "$tag" != "$ver" ]; then
+            echo "tag ($tag) != package.json version ($ver)"
+            exit 1
+          fi
+
+      - name: Determine release tag
+        id: create_tag
+        uses: actions/github-script@v9
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        with:
+          script: |
+            const version = process.env.VERSION;
+            const base = `v${version}`;
+
+            if (context.ref.startsWith("refs/tags/")) {
+              // タグ push トリガー: トリガーとなったタグをそのまま使う（既に存在するため作成不要）。
+              core.setOutput("tag", context.ref.replace("refs/tags/", ""));
+              return;
+            }
+
+            // workflow_dispatch 手動実行: タグが未作成のため、ここで作成する。
+            // 同名タグが既に存在する場合は "-temp-<連番>" を付与して衝突を回避する。
+            async function tagExists(name) {
+              try {
+                await github.rest.git.getRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `tags/${name}`,
+                });
+                return true;
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                return false;
+              }
+            }
+
+            let tag = base;
+            if (await tagExists(base)) {
+              let n = 1;
+              while (await tagExists(`${base}-temp-${n}`)) {
+                n++;
+              }
+              tag = `${base}-temp-${n}`;
+            }
+
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/${tag}`,
+              sha: context.sha,
+            });
+            console.log(`created tag ${tag} at ${context.sha}`);
+            core.setOutput("tag", tag);
+
+      - name: Determine previous tag
+        id: prevtag
+        run: |
+          git fetch --tags --force
+          current="${{ steps.create_tag.outputs.tag }}"
+          # 旧形式 "ver.x.y.z" と新形式 "vx.y.z" のタグを、接頭辞を除いたバージョンで新しい順に並べる。
+          # 検証用の -temp- タグは比較起点にしない（正式リリースタグ間の差分でノートを作る）。
+          # sort -V では "~" が最も小さく並ぶため、最初の "-" を "~" にしてプレリリースを正式版より前に置く。
+          mapfile -t tags < <(
+            git tag | grep -E '^(v|ver\.)[0-9]' | grep -v -- '-temp-' \
+              | while read -r t; do
+                  v="${t#ver.}"
+                  v="${v#v}"
+                  printf '%s\t%s\n' "${v/-/\~}" "$t"
+                done \
+              | sort -t "$(printf '\t')" -k1,1 -V -r | cut -f2 || true
+          )
+          prev=""
+          if printf '%s\n' "${tags[@]}" | grep -qx "$current"; then
+            found=0
+            for t in "${tags[@]}"; do
+              if [ "$found" = "1" ]; then prev="$t"; break; fi
+              if [ "$t" = "$current" ]; then found=1; fi
+            done
+          else
+            prev="${tags[0]:-}"
+          fi
+          echo "prev=$prev" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update draft release with notes
+        id: create
+        uses: actions/github-script@v9
+        env:
+          PREV_TAG: ${{ steps.prevtag.outputs.prev }}
+          TAG: ${{ steps.create_tag.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        with:
+          result-encoding: string
+          script: |
+            const tag = process.env.TAG;
+            const prev = process.env.PREV_TAG;
+            // 0.0.4-alpha5 のようなプレリリース版は prerelease として公開する
+            const prerelease = process.env.VERSION.includes("-");
+
+            // 前タグ〜今回タグのマージ済み PR から GitHub 標準のリリースノートを生成する
+            const { data: notes } = await github.rest.repos.generateReleaseNotes({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              ...(prev ? { previous_tag_name: prev } : {}),
+            });
+            const body = notes.body;
+            console.log(`generated release body:\n${body}`);
+
+            const existing = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+            const found = existing.data.find((r) => r.tag_name === tag);
+            if (found) {
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: found.id,
+                body,
+                prerelease,
+              });
+              return String(found.id);
+            }
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `CSV Editor ${tag}`,
+              body,
+              draft: true,
+              prerelease,
+            });
+            return String(data.id);
+
+  vsix:
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      # vscode:prepublish（npm run package）で型チェック・lint・webview ビルド・本番ビルドが実行される
+      - name: Package VSIX
+        run: npx vsce package --no-dependencies
+
+      - name: Upload VSIX to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+        run: |
+          vsix=$(ls ./*.vsix | head -n1)
+          if [ -z "$vsix" ]; then
+            echo "VSIX not found"
+            exit 1
+          fi
+          gh release upload "$TAG" "$vsix" --clobber
+
+      - name: Upload CI artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: csv-editor-${{ needs.create-release.outputs.version }}.vsix
+          path: ./*.vsix
+          if-no-files-found: error
+
+  publish-release:
+    needs: [create-release, vsix]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ needs.create-release.outputs.release_id }},
+              draft: false,
+            });
