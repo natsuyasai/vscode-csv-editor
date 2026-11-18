@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "@amiceli/vitest-cucumber": "^8.0.1",
-    "@chromatic-com/storybook": "^4.1.4",
+    "@chromatic-com/storybook": "^5.6.0",
     "@markuplint/jsx-parser": "^5.6.1",
     "@markuplint/react-spec": "^5.6.1",
     "@playwright/test": "^1.65.1",
