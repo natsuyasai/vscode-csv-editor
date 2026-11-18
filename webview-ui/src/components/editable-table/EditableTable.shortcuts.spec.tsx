@@ -22,7 +22,9 @@ const DATA = [
 
 const setup = () => {
   const setCSVArray = vi.fn();
-  render(<EditableTable csvArray={DATA} theme="light" setCSVArray={setCSVArray} onApply={vi.fn()} />);
+  render(
+    <EditableTable csvArray={DATA} theme="light" setCSVArray={setCSVArray} onApply={vi.fn()} />
+  );
   return { setCSVArray };
 };
 
@@ -57,6 +59,8 @@ describe("EditableTable ショートカット", () => {
     setup();
     expect(fireEvent.keyDown(document.body, { key: "z", ctrlKey: true })).toBe(false);
     expect(fireEvent.keyDown(document.body, { key: "z", metaKey: true })).toBe(false);
-    expect(fireEvent.keyDown(document.body, { key: "Z", ctrlKey: true, shiftKey: true })).toBe(false);
+    expect(fireEvent.keyDown(document.body, { key: "Z", ctrlKey: true, shiftKey: true })).toBe(
+      false
+    );
   });
 });

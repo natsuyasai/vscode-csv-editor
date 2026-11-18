@@ -833,9 +833,7 @@ export class LargeCsvDocument implements vscode.CustomDocument {
    * 今のファイルを読み直す（serial の中で呼ぶ）。ジョブを取り消し、ソート・フィルタと編集の状態を捨て、
    * ハンドルの体系と Undo の世代を進めて行インデックスを作り直す。作り直したインデックスの完了を返す
    */
-  private async restartIndex(
-    boundary: EditBoundary
-  ): Promise<{ done: Promise<RowIndexSummary> }> {
+  private async restartIndex(boundary: EditBoundary): Promise<{ done: Promise<RowIndexSummary> }> {
     await this.abortQuery("reload");
     this.indexAbort.abort();
     await this.closeReader(this.reader);

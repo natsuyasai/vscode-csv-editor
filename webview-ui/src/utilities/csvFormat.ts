@@ -17,8 +17,7 @@ export interface CsvParseError {
 
 /** CSVパース結果（成功/失敗の判別可能なユニオン） */
 export type ParseCsvResult =
-  | { ok: true; rows: string[][]; format: CsvFormat }
-  | { ok: false; error: CsvParseError };
+  { ok: true; rows: string[][]; format: CsvFormat } | { ok: false; error: CsvParseError };
 
 /**
  * CSVテキストをパースする。例外は投げず、結果を判別可能なユニオン型で返す。
