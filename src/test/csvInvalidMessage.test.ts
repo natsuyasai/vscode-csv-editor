@@ -53,7 +53,7 @@ suite("不正な webview メッセージの無視 (issue #89)", () => {
     } as unknown as vscode.ExtensionContext;
     new CSVEditorProvider(context).resolveCustomTextEditor(document, mockPanel, {
       isCancellationRequested: false,
-      onCancellationRequested: () => ({ dispose: () => {} }),
+      onCancellationRequested: () => new vscode.Disposable(() => {}),
     });
     return {
       posted,

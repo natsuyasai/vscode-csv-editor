@@ -54,7 +54,7 @@ export function createProviderHarness(document: vscode.TextDocument) {
   } as unknown as vscode.ExtensionContext;
   new CSVEditorProvider(context).resolveCustomTextEditor(document, mockPanel, {
     isCancellationRequested: false,
-    onCancellationRequested: () => ({ dispose: () => {} }),
+    onCancellationRequested: () => new vscode.Disposable(() => {}),
   });
 
   const send = async (message: Message | ApplyOpsMessage) => {

@@ -63,7 +63,7 @@ suite("CSV解析エラー時の挙動", () => {
     } as unknown as vscode.ExtensionContext;
     new CSVEditorProvider(context).resolveCustomTextEditor(document, mockPanel, {
       isCancellationRequested: false,
-      onCancellationRequested: () => ({ dispose: () => {} }),
+      onCancellationRequested: () => new vscode.Disposable(() => {}),
     });
     return {
       sentMessages,

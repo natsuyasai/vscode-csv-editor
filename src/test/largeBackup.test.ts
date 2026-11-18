@@ -50,7 +50,7 @@ const QUIET_MS = 1500;
 
 const token: vscode.CancellationToken = {
   isCancellationRequested: false,
-  onCancellationRequested: () => ({ dispose: () => {} }),
+  onCancellationRequested: () => new vscode.Disposable(() => {}),
 };
 
 async function getApi(): Promise<CsvEditorTestingApi> {
