@@ -1,6 +1,7 @@
 import { CellContext } from "@tanstack/react-table";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import { isImeComposing, isImeInputStart } from "../../utilities/ime";
+import type { EditableTableFeatures } from "../editable-table/tableFeatures";
 import { RowData } from "../editable-table/types";
 import styles from "./EditableCell.module.scss";
 
@@ -12,7 +13,7 @@ import styles from "./EditableCell.module.scss";
  * - キーボードショートカット（Enter、Space、Delete、Backspace、文字入力）
  * - セル選択のサポート
  */
-export const EditableCell: FC<CellContext<RowData, unknown>> = (props) => {
+export const EditableCell: FC<CellContext<EditableTableFeatures, RowData, unknown>> = (props) => {
   const cellValue = props.getValue();
   let initialValue = "";
   if (typeof cellValue === "string") {
