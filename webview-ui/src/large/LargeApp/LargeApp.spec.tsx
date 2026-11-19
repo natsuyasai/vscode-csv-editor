@@ -307,11 +307,12 @@ describe("LargeApp", () => {
     fireEvent.mouseDown(cellOf(2, 1), { shiftKey: true });
     fireEvent.keyDown(cellOf(2, 1), { key: "c", ctrlKey: true });
     const request = sent().find((message) => message.type === "large/getRange") as
-      | { reqId: number }
-      | undefined;
+      { reqId: number } | undefined;
     expect(request).toBeDefined();
     receive({ type: "large/error", message: "読めません", reqId: request?.reqId ?? -1 });
-    expect(await screen.findByRole("alert")).toHaveTextContent("コピーできませんでした: 読めません");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "コピーできませんでした: 読めません"
+    );
   });
 
   test("large/invalidate の header で列名を更新する", () => {

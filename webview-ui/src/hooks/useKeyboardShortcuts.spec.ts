@@ -358,19 +358,24 @@ describe("useKeyboardShortcuts: mod / 入力要素の扱い (issue #84)", () => 
       },
     ],
     ["vscode-textfield", () => document.createElement("vscode-textfield")],
-  ])("ignoreWhenEditing指定のショートカットは%sにフォーカス中は実行されず標準動作が残る", (_n, create) => {
-    const handler = vi.fn();
-    renderHook(() =>
-      useKeyboardShortcuts({
-        shortcuts: [{ key: "c", mod: true, ignoreWhenEditing: true, preventDefault: true, handler }],
-      })
-    );
-    const el = create();
-    document.body.appendChild(el);
-    const event = fire(el, { key: "c", ctrlKey: true });
-    expect(handler).not.toHaveBeenCalled();
-    expect(event.defaultPrevented).toBe(false);
-  });
+  ])(
+    "ignoreWhenEditing指定のショートカットは%sにフォーカス中は実行されず標準動作が残る",
+    (_n, create) => {
+      const handler = vi.fn();
+      renderHook(() =>
+        useKeyboardShortcuts({
+          shortcuts: [
+            { key: "c", mod: true, ignoreWhenEditing: true, preventDefault: true, handler },
+          ],
+        })
+      );
+      const el = create();
+      document.body.appendChild(el);
+      const event = fire(el, { key: "c", ctrlKey: true });
+      expect(handler).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(false);
+    }
+  );
 
   it("ignoreWhenEditing指定でも入力要素以外では実行される", () => {
     const handler = vi.fn();

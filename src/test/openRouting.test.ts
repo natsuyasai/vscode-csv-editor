@@ -336,7 +336,7 @@ suite("入口の振り分け（OpenRouter）", () => {
       commandsApi.registerCommand = (command, handler) => {
         registered.push(command);
         callback = handler;
-        return { dispose: () => disposed.push(command) };
+        return new vscode.Disposable(() => disposed.push(command));
       };
       try {
         const { router, opened } = createRouter({ "a.csv": 1 });

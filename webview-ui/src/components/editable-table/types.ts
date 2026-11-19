@@ -1,4 +1,5 @@
-import { CellContext } from "@tanstack/react-table";
+import type { CellContext, RowData as TanStackRowData, TableFeatures } from "@tanstack/react-table";
+import type { EditableTableFeatures } from "./tableFeatures";
 
 /**
  * EditableTableのProps型
@@ -16,11 +17,16 @@ export interface EditableTableProps {
 export type RowData = Record<string, string>;
 
 /**
- * TableMetaの型拡張
+ * TableMetaの型拡張（v9 では第1型引数に TFeatures が加わった）
  */
 declare module "@tanstack/react-table" {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface TableMeta<TData> {
+  // 型引数は元の宣言と一致させる必要があるため、未使用でも残す
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  interface TableMeta<
+    in out TFeatures extends TableFeatures,
+    in out TData extends TanStackRowData,
+  > {
+    /* eslint-enable @typescript-eslint/no-unused-vars */
     updateData?: (rowIndex: number, columnId: string, value: string) => void;
     selectedRowIndex?: number | null;
     setSelectedRowIndex?: (index: number | null) => void;
@@ -75,7 +81,7 @@ export interface DraggableHeaderCellProps {
 /**
  * RowIndexCellコンポーネントのProps型
  */
-export interface RowIndexCellProps extends CellContext<RowData, unknown> {
+export interface RowIndexCellProps extends CellContext<EditableTableFeatures, RowData, unknown> {
   isSelected: boolean;
   onSelect: () => void;
   /** true の間は行のドラッグ&ドロップによる並び替えを無効にする（ソート・フィルター適用中） */

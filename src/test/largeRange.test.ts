@@ -255,7 +255,10 @@ suite("大容量モードでの範囲コピーと貼り付け", function () {
       ["r1", "saved"],
       ["r2", "a2"],
     ]);
-    assert.ok(fs.readFileSync(uri.fsPath, "utf8").startsWith("id,a,b\nr1,saved,b1\n"), "保存された");
+    assert.ok(
+      fs.readFileSync(uri.fsPath, "utf8").startsWith("id,a,b\nr1,saved,b1\n"),
+      "保存された"
+    );
   });
 
   test("複数行への貼り付けは1回のUndoで元に戻る", async () => {

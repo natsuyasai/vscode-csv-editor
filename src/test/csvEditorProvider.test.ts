@@ -28,11 +28,10 @@ suite("CSVEditorProvider", () => {
     const registeredCommands: string[] = [];
     const registeredViewTypes: string[] = [];
     const disposedNames: string[] = [];
-    const trackedDisposable = (name: string): vscode.Disposable => ({
-      dispose: () => {
+    const trackedDisposable = (name: string): vscode.Disposable =>
+      new vscode.Disposable(() => {
         disposedNames.push(name);
-      },
-    });
+      });
     commandsApi.registerCommand = (command) => {
       registeredCommands.push(command);
       return trackedDisposable(`command:${command}`);
@@ -140,7 +139,7 @@ suite("CSVEditorProvider", () => {
       // resolveCustomTextEditor を呼び出し
       provider.resolveCustomTextEditor(document, mockPanel, {
         isCancellationRequested: false,
-        onCancellationRequested: () => ({ dispose: () => {} }),
+        onCancellationRequested: () => new vscode.Disposable(() => {}),
       });
 
       // HTMLが設定されているか確認
@@ -184,7 +183,7 @@ suite("CSVEditorProvider", () => {
 
       provider.resolveCustomTextEditor(document, mockPanel, {
         isCancellationRequested: false,
-        onCancellationRequested: () => ({ dispose: () => {} }),
+        onCancellationRequested: () => new vscode.Disposable(() => {}),
       });
 
       assert.ok(messageHandler, "Message handler should be registered");
@@ -250,7 +249,7 @@ suite("CSVEditorProvider", () => {
 
       provider.resolveCustomTextEditor(document, mockPanel, {
         isCancellationRequested: false,
-        onCancellationRequested: () => ({ dispose: () => {} }),
+        onCancellationRequested: () => new vscode.Disposable(() => {}),
       });
 
       // webviewからinitメッセージを送信して初期化
@@ -303,7 +302,7 @@ suite("CSVEditorProvider", () => {
       } as unknown as vscode.WebviewPanel;
       provider.resolveCustomTextEditor(document, mockPanel, {
         isCancellationRequested: false,
-        onCancellationRequested: () => ({ dispose: () => {} }),
+        onCancellationRequested: () => new vscode.Disposable(() => {}),
       });
       const send = async (message: Message | ApplyOpsMessage) => {
         assert.ok(messageHandler, "Message handler should be registered");
@@ -455,7 +454,7 @@ suite("CSVEditorProvider", () => {
 
       provider.resolveCustomTextEditor(document, mockPanel, {
         isCancellationRequested: false,
-        onCancellationRequested: () => ({ dispose: () => {} }),
+        onCancellationRequested: () => new vscode.Disposable(() => {}),
       });
 
       // webviewからinitメッセージを送信してテーマ更新をトリガー
@@ -544,7 +543,7 @@ suite("CSVEditorProvider", () => {
 
       provider.resolveCustomTextEditor(document, mockPanel, {
         isCancellationRequested: false,
-        onCancellationRequested: () => ({ dispose: () => {} }),
+        onCancellationRequested: () => new vscode.Disposable(() => {}),
       });
 
       // 複雑なデータの更新をシミュレート（1行目を書き換え、残りの行を削除する）
@@ -614,7 +613,7 @@ suite("CSVEditorProvider", () => {
       const startTime = Date.now();
       provider.resolveCustomTextEditor(document, mockPanel, {
         isCancellationRequested: false,
-        onCancellationRequested: () => ({ dispose: () => {} }),
+        onCancellationRequested: () => new vscode.Disposable(() => {}),
       });
       const endTime = Date.now();
 

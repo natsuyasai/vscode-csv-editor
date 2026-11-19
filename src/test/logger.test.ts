@@ -13,7 +13,12 @@ suite("logger (issue #89)", () => {
     disposed = 0;
     (vscode.window as { createOutputChannel: unknown }).createOutputChannel = () => {
       created++;
-      return { appendLine: () => {}, dispose: () => { disposed++; } };
+      return {
+        appendLine: () => {},
+        dispose: () => {
+          disposed++;
+        },
+      };
     };
   }
 
