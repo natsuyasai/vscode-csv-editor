@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { CellContext } from "@tanstack/react-table";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import type { EditableTableFeatures } from "@/components/editable-table/tableFeatures";
 import { RowData } from "@/components/editable-table/types";
 import { EditableCell } from "@/components/table-cell/EditableCell";
 
@@ -32,8 +33,8 @@ type Story = StoryObj<typeof meta>;
 // モックのpropsを作成
 const createMockProps = (
   value: string = "Sample Text",
-  overrides?: Partial<CellContext<RowData, unknown>>
-): CellContext<RowData, unknown> => ({
+  overrides?: Partial<CellContext<EditableTableFeatures, RowData, unknown>>
+): CellContext<EditableTableFeatures, RowData, unknown> => ({
   getValue: (() => value) as never,
   row: { index: 0 } as never,
   column: { id: "col0" } as never,

@@ -3,6 +3,7 @@
 		"module": "Node16",
 		"target": "ES2022",
 		"outDir": "out",
+		"types": ["node", "mocha"],
 		"lib": [
 			"ES2022"
 		],
@@ -14,7 +15,6 @@
 		"noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
 		"noUnusedParameters": true, /* Report errors on unused parameters. */
 		"skipLibCheck": true,
-		"baseUrl": ".",
 		"paths": {
 			"@message/*": [
 				"./src/message/*"

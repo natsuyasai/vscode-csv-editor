@@ -17,7 +17,7 @@
     {
       "selector": "div[role=button]",
       "rules": {
-        "invalid-attr": {
+        "no-unknown-attr": {
           "options": {
             "allowAttrs": [
               "onDoubleClick"
@@ -29,7 +29,7 @@
     {
       "selector": "td[role=gridcell], th[scope=col]",
       "rules": {
-        "invalid-attr": {
+        "no-unknown-attr": {
           "options": {
             "allowAttrs": [
               "onDoubleClick"
@@ -42,8 +42,20 @@
   "overrides": {
     "./**/editable-table/EditableTable.tsx": {
       "rules": {
-        "permitted-contents": false
+        "permitted-contents": false,
+        "a11y/table-row-column-alignment": false,
+        "a11y/no-empty-table-track": false,
+        "a11y/wai-aria/required-owned-elements": false
+      }
+    },
+    "./**/table-cell/EditableCell.tsx": {
+      "rules": {
+        "a11y/wai-aria/presentational-children": false
       }
     }
-  }
+  },
+  "rules": {
+    "security/no-event-handler-attr": false
+  },
+  "overrideMode": "merge"
 }

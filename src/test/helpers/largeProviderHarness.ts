@@ -16,7 +16,7 @@ export interface LargePosted {
 
 const token: vscode.CancellationToken = {
   isCancellationRequested: false,
-  onCancellationRequested: () => ({ dispose: () => {} }),
+  onCancellationRequested: () => new vscode.Disposable(() => {}),
 };
 
 /**

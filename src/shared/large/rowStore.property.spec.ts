@@ -294,38 +294,42 @@ function expectMatches(store: RowStore, model: Model, lineCount: number) {
 const PROPERTY_TIMEOUT_MS = 30_000;
 
 describe("RowStore - Property-Based Tests", () => {
-  it("op 列の各段階で配列モデルと一致し、逆操作を逆順に当てると元に戻る", () => {
-    fc.assert(
-      fc.property(
-        lineCountArb,
-        chunkSizeArb,
-        fc.array(seedArb, { maxLength: 25 }),
-        (lineCount, chunkSize, seeds) => {
-          const store = new RowStore(lineCount, { chunkSize });
-          const initial = initialModel(lineCount);
-          let model = initial;
-          const ctx: HandleContext = { next: -1, used: [] };
-          const inverses: RowStoreOp[] = [];
-          for (const seed of seeds) {
-            const { op, valid } = toOp(seed, model, lineCount, ctx);
-            if (valid) {
-              inverses.push(store.apply(op));
-              model = applyToModel(model, op);
-            } else {
-              expect(() => store.apply(op)).toThrow(RowStoreError);
+  it(
+    "op 列の各段階で配列モデルと一致し、逆操作を逆順に当てると元に戻る",
+    () => {
+      fc.assert(
+        fc.property(
+          lineCountArb,
+          chunkSizeArb,
+          fc.array(seedArb, { maxLength: 25 }),
+          (lineCount, chunkSize, seeds) => {
+            const store = new RowStore(lineCount, { chunkSize });
+            const initial = initialModel(lineCount);
+            let model = initial;
+            const ctx: HandleContext = { next: -1, used: [] };
+            const inverses: RowStoreOp[] = [];
+            for (const seed of seeds) {
+              const { op, valid } = toOp(seed, model, lineCount, ctx);
+              if (valid) {
+                inverses.push(store.apply(op));
+                model = applyToModel(model, op);
+              } else {
+                expect(() => store.apply(op)).toThrow(RowStoreError);
+              }
+              expectMatches(store, model, lineCount);
             }
-            expectMatches(store, model, lineCount);
+            for (const inverse of inverses.reverse()) {
+              store.apply(inverse);
+            }
+            expectMatches(store, initial, lineCount);
+            expect(store.isModified).toBe(false);
           }
-          for (const inverse of inverses.reverse()) {
-            store.apply(inverse);
-          }
-          expectMatches(store, initial, lineCount);
-          expect(store.isModified).toBe(false);
-        }
-      ),
-      { numRuns: 800 }
-    );
-  }, PROPERTY_TIMEOUT_MS);
+        ),
+        { numRuns: 800 }
+      );
+    },
+    PROPERTY_TIMEOUT_MS
+  );
 });
 
 type Command =
@@ -350,80 +354,84 @@ interface Version {
 }
 
 describe("EditStack - Property-Based Tests", () => {
-  it("apply / undo / redo / markSaved を任意に挟んでも履歴付きの配列モデルと一致する", () => {
-    fc.assert(
-      fc.property(
-        lineCountArb,
-        chunkSizeArb,
-        fc.array(commandArb, { maxLength: 30 }),
-        (lineCount, chunkSize, commands) => {
-          const store = new RowStore(lineCount, { chunkSize });
-          const stack = new EditStack(store);
-          const ctx: HandleContext = { next: -1, used: [] };
-          let current: Version = { id: 0, model: initialModel(lineCount) };
-          const past: Version[] = [];
-          let future: Version[] = [];
-          let savedId = 0;
-          let nextId = 1;
+  it(
+    "apply / undo / redo / markSaved を任意に挟んでも履歴付きの配列モデルと一致する",
+    () => {
+      fc.assert(
+        fc.property(
+          lineCountArb,
+          chunkSizeArb,
+          fc.array(commandArb, { maxLength: 30 }),
+          (lineCount, chunkSize, commands) => {
+            const store = new RowStore(lineCount, { chunkSize });
+            const stack = new EditStack(store);
+            const ctx: HandleContext = { next: -1, used: [] };
+            let current: Version = { id: 0, model: initialModel(lineCount) };
+            const past: Version[] = [];
+            let future: Version[] = [];
+            let savedId = 0;
+            let nextId = 1;
 
-          for (const command of commands) {
-            switch (command.kind) {
-              case "apply": {
-                let working = current.model;
-                const ops: LargeOp[] = [];
-                let valid = true;
-                for (const seed of command.seeds) {
-                  const converted = toOp(seed, working, lineCount, ctx);
-                  ops.push(converted.op);
-                  if (!converted.valid) {
-                    valid = false;
-                    break;
+            for (const command of commands) {
+              switch (command.kind) {
+                case "apply": {
+                  let working = current.model;
+                  const ops: LargeOp[] = [];
+                  let valid = true;
+                  for (const seed of command.seeds) {
+                    const converted = toOp(seed, working, lineCount, ctx);
+                    ops.push(converted.op);
+                    if (!converted.valid) {
+                      valid = false;
+                      break;
+                    }
+                    working = applyToModel(working, converted.op);
                   }
-                  working = applyToModel(working, converted.op);
+                  if (!valid) {
+                    expect(() => stack.apply(ops)).toThrow(RowStoreError);
+                  } else if (ops.length === 0) {
+                    expect(stack.apply(ops)).toBe(false);
+                  } else {
+                    expect(stack.apply(ops)).toBe(true);
+                    past.push(current);
+                    current = { id: nextId++, model: working };
+                    future = [];
+                  }
+                  break;
                 }
-                if (!valid) {
-                  expect(() => stack.apply(ops)).toThrow(RowStoreError);
-                } else if (ops.length === 0) {
-                  expect(stack.apply(ops)).toBe(false);
-                } else {
-                  expect(stack.apply(ops)).toBe(true);
-                  past.push(current);
-                  current = { id: nextId++, model: working };
-                  future = [];
+                case "undo": {
+                  const previous = past.pop();
+                  expect(stack.undo()).toBe(previous !== undefined);
+                  if (previous) {
+                    future.push(current);
+                    current = previous;
+                  }
+                  break;
                 }
-                break;
+                case "redo": {
+                  const following = future.pop();
+                  expect(stack.redo()).toBe(following !== undefined);
+                  if (following) {
+                    past.push(current);
+                    current = following;
+                  }
+                  break;
+                }
+                case "save":
+                  stack.markSaved();
+                  savedId = current.id;
+                  break;
               }
-              case "undo": {
-                const previous = past.pop();
-                expect(stack.undo()).toBe(previous !== undefined);
-                if (previous) {
-                  future.push(current);
-                  current = previous;
-                }
-                break;
-              }
-              case "redo": {
-                const following = future.pop();
-                expect(stack.redo()).toBe(following !== undefined);
-                if (following) {
-                  past.push(current);
-                  current = following;
-                }
-                break;
-              }
-              case "save":
-                stack.markSaved();
-                savedId = current.id;
-                break;
+              expectMatches(store, current.model, lineCount);
+              expect(stack.isDirty).toBe(current.id !== savedId);
+              expect(stack.canUndo).toBe(past.length > 0);
+              expect(stack.canRedo).toBe(future.length > 0);
             }
-            expectMatches(store, current.model, lineCount);
-            expect(stack.isDirty).toBe(current.id !== savedId);
-            expect(stack.canUndo).toBe(past.length > 0);
-            expect(stack.canRedo).toBe(future.length > 0);
           }
-        }
-      ),
-      { numRuns: 500 }
-    );
-  }, PROPERTY_TIMEOUT_MS);
+        ),
+        { numRuns: 500 }
+      );
+    },
+    PROPERTY_TIMEOUT_MS
+  );
 });

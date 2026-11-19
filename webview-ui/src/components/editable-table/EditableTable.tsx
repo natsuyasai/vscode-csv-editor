@@ -1,11 +1,8 @@
 import {
   flexRender,
-  getCoreRowModel,
-  useReactTable,
+  useTable,
   ColumnDef,
-  getSortedRowModel,
   SortingState,
-  getFilteredRowModel,
   ColumnFiltersState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -47,7 +44,9 @@ import {
   identityRowIndexMapper,
   type RowIndexMapper,
 } from "./rowIndexMapper";
+import { editableTableFeatures, type EditableTableFeatures } from "./tableFeatures";
 import type { EditableTableProps, RowData } from "./types";
+import { v8CompatAutoSortFn } from "./v8CompatSort";
 
 // データの正本は csvArray で、編集は常に updateCells 等のコールバック経由で行うため、
 // useCellSelection の setData フォールバック（履歴管理なし）は使われない
@@ -329,12 +328,12 @@ export const EditableTable: FC<EditableTableProps> = ({
 
   // 列定義を生成。データ行の編集では作り直さないよう、ヘッダー行(列構成)だけに依存させる
   const headerRow: readonly string[] | undefined = csvArray[0];
-  const columns = useMemo((): ColumnDef<RowData>[] => {
+  const columns = useMemo((): ColumnDef<EditableTableFeatures, RowData>[] => {
     if (headerRow === undefined || headerRow.length === 0) {
       return [];
     }
 
-    const cols: ColumnDef<RowData>[] = [
+    const cols: ColumnDef<EditableTableFeatures, RowData>[] = [
       {
         id: ROW_IDX_KEY,
         accessorKey: ROW_IDX_KEY,
@@ -385,6 +384,8 @@ export const EditableTable: FC<EditableTableProps> = ({
         header: isIgnoreHeaderRow ? "" : header,
         enableResizing: true,
         enableSorting: true,
+        // v8 の既定(sortingFn: "auto")と同じ並びにする（v9 は自動判定の標本が変わったため）
+        sortFn: v8CompatAutoSortFn,
         cell: EditableCell,
         size: getColumnWidth(index),
       });
@@ -405,7 +406,8 @@ export const EditableTable: FC<EditableTableProps> = ({
   ]);
 
   // TanStack Tableのインスタンスを作成
-  const table = useReactTable({
+  const table = useTable({
+    features: editableTableFeatures,
     data,
     columns,
     // 行IDを行のキーにして、行の追加・削除・編集でも他の行を作り直さない
@@ -416,9 +418,6 @@ export const EditableTable: FC<EditableTableProps> = ({
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     meta: {
       updateData: (rowIndex: number, columnId: string, value: string) => {
         // columnIdから列インデックスを取得（例: "col0" -> 0）

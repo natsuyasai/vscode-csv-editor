@@ -1,12 +1,13 @@
 import { flexRender, Header as TanStackHeader } from "@tanstack/react-table";
 import { FC, useCallback, useRef, useState } from "react";
 import { isImeComposing, isImeInputStart } from "../../utilities/ime";
+import type { EditableTableFeatures } from "../editable-table/tableFeatures";
 import { RowData } from "../editable-table/types";
 import { DraggableHeaderCell } from "./DraggableHeaderCell";
 import styles from "./HeaderCell.module.scss";
 
 interface HeaderCellProps {
-  header: TanStackHeader<RowData, unknown>;
+  header: TanStackHeader<EditableTableFeatures, RowData, unknown>;
   headerIndex: number;
   rowIdxKey: string;
   selectedColumnIndex: number | null;
